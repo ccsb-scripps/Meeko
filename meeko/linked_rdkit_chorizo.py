@@ -1118,7 +1118,7 @@ class LinkedRDKitChorizo:
                 fail_log[-1].append("heavy missing")
             if result["heavy"]["excess"] > 0:
                 fail_log[-1].append("heavy excess")
-            if result["H"]["excess"] > 0:
+            if result["H"]["excess"]:
                 fail_log[-1].append("H excess")
             if len(result["bonds"]["excess"]) > 0:
                 fail_log[-1].append("bonds excess")
@@ -2380,7 +2380,7 @@ class ResidueTemplate:
         # atoms "missing" exist in self.mol but not in input_mol
         # "excess" atoms exist in input_mol but not in self.mol
         result = {
-            "H": {"found": 0, "missing": 0, "excess": 0},
+            "H": {"found": 0, "missing": 0, "excess": []},
             "heavy": {"found": 0, "missing": 0, "excess": 0},
         }
         for atom in self.mol.GetAtoms():
@@ -2390,7 +2390,14 @@ class ResidueTemplate:
         for atom in input_mol.GetAtoms():
             element = "H" if atom.GetAtomicNum() == 1 else "heavy"
             if atom.GetIdx() not in mapping_inv:
-                result[element]["excess"] += 1
+                if element == "H": 
+                    nei_idx = atom.GetNeighbors()[0].GetIdx()
+                    if nei_idx in mapping_inv: 
+                        result[element]["excess"].append(mapping_inv[nei_idx])
+                    else:
+                        result[element]["excess"].append(-1)
+                else:
+                    result[element]["excess"] += 1
         return result, mapping
 
 def rdkit_or_none_to_json(rdkit_mol):
