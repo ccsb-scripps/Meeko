@@ -15,10 +15,9 @@ from rdkit import Chem
 from rdkit.Chem import rdmolops
 
 from rdkit import RDLogger
-logger = RDLogger.logger()
-logger.setLevel(RDLogger.CRITICAL)
 import sys, logging
-logging.basicConfig(stream=sys.stdout, level=logging.WARNING)
+
+logger = logging.getLogger(__name__)
 
 
 list_of_AD_elements_as_AtomicNum = list(covalent_radius.keys())
@@ -41,7 +40,7 @@ def get_atom_idx_by_names(mol: Chem.Mol, wanted_names: set[str] = set()) -> set[
     wanted_atoms_by_names = {atom for atom in mol.GetAtoms() if atom.GetProp('atom_id') in wanted_names}
     names_not_found = wanted_names.difference({atom.GetProp('atom_id') for atom in wanted_atoms_by_names})
     if names_not_found: 
-        logging.warning(f"Molecule doesn't contain the requested atoms with names: {names_not_found} -> continue with found names... ")
+        logger.warning(f"Molecule doesn't contain the requested atoms with names: {names_not_found} -> continue with found names... ")
     return {atom.GetIdx() for atom in wanted_atoms_by_names}
 
 
@@ -57,10 +56,10 @@ def get_atom_idx_by_patterns(mol: Chem.Mol, allowed_smarts: str,
     tmol = Chem.MolFromSmarts(allowed_smarts)
     match_allowed = mol.GetSubstructMatches(tmol)
     if not match_allowed:
-        logging.warning(f"Molecule doesn't contain allowed_smarts: {allowed_smarts} -> no pattern-based action will be made. ")
+        logger.warning(f"Molecule doesn't contain allowed_smarts: {allowed_smarts} -> no pattern-based action will be made. ")
         return set()
     if len(match_allowed) > 1 and not allow_multiple: 
-        logging.warning(f"Molecule contain multiple copies of allowed_smarts: {allowed_smarts} -> no pattern-based action will be made. ")
+        logger.warning(f"Molecule contain multiple copies of allowed_smarts: {allowed_smarts} -> no pattern-based action will be made. ")
         return set()
     if len(match_allowed) > 1 and allow_multiple:
         match_allowed = {item for sublist in match_allowed for item in sublist}
@@ -72,7 +71,7 @@ def get_atom_idx_by_patterns(mol: Chem.Mol, allowed_smarts: str,
         lmol = Chem.MolFromSmarts(wanted_smarts)
         match_wanted = mol.GetSubstructMatches(lmol)
         if not match_wanted:
-            logging.warning(f"Molecule doesn't contain wanted_smarts: {wanted_smarts} -> continue with next pattern... ")
+            logger.warning(f"Molecule doesn't contain wanted_smarts: {wanted_smarts} -> continue with next pattern... ")
             continue
         for match_copy in match_wanted:
             match_in_copy = (idx for idx in match_copy if match_copy.index(idx) in wanted_smarts_loc[wanted_smarts])
@@ -110,7 +109,7 @@ def embed(mol: Chem.Mol, allowed_smarts: str,
         leaving_atoms_idx.update(atom.GetIdx() for atom in leaving_Hs)
 
     if not leaving_atoms_idx:
-        logging.warning(f"No matched atoms to delete -> embed returning original mol...")
+        logger.warning(f"No matched atoms to delete -> embed returning original mol...")
         return mol
     
     rwmol = Chem.RWMol(mol)
@@ -140,7 +139,7 @@ def cap(mol: Chem.Mol, allowed_smarts: str,
         capping_atoms_idx.update(get_atom_idx_by_patterns(mol, allowed_smarts, capping_smarts_loc, allow_multiple = True))
 
     if not capping_atoms_idx:
-        logging.warning(f"No matched atoms to cap -> cap returning original mol...")
+        logger.warning(f"No matched atoms to cap -> cap returning original mol...")
         return mol
     
     def get_max_Hid(mol: Chem.Mol) -> int:
@@ -160,7 +159,7 @@ def cap(mol: Chem.Mol, allowed_smarts: str,
             parent_atom.SetFormalCharge(parent_atom.GetFormalCharge() + 1)
         needed_Hs = parent_atom.GetNumImplicitHs()
         if needed_Hs == 0:
-            logging.warning(f"Atom # {atom_idx} ({parent_atom.GetProp('atom_id')}) in mol doesn't have implicit Hs -> continue with next atom... ")
+            logger.warning(f"Atom # {atom_idx} ({parent_atom.GetProp('atom_id')}) in mol doesn't have implicit Hs -> continue with next atom... ")
         else:
             new_atom = Chem.Atom("H")
             new_atom.SetProp('atom_id', f"H{new_Hid}")
@@ -187,7 +186,7 @@ def deprotonate(mol: Chem.Mol, acidic_proton_loc: dict[str, int] = None) -> Chem
         acidic_protons_idx.update(match[idx] for match in mol.GetSubstructMatches(qmol))
     
     if not acidic_protons_idx:
-        logging.warning(f"Molecule doesn't contain matching atoms for acidic_proton_loc:" + 
+        logger.warning(f"Molecule doesn't contain matching atoms for acidic_proton_loc:" + 
                         f"{acidic_proton_loc}" + 
                         f"-> deprotonate returning original mol... ")
         return mol
@@ -231,8 +230,8 @@ def recharge(rwmol: Chem.RWMol) -> Chem.RWMol:
         nonmetal_coord_atoms = set(atom for v_set in metal_to_nonmetal_neighbors.values() for atom in v_set)
         #if 1:
         if any(atom.GetFormalCharge() == 0 for atom in metal_atoms): 
-            logging.warning(f"Molecule contains metal with unspecified charge state -> charging nonmetal coordinated atoms...")
-            logging.warning(f"All metals will be neutralized and the nonmetal coordinated atoms will be charged according to their explicit valence. ")
+            logger.warning(f"Molecule contains metal with unspecified charge state -> charging nonmetal coordinated atoms...")
+            logger.warning(f"All metals will be neutralized and the nonmetal coordinated atoms will be charged according to their explicit valence. ")
             for atom in metal_atoms: 
                 atom.SetFormalCharge(0)
             for atom in nonmetal_coord_atoms: 
@@ -243,8 +242,8 @@ def recharge(rwmol: Chem.RWMol) -> Chem.RWMol:
         # -> ionize (break bonds w/) and charge down nonmetal coordinated atoms
         # (metal ox state will be from input charge state)
         else: 
-            logging.warning(f"Molecule contains metal specified charge state -> ionizing metal-nonmetal coordinate bonds...")
-            logging.warning(f"All metal-nonmetal coordinate bonds will be polarized. ")
+            logger.warning(f"Molecule contains metal specified charge state -> ionizing metal-nonmetal coordinate bonds...")
+            logger.warning(f"All metal-nonmetal coordinate bonds will be polarized. ")
             metal_bonds = {bond.GetIdx(): (bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()) 
                                for metal in metal_atoms for bond in metal.GetBonds()}
 
@@ -262,7 +261,7 @@ def recharge(rwmol: Chem.RWMol) -> Chem.RWMol:
                     metal.SetFormalCharge(metal.GetFormalCharge() - 1)
                     nei.SetFormalCharge(nei.GetFormalCharge() + 1)
 
-        logging.warning(f"Total charge of the molecule after recharging: {sum(atom.GetFormalCharge() for atom in rwmol.GetAtoms())}")
+        logger.warning(f"Total charge of the molecule after recharging: {sum(atom.GetFormalCharge() for atom in rwmol.GetAtoms())}")
 
     return rwmol
 
@@ -309,27 +308,25 @@ def get_pretty_smiles(smi: str) -> str:
             smi = smi.replace(f"[{content}]", f"{H_stripped}" if 'H' in content else f"{content}")
     return smi
 
-
 class ChemicalComponent_LoggingControler:
 
     def __init__(self):
-        self.logger = logging.getLogger('ChemicalComponent')
-        self.original_level = self.logger.level
+        self.original_level = logger.level
         self.rdkit_logger = RDLogger.logger()
         self.default_rdkit_level = RDLogger.WARNING
+        self.handler = None
 
     def __enter__(self):
         self.rdkit_logger.setLevel(RDLogger.CRITICAL)
-        self.logger.setLevel(logging.WARNING)
-        handler = logging.StreamHandler(sys.stdout)
-        self.logger.addHandler(handler)
+        logger.setLevel(logging.WARNING)
+        self.handler = logging.StreamHandler(sys.stdout)
+        logger.addHandler(self.handler)
         return self
     
     def __exit__(self, exc_type, exc_value, traceback):
         self.rdkit_logger.setLevel(self.default_rdkit_level)
-        self.logger.setLevel(self.original_level)
-        for handler in self.logger.handlers:
-            self.logger.removeHandler(handler)
+        logger.setLevel(self.original_level)
+        logger.removeHandler(self.handler)
 
 
 class ChemicalComponent:
@@ -385,7 +382,7 @@ class ChemicalComponent:
 
         # Check if rwmol contains unexpected elements
         if mol_contains_unexpected_element(rwmol):
-            logging.warning(f"Molecule contains unexpected elements -> template for {resname} will be None. ")
+            logger.warning(f"Molecule contains unexpected elements -> template for {resname} will be None. ")
             return None
 
         # Map atom_id (atom names) with rdkit idx
@@ -427,20 +424,20 @@ class ChemicalComponent:
         try:
             rwmol = recharge(rwmol)
         except Exception as e:
-            logging.error(f"Failed to recharge rdkitmol. Error: {e} -> template for {resname} will be None. ")
+            logger.error(f"Failed to recharge rdkitmol. Error: {e} -> template for {resname} will be None. ")
             return None
 
         # Finish eidting mol 
         try:    
             rwmol.UpdatePropertyCache()
         except Exception as e:
-            logging.error(f"Failed to create rdkitmol from cif. Error: {e} -> template for {resname} will be None. ")
+            logger.error(f"Failed to create rdkitmol from cif. Error: {e} -> template for {resname} will be None. ")
             return None
         
         # Check implicit Hs
         total_implicit_hydrogens = sum(atom.GetNumImplicitHs() for atom in rwmol.GetAtoms())
         if total_implicit_hydrogens > 0:
-            logging.error(f"rdkitmol from cif has implicit hydrogens. -> template for {resname} will be None. ")
+            logger.error(f"rdkitmol from cif has implicit hydrogens. -> template for {resname} will be None. ")
             return None
 
         rdkit_mol = rwmol.GetMol()
@@ -485,9 +482,9 @@ class ChemicalComponent:
                                                 wanted_smarts_loc = {pattern: {0}})
             atoms_in_mol = [atom for atom in self.rdkit_mol.GetAtoms()]
             if not atom_idx:
-                logging.warning(f"Molecule doesn't contain pattern: {pattern} -> linker label for {pattern_to_label_mapping[pattern]} will not be made. ")
+                logger.warning(f"Molecule doesn't contain pattern: {pattern} -> linker label for {pattern_to_label_mapping[pattern]} will not be made. ")
             elif len(atom_idx) > 1:
-                logging.warning(f"Molecule contain multiple copies of pattern: {pattern} -> linker label for {pattern_to_label_mapping[pattern]} will not be made. ")
+                logger.warning(f"Molecule contain multiple copies of pattern: {pattern} -> linker label for {pattern_to_label_mapping[pattern]} will not be made. ")
             else:
                 atom_idx = next(iter(atom_idx))
                 name = atoms_in_mol[atom_idx].GetProp('atom_id')
@@ -592,7 +589,7 @@ def fetch_from_pdb(resname: str, max_retries = 5, backoff_factor = 2) -> str:
         try:
             with urllib.request.urlopen(url) as response:
                 content = response.read()
-            logging.info(f"File downloaded successfully: {file_path}")
+            logger.info(f"File downloaded successfully: {file_path}")
             with tempfile.NamedTemporaryFile(delete=False, suffix=".cif") as temp_file:
                 temp_file.write(content)
             atexit.register(
@@ -607,7 +604,7 @@ def fetch_from_pdb(resname: str, max_retries = 5, backoff_factor = 2) -> str:
                 raise RuntimeError(f"Ligand {resname} not available from rcsb.org") from e
             elif retry < max_retries - 1: 
                 wait_time = backoff_factor ** retry  
-                logging.info(f"Download failed for {resname}. Error: {e}. Retrying in {wait_time} seconds...")
+                logger.info(f"Download failed for {resname}. Error: {e}. Retrying in {wait_time} seconds...")
                 time.sleep(wait_time)
             else:
                 err = f"Max retries reached. Could not download CIF file for {resname}. Error: {e}"
@@ -690,19 +687,19 @@ def build_linked_CCs(basename: str, AA: bool = False, NA: bool = False,
                     "_5": ({"[O][PX4](=O)([O])[OX2][CX4]": {0,1,2,3}, "[CX4]1[OX2][CX4][CX4][CX4]1[OX2][H]": {6}}, {"[OX2][CX4][CX4]1[OX2][CX4][CX4][CX4]1[OX2]": {0}}), # 5' end nucleoside (canonical X5 in Amber)
                 }
         elif embed_allowed_smarts is None:
-           logging.warning(f"Unspecified embed_allowed_smarts for molecule -> no templates will be made. ")
+           logger.warning(f"Unspecified embed_allowed_smarts for molecule -> no templates will be made. ")
            return None
         
         editable = cc_from_cif.rdkit_mol.GetSubstructMatch(Chem.MolFromSmarts(embed_allowed_smarts))
         if not editable:
-            logging.warning(f"Molecule doesn't contain embed_allowed_smarts: {embed_allowed_smarts} -> no templates will be made. ")
+            logger.warning(f"Molecule doesn't contain embed_allowed_smarts: {embed_allowed_smarts} -> no templates will be made. ")
             return None
 
         cc_variants = []
         for suffix in variant_dict:
             cc = copy.deepcopy(cc_from_cif)
             cc.resname += suffix
-            logging.info(f"*** using CCD residue {basename} to construct {cc.resname} ***")
+            logger.info(f"*** using CCD residue {basename} to construct {cc.resname} ***")
 
             cc = (
                 cc
@@ -711,7 +708,7 @@ def build_linked_CCs(basename: str, AA: bool = False, NA: bool = False,
                             leaving_smarts_loc = variant_dict[suffix][0])
                 )
             if len(rdmolops.GetMolFrags(cc.rdkit_mol))>1:
-                logging.warning(f"Molecule breaks into fragments during the deleterious editing of {cc.resname} -> skipping the vaiant... ")
+                logger.warning(f"Molecule breaks into fragments during the deleterious editing of {cc.resname} -> skipping the vaiant... ")
                 continue
 
             cc = (
@@ -727,16 +724,16 @@ def build_linked_CCs(basename: str, AA: bool = False, NA: bool = False,
                 cc.ResidueTemplate_check()
             except Exception as e:
                 err = f"Template {cc.resname} Failed to pass ResidueTemplate check. Error: {e}"
-                logging.error(err)
+                logger.error(err)
                 continue
             
             # Check redundancy
             if any(cc == other_variant for other_variant in cc_variants):
-                logging.error(f"Template Failed to pass redundancy check -> skipping the template... ")
+                logger.error(f"Template Failed to pass redundancy check -> skipping the template... ")
                 continue
 
             cc_variants.append(cc)
-            logging.info(f"*** finish making {cc.resname} ***")
+            logger.info(f"*** finish making {cc.resname} ***")
     return cc_variants
 
 
