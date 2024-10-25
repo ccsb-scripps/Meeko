@@ -1689,7 +1689,7 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
                     ok_charges.insert(i, 0.0)
                 nr_rm = len(idx_rm_to_formal_charge)
                 nr_added_h = copy_mol.GetNumAtoms() - self.mol.GetNumAtoms() + nr_rm
-                ok_charges = ok_charges[:-nr_added_h]
+                ok_charges = ok_charges[:len(ok_charges)-nr_added_h]
                 # print(f"{nr_added_h=}")
                 # print(f"{nr_rm=}")
                 # print(f"{idx_rm_to_formal_charge=}")
