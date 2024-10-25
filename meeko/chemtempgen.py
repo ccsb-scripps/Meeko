@@ -689,9 +689,12 @@ def build_linked_CCs(basename: str, AA: bool = False, NA: bool = False,
                     "_5p": ({"[CX4]1[OX2][CX4][CX4][CX4]1[OX2][H]": {6}}, None), # 5' end nucleotide (extra phosphate than canonical X5)
                     "_5": ({"[O][PX4](=O)([O])[OX2][CX4]": {0,1,2,3}, "[CX4]1[OX2][CX4][CX4][CX4]1[OX2][H]": {6}}, {"[OX2][CX4][CX4]1[OX2][CX4][CX4][CX4]1[OX2]": {0}}), # 5' end nucleoside (canonical X5 in Amber)
                 }
-        if embed_allowed_smarts is not None:
-            editable = cc_from_cif.rdkit_mol.GetSubstructMatch(Chem.MolFromSmarts(embed_allowed_smarts))
-        if embed_allowed_smarts is None or not editable:
+        elif embed_allowed_smarts is None:
+           logging.warning(f"Unspecified embed_allowed_smarts for molecule -> no templates will be made. ")
+           return None
+        
+        editable = cc_from_cif.rdkit_mol.GetSubstructMatch(Chem.MolFromSmarts(embed_allowed_smarts))
+        if not editable:
             logging.warning(f"Molecule doesn't contain embed_allowed_smarts: {embed_allowed_smarts} -> no templates will be made. ")
             return None
 
