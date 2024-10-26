@@ -740,15 +740,6 @@ class LinkedRDKitChorizo:
                     f"Residue IDs in set_template not found: {missing} {raw_input_mols.keys()}"
                 )
 
-        # currently allowing only one bond per residue pair
-        if any([len(v) > 1 for k, v in bonds.items()]):
-            msg = "got more than one bond between some residue pairs:"
-            for key, value in bonds.items():
-                if len(value) > 1:
-                    msg += f" {key}"
-            raise ValueError(msg)
-        bonds = {k: v[0] for k, v in bonds.items()}
-
         # check if input assigned residue name in residue_templates
         err = ""
         supported_resnames = residue_templates.keys() | ambiguous.keys()
@@ -788,7 +779,7 @@ class LinkedRDKitChorizo:
             all_unknown_res = unknown_res_from_input.copy()
             all_unknown_res.update(unknown_res_from_assign)
 
-            bonded_unknown_res = {res_id: all_unknown_res[res_id] for res_id in all_unknown_res if any(tup for tup in bonds if res_id in tup)}
+            bonded_unknown_res = {res_id: all_unknown_res[res_id] for res_id in all_unknown_res if res_id in bonds}
             
             unbound_unknown_res = all_unknown_res.copy()
             for key in bonded_unknown_res:
@@ -844,14 +835,14 @@ class LinkedRDKitChorizo:
         )
 
         _bonds = {}
-        for key, bond in bonds.items():
+        for key, bond_list in bonds.items():
             res1 = self.residues[key[0]]
             res2 = self.residues[key[1]]
             if res1.rdkit_mol is None or res2.rdkit_mol is None:
                 continue
             invmap1 = {j: i for i, j in res1.mapidx_to_raw.items()}
             invmap2 = {j: i for i, j in res2.mapidx_to_raw.items()}
-            _bonds[key] = (invmap1[bond[0]], invmap2[bond[1]])
+            _bonds[key] = [(invmap1[b[0]], invmap2[b[1]]) for b in bond_list]
         bonds = _bonds
 
         # padding may seem overkill but we had to run a reaction anyway for h_coord_from_dipep
@@ -1315,11 +1306,12 @@ class LinkedRDKitChorizo:
             if blunt_ends is None:
                 blunt_ends = []
             raw_atoms_with_bonds = []
-            for (r1, r2), (i, j) in bonds.items():
-                if r1 == residue_key:
-                    raw_atoms_with_bonds.append(i)
-                if r2 == residue_key:
-                    raw_atoms_with_bonds.append(j)
+            for (r1, r2), bond_list in bonds.items():
+                for i, j in bond_list:
+                    if r1 == residue_key:
+                        raw_atoms_with_bonds.append(i)
+                    if r2 == residue_key:
+                        raw_atoms_with_bonds.append(j)
 
             all_stats = {
                 "heavy_missing": [],
@@ -1481,10 +1473,16 @@ class LinkedRDKitChorizo:
                 atom.GetIdx(): atom.GetIdx() for atom in padded_mol.GetAtoms()
             }
             for atom_index, link_label in residue.link_labels.items():
-                adjacent_rid  = None
+                adjacent_rid = None
                 adjacent_mol = None
                 adjacent_atom_index = None
-                for (r1_id, r2_id), (i1, i2) in bonds.items():
+                for (r1_id, r2_id), bond_list in bonds.items():
+                    # TODO the second and subsequent bonds between a pair of
+                    # residues will not update the padding atoms with the
+                    # positions of the adjacent residues. This is OK, the same
+                    # happens for blunt residues, because the adjacent residue
+                    # is missing.
+                    i1, i2 = bond_list[0]
                     if r1_id == residue_id and i1 == atom_index:
                         adjacent_rid = r2_id
                         adjacent_atom_index = i2
