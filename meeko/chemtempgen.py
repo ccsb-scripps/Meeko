@@ -741,7 +741,7 @@ def build_linked_CCs(basename: str, embed_allowed_smarts: str = None,
             NA = cc_from_cif.rdkit_mol.GetSubstructMatch(Chem.MolFromSmarts(NA_recipe.embed_allowed_smarts))
 
             if not AA and not NA: 
-                logger.warning(f"Unspecified embed_allowed_smarts for molecule. -> no templates will be made. ")
+                logger.warning(f"Molecule doesn't contain the standard backbone of nucleotides or amino acids. -> no templates will be made. ")
                 return None
             
         else: 
