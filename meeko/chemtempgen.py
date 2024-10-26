@@ -9,28 +9,7 @@ import re
 import atexit
 import os
 
-covalent_radius = {  # from wikipedia
-    1: 0.31,
-    5: 0.84,
-    6: 0.76,
-    7: 0.71,
-    8: 0.66,
-    9: 0.57,
-    12: 0.00,  # hack to avoid bonds with metals
-    14: 1.11,
-    15: 1.07,
-    16: 1.05,
-    17: 1.02,
-    # 19: 2.03,
-    20: 0.00,
-    # 24: 1.39,
-    25: 0.00,  # hack to avoid bonds with metals
-    26: 0.00,
-    30: 0.00,  # hack to avoid bonds with metals
-    # 34: 1.20,
-    35: 1.20,
-    53: 1.39,
-}
+from .utils.rdkitutils import covalent_radius
 
 from rdkit import Chem
 from rdkit.Chem import rdmolops
@@ -771,6 +750,13 @@ def build_linked_CCs(basename: str, embed_allowed_smarts: str = None,
             if not editable:
                 logger.warning(f"Molecule doesn't contain embed_allowed_smarts: {embed_allowed_smarts} -> no templates will be made. ")
                 return None
+            
+            if not any(item is None for item in (cap_allowed_smarts, pattern_to_label_mapping_standard, variant_dict)):
+                return add_variants(cc_orig = cc_from_cif, cc_list = [], 
+                            embed_allowed_smarts = embed_allowed_smarts, 
+                            cap_allowed_smarts = cap_allowed_smarts, cap_protonate = cap_protonate, 
+                            pattern_to_label_mapping_standard = pattern_to_label_mapping_standard, 
+                            variant_dict = variant_dict)
         
         cc_variants = []
         if AA: 
