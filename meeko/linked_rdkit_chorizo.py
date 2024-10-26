@@ -779,8 +779,9 @@ class LinkedRDKitChorizo:
             all_unknown_res = unknown_res_from_input.copy()
             all_unknown_res.update(unknown_res_from_assign)
 
-            bonded_unknown_res = {res_id: all_unknown_res[res_id] for res_id in all_unknown_res if res_id in bonds}
-            
+            bonded_unknown_res = {res_id: all_unknown_res[res_id] for res_id in all_unknown_res 
+                                  if any(res_id in respair for respair in bonds)}
+
             unbound_unknown_res = all_unknown_res.copy()
             for key in bonded_unknown_res:
                 unbound_unknown_res.pop(key, None) 
