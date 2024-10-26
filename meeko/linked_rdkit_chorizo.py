@@ -1118,7 +1118,7 @@ class LinkedRDKitChorizo:
                 fail_log[-1].append("heavy missing")
             if result["heavy"]["excess"] > 0:
                 fail_log[-1].append("heavy excess")
-            if result["H"]["excess"]:
+            if len(result["H"]["excess"]) > 0:
                 fail_log[-1].append("H excess")
             if len(result["bonds"]["excess"]) > 0:
                 fail_log[-1].append("bonds excess")
@@ -1251,25 +1251,41 @@ class LinkedRDKitChorizo:
                 all_stats["bonded_atoms_excess"].append(bonded_atoms_excess)
 
             passed = []
-            for i in range(len(all_stats["H_excess"])):
+
+            embedded_indices = [index for index, template in enumerate(candidate_templates) if len(template.link_labels) >= 2]
+            # 1st round
+            for i in embedded_indices:
                 if (
                     all_stats["heavy_missing"][i]
                     or all_stats["heavy_excess"][i]
-                    or (all_stats["H_excess"][i] and not excess_H_ok)
-                    or len(all_stats["bonded_atoms_missing"][i])
+                    or all_stats["H_excess"][i]
+                    or all_stats["bonded_atoms_missing"][i]
                     or len(all_stats["bonded_atoms_excess"][i])
                 ):
                     continue
                 passed.append(i)
 
-            if len(passed) == 0: # forgive residues neaby a gap
-                for i in range(len(all_stats["H_excess"])):
+            # 2nd round
+            if len(passed) == 0: 
+                for i in embedded_indices:
                     if (
                         all_stats["heavy_missing"][i]
                         or all_stats["heavy_excess"][i]
-                        or not set(all_stats["H_excess"][i]) <= set(candidate_templates[i].link_labels)
-                        #or (all_stats["H_excess"][i] and not excess_H_ok)
-                        #or len(all_stats["bonded_atoms_missing"][i])
+                        or (not set(all_stats["H_excess"][i]) <= set(candidate_templates[i].link_labels) and not excess_H_ok)
+                        or not all_stats["bonded_atoms_missing"][i] <= set(candidate_templates[i].link_labels)
+                        or len(all_stats["bonded_atoms_excess"][i])
+                    ):
+                        continue
+                    passed.append(i)
+
+            # 3rd round
+            if len(passed) == 0: 
+                for i in range(len(candidate_templates)):
+                    if (
+                        all_stats["heavy_missing"][i]
+                        or all_stats["heavy_excess"][i]
+                        or (all_stats["H_excess"][i] and not excess_H_ok)
+                        or len(all_stats["bonded_atoms_missing"][i])
                         or len(all_stats["bonded_atoms_excess"][i])
                     ):
                         continue
