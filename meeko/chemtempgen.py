@@ -228,7 +228,7 @@ def recharge(rwmol: Chem.RWMol) -> Chem.RWMol:
         metal_to_nonmetal_neighbors = {metal: {atom for atom in metal.GetNeighbors() 
                                                if atom.GetAtomicNum() not in metal_AtomicNums} for metal in metal_atoms}
         nonmetal_coord_atoms = set(atom for v_set in metal_to_nonmetal_neighbors.values() for atom in v_set)
-        #if 1:
+
         if any(atom.GetFormalCharge() == 0 for atom in metal_atoms): 
             logger.warning(f"Molecule contains metal with unspecified charge state -> charging nonmetal coordinated atoms...")
             logger.warning(f"All metals will be neutralized and the nonmetal coordinated atoms will be charged according to their explicit valence. ")
@@ -387,15 +387,6 @@ class ChemicalComponent:
 
         # Map atom_id (atom names) with rdkit idx
         name_to_idx_mapping = {atom.GetProp('atom_id'): idx for (idx, atom) in enumerate(rwmol.GetAtoms())}
-
-        # Populate bond table
-        bond_category = '_chem_comp_bond.'
-        bond_attributes = ['atom_id_1', # atom name 1
-                           'atom_id_2', # atom name 2
-                           'value_order', # bond order
-                           ]
-        bond_table = block.find(bond_category, bond_attributes)
-        bond_cols = {attr: bond_table.find_column(f"{bond_category}{attr}") for attr in bond_attributes}
 
         # Populate bond table
         bond_category = '_chem_comp_bond.'
