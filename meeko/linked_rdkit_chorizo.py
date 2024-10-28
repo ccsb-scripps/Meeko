@@ -787,8 +787,8 @@ class LinkedRDKitChorizo:
                 unbound_unknown_res.pop(key, None) 
 
             if unbound_unknown_res: 
-                try: 
-                    for resname in set(unbound_unknown_res.values()): 
+                for resname in set(unbound_unknown_res.values()): 
+                    try: 
                         cc = build_noncovalent_CC(resname)
                         fetch_template_dict = json.loads(export_chem_templates_to_json([cc]))['residue_templates'][cc.resname]
                         residue_templates.update({resname: ResidueTemplate(
@@ -796,8 +796,9 @@ class LinkedRDKitChorizo:
                                                     atom_names = fetch_template_dict['atom_name'],
                                                     link_labels = fetch_template_dict['link_labels'])})
                         ambiguous[resname] = [cc.resname]
-                except Exception as e: 
-                    raise ChorizoCreationError(str(e))
+                    except Exception as e: 
+                        print(f"Failed building template from CCD for {resname=}")
+                        raise ChorizoCreationError(str(e))
 
             if bonded_unknown_res: 
                 failed_build = set()
