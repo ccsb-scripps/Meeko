@@ -105,7 +105,7 @@ def embed(mol: Chem.Mol, allowed_smarts: str,
 
     if leaving_atoms_idx and alsoHs:
         atoms_in_mol = [atom for atom in mol.GetAtoms()]
-        leaving_Hs = (ne for atom_idx in leaving_atoms_idx for ne in atoms_in_mol[atom_idx].GetNeighbors() if ne.GetAtomicNum() == 1)
+        leaving_Hs = (ne for atom_idx in leaving_atoms_idx.copy() for ne in atoms_in_mol[atom_idx].GetNeighbors() if ne.GetAtomicNum() == 1)
         leaving_atoms_idx.update(atom.GetIdx() for atom in leaving_Hs)
 
     if not leaving_atoms_idx:
