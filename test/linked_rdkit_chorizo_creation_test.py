@@ -25,6 +25,7 @@ loop_with_disulfide = pkgdir / "test/linked_rdkit_chorizo_data/loop_with_disulfi
 insertion_code = pkgdir / "test/linked_rdkit_chorizo_data/1igy_B_82-83_has-icode.pdb"
 non_sequential_res = pkgdir / "test/linked_rdkit_chorizo_data/non-sequential-res.pdb"
 has_altloc = pkgdir / "test/linked_rdkit_chorizo_data/has-altloc.pdb"
+disulfide_adjacent = pkgdir / "test/linked_rdkit_chorizo_data/disulfide_bridge_in_adjacent_residues.pdb"
 
 
 # TODO: add checks for untested chorizo fields (e.g. input options not indicated here)
@@ -403,3 +404,15 @@ def test_altloc():
         if name == "OG":
             break
     assert abs(xyz[index][0] - 12.346) < 0.001
+
+def test_disulfide_adjacent():
+    """ disulfide bridge in adjacent residues broke a version of the code
+        that assumed only one bond between each pair of residues
+    """
+    with open(disulfide_adjacent, "r") as f:
+        pdb_text = f.read()
+    chorizo = LinkedRDKitChorizo.from_pdb_string(
+        pdb_text,
+        chem_templates,
+        mk_prep,
+    )
