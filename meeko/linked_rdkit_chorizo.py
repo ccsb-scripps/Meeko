@@ -2333,7 +2333,13 @@ class ResidueTemplate:
         ps = Chem.SmilesParserParams()
         ps.removeHs = False
         mol = Chem.MolFromSmiles(smiles, ps)
-        self.check(mol, link_labels, atom_names)
+        try:
+            self.check(mol, link_labels, atom_names)
+        except Exception as e:
+            print(smiles, link_labels, atom_names)
+            print(e)
+            import sys
+            sys.exit(2)
         self.mol = mol
         self.link_labels = link_labels
         self.atom_names = atom_names
