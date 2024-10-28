@@ -25,6 +25,9 @@ loop_with_disulfide = pkgdir / "test/linked_rdkit_chorizo_data/loop_with_disulfi
 insertion_code = pkgdir / "test/linked_rdkit_chorizo_data/1igy_B_82-83_has-icode.pdb"
 non_sequential_res = pkgdir / "test/linked_rdkit_chorizo_data/non-sequential-res.pdb"
 has_altloc = pkgdir / "test/linked_rdkit_chorizo_data/has-altloc.pdb"
+has_lys = pkgdir / "test/linked_rdkit_chorizo_data/has-lys.pdb"
+has_lyn = pkgdir / "test/linked_rdkit_chorizo_data/has-lyn.pdb"
+has_lyn_resname_lys = pkgdir / "test/linked_rdkit_chorizo_data/has-lyn-resname-lys.pdb"
 
 
 # TODO: add checks for untested chorizo fields (e.g. input options not indicated here)
@@ -274,7 +277,8 @@ def test_disulfides():
             blunt_ends=[("B:22", 0), ("B:22", 2), ("B:95", 0), ("B:95", 2)],
         )
 
-    # remove bond and expect CYS between residues (currently, max one bond between each pair of residues)
+    # remove bond and expect CYS between residues
+    # currently, all bonds between a pair of residues will be removed
     chorizo_thiols = LinkedRDKitChorizo.from_pdb_string(
         pdb_text,
         chem_templates,
@@ -403,3 +407,48 @@ def test_altloc():
         if name == "OG":
             break
     assert abs(xyz[index][0] - 12.346) < 0.001
+
+def test_set_template_LYN():
+    """the input is fully protonated NH3+"""
+    with open(loop_with_disulfide) as f:
+        pdb_string = f.read()
+    chorizo = LinkedRDKitChorizo.from_pdb_string(
+        pdb_string,
+        chem_templates,
+        mk_prep,
+        set_template={":16": "LYN"},
+    )
+    res16 = chorizo.residues[":16"]
+    res17 = chorizo.residues[":17"]
+    assert res17.residue_template_key == "CYX"
+    assert res16.residue_template_key == "LYN"
+    chrg16 = sum([a.charge for a in res16.molsetup.atoms if not a.is_ignore])
+    assert abs(chrg16) < 1e-6
+
+def test_weird_zero_coord():
+    with open(has_lys) as f:
+        pdbstr = f.read()
+    chorizo = LinkedRDKitChorizo.from_pdb_string(pdbstr, chem_templates, mk_prep)
+    for _, res in chorizo.residues.items():
+        for atom in res.molsetup.atoms:
+            x = float(atom.coord[0])
+            y = float(atom.coord[1])
+            z = float(atom.coord[2])
+            assert x**2 + y**2 + z**2 > 1e-6
+
+def test_auto_LYN():
+    with open(has_lyn) as f:
+        pdbstr = f.read()
+    chorizo = LinkedRDKitChorizo.from_pdb_string(pdbstr, chem_templates, mk_prep)
+    assert chorizo.residues[":15"].residue_template_key == "LEU"
+    assert chorizo.residues[":16"].residue_template_key == "LYN"
+    assert chorizo.residues[":17"].residue_template_key == "CYX"
+    with open(has_lys) as f:
+        pdbstr = f.read()
+    chorizo = LinkedRDKitChorizo.from_pdb_string(pdbstr, chem_templates, mk_prep)
+    assert chorizo.residues[":16"].residue_template_key == "LYS"
+    assert chorizo.residues[":17"].residue_template_key == "CYX"
+    with open(has_lyn_resname_lys) as f:
+        pdbstr = f.read()
+    chorizo = LinkedRDKitChorizo.from_pdb_string(pdbstr, chem_templates, mk_prep)
+    assert chorizo.residues[":16"].residue_template_key == "LYS"

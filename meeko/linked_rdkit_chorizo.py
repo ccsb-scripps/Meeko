@@ -822,10 +822,17 @@ class LinkedRDKitChorizo:
         bonds = find_inter_mols_bonds(raw_input_mols)
         if bonds_to_delete is not None:
             for res1, res2 in bonds_to_delete:
+                popped = ()
                 if (res1, res2) in bonds:
-                    bonds.pop((res1, res2))
+                    popped = bonds.pop((res1, res2))
                 elif (res2, res1) in bonds:
-                    bonds.pop((res2, res1))
+                    popped = bonds.pop((res2, res1))
+                if len(popped) >= 2:
+                    msg = (
+                        "can't delete bonds for residue pairs that have more"
+                        " than one bond between them"
+                    )
+                    raise NotImplementedError(msg)
         chorizo = cls(
             raw_input_mols,
             bonds,
@@ -909,10 +916,17 @@ class LinkedRDKitChorizo:
         bonds = find_inter_mols_bonds(raw_input_mols)
         if bonds_to_delete is not None:
             for res1, res2 in bonds_to_delete:
+                popped = ()
                 if (res1, res2) in bonds:
-                    bonds.pop((res1, res2))
+                    popped = bonds.pop((res1, res2))
                 elif (res2, res1) in bonds:
-                    bonds.pop((res2, res1))
+                    popped = bonds.pop((res2, res1))
+                if len(popped) >= 2:
+                    msg = (
+                        "can't delete bonds for residue pairs that have more"
+                        " than one bond between them"
+                    )
+                    raise NotImplementedError(msg)
         chorizo = cls(
             raw_input_mols,
             bonds,
