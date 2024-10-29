@@ -275,7 +275,6 @@ naming scheme for atoms and residues, e.g., `HIE` or `HID`
 instead of `HIS`.
 
 ### 2. Prepare protein pdbqt
-Here, `wk.pdb` was written by waterkit.
 Here, `wk.pdb` was written by waterkit. The example below will center a gridbox of specified size on the given reactive residue.
 
 ```console
