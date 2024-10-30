@@ -1,3 +1,5 @@
+.. _py_build_temp:
+
 Building residue templates in Python
 ===================================
 
@@ -109,6 +111,7 @@ As we may see from the picture above, in order to forge ``CRO`` into a linking e
    :width: 100%
    :align: center
 
+Looking at the structure of the edited picture. 
 
 .. code-block:: python
 
