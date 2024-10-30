@@ -69,5 +69,12 @@ Meeko superseeds the preparation scripts from MGLTools. List advantages here (**
    cli_export_result
    In Python <py_export_result>
 
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+   :caption: Building residue templates
+
+   In Python <py_build_temp>
+
 
 
