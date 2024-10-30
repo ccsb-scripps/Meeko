@@ -9,7 +9,7 @@ import re
 import atexit
 import os
 
-from .utils.rdkitutils import covalent_radius
+from meeko.utils.rdkitutils import covalent_radius
 
 from rdkit import Chem
 from rdkit.Chem import rdmolops
