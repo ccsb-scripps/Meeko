@@ -230,6 +230,8 @@ The expected output is:
 
 .. code-block:: bash
 
+    Molecule doesn't contain wanted_smarts: [CX3h1] -> continue with next pattern... 
+    Molecule doesn't contain pattern: [CX3h1] -> linker label for C-term will not be made. 
     ******************** New Template Built ********************
     {
         "ambiguous": {
