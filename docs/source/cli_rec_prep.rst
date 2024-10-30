@@ -1,3 +1,4 @@
+.. _cli_rec_prep:
 
 The input structure is matched against templates to
 guarantee chemical correctness and identify problems with the input structures.
