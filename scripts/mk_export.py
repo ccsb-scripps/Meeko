@@ -24,17 +24,17 @@ def cmd_lineparser():
     parser.add_argument(dest='docking_results_filename', nargs = "+",
                         help='Docking output file(s), either PDBQT \
                         file from Vina or DLG file from AD-GPU.')
-    parser.add_argument('-s', '--write_sdf', metavar='filename',
+    parser.add_argument('-s', '--write_sdf', metavar='output_SDF_filename',
                         help="defaults to input filename with suffix from --sufix")
     parser.add_argument(
         '-p',
         '--write_pdb',
-        metavar='filename',
+        metavar='output_PDB_filename',
         help="defaults to input filename with suffix from --suffix",
     )
     parser.add_argument("--suffix", default="_docked",
                         help="suffix for output filesnames that are not explicitly set")
-    parser.add_argument('-j', '--read_json', metavar='filename',
+    parser.add_argument('-j', '--read_json', metavar='input_JSON_filename',
                         help="receptor written by mk_prepare_receptor -j/--write_json")
     parser.add_argument('--all_dlg_poses', action='store_true',
                         help="write all AutoDock-GPU poses, not just cluster leads.")
