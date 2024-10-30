@@ -103,6 +103,16 @@ for filename in docking_results_filenames:
     )
     for i in failures:
         warnings.warn("molecule %d not converted to RDKit/SD File" % i)
+    if sdf_string == "": 
+        warnings.warn("sdf_string does not contain molecular data. " % i)
+        if redirect_stdout or write_pdb: 
+            pass
+        else:
+            print("Output SDF will not be created because there is no pose data for ligand. \n"
+                    + "Maybe the input poses only contain flexible sidechains and \n"
+                    + "keep_flexres_sdf is set to False. \n"
+                    + "Use -k with mk_export.py to retain the flexres and write to output SDF File. ")
+            sys.exit(2)
     if len(failures) == len(pdbqt_mol._atom_annotations["mol_index"]):
         msg = "\nCould not convert to RDKit. Maybe meeko was not used for preparing\n"
         msg += "the input PDBQT for docking, and the SMILES string is missing?\n"
