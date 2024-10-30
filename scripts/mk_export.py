@@ -104,7 +104,7 @@ for filename in docking_results_filenames:
     for i in failures:
         warnings.warn("molecule %d not converted to RDKit/SD File" % i)
     if sdf_string == "": 
-        warnings.warn("sdf_string does not contain molecular data. " % i)
+        warnings.warn("sdf_string does not contain molecular data.")
         if redirect_stdout or write_pdb: 
             pass
         else:
