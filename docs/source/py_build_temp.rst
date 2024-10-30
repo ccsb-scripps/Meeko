@@ -87,7 +87,7 @@ The created ``ChemicalComponent`` object, ``CRO_from_cif``, has a corresponding 
 
     draw_cc_mol(CRO_from_cif.rdkit_mol)
 
-.. image:: images/embedded_CRO.png
+.. image:: images/starting_CRO.png
    :alt: starting CRO
    :width: 60%
    :align: center
@@ -95,15 +95,12 @@ The created ``ChemicalComponent`` object, ``CRO_from_cif``, has a corresponding 
 As we may see from the picture above, in order to forge ``CRO`` into a linking embedded fragment in a protein, some atoms need to be removed. In this example, we will simply do so by specifying the atom names. ``make_embedded`` calls function ``embed`` on the duplicated object ``cc``, which takes ``embed_allowed_smarts`` as the editable zone and removes atoms matching the names in ``leaving_names``. Here, the ``embed_allowed_smarts`` is chosen to be the SMARTS of altered backbone in residue ``CRO``. Note that by default, ``embed`` removes associated hydrogens for convenience. Therefore, in this case, ``leaving_names = {"H2", "OXT"}`` removes atoms ``H2``, ``OXT`` as well as the bonded hydrogen, ``HXT``. The same task could be alternatively done by the equivalent SMARTS pattern. 
 
 .. code-block:: python
-    # Dupicate CRO_from_cif for editing
+
     cc = copy.deepcopy(CRO_from_cif)
 
-    # Specify the editable zone
     embed_allowed_smarts = "[NX2][CX4][CX3][NX3][CX4][CX3](=O)[OX2]"
-    # Remove atoms by names from the chemical component
     cc = cc.make_embedded(allowed_smarts = embed_allowed_smarts, leaving_names = {"H2", "OXT"})
 
-    # Draw the edited molecule
     draw_cc_mol(cc.rdkit_mol)
 
 .. image:: images/embedded_CRO.png
@@ -111,7 +108,7 @@ As we may see from the picture above, in order to forge ``CRO`` into a linking e
    :width: 60%
    :align: center
 
-Looking at the structure of the edited picture. 
+Looking at the structure of the edited picture, we will see that the unneccessary atoms have gone and the hydrogens at the broken (blunt) ends become implict, which is exactly needed to generate the Smiles string for the chemical template. Function ``make_pretty_smiles`` makes the Smiles string with all Hs explicit for the template's RDKit molecule. Last but not least, we will determin the ``link_labels`` which specifies how ``CRO`` should be connected to other residues. Here, we will use the pattern from a built-in recipe, ``AA_recipe.pattern_to_label_mapping_standard``, which also applies to all other standard amino acid residues: ``{'[NX3h1]': 'N-term', '[CX3h1]': 'C-term'}``. Opionally, we can run a ``ResidueTemplate_check`` to see potential problems with the generated template. 
 
 .. code-block:: python
 
@@ -122,6 +119,8 @@ Looking at the structure of the edited picture.
         )
     cc.ResidueTemplate_check()
     export_chem_templates_to_json([cc])
+
+``export_chem_templates_to_json`` returns a JSON string of the residue template, with the corresponding content printed to console: 
 
 .. code-block:: bash
 
@@ -140,3 +139,141 @@ Looking at the structure of the edited picture.
     }
     ************************************************************
 
+You may now wonder: What if the residue locates at the C- or N-terminal of the protein? Although this is not common for ``CRO``, we will go with it for demonstration purposes. 
+
+To make the N-terminal embedding variant of ``CRO``: 
+
+.. code-block:: python
+
+    # Duplicate and start over from the original chemical component
+    cc_N = copy.deepcopy(CRO_from_cif)
+
+    cc_N = (
+        cc_N
+        # Remove atom OXT
+        .make_embedded(allowed_smarts = embed_allowed_smarts, leaving_names = {"OXT"})
+        # Cap (protonate) atom N
+        .make_capped(allowed_smarts = embed_allowed_smarts, capping_names = {"N1"}, protonate = True)
+        # (Re)generate Smiles with all Hs explicit
+        .make_pretty_smiles()
+        # Find linker atoms
+        .make_link_labels_from_patterns(pattern_to_label_mapping = AA_recipe.pattern_to_label_mapping_standard)
+        )
+
+    cc_N.ResidueTemplate_check()
+    # In case there are already residue templates with the same parent (original) residue name
+    cc_N.resname += "_N"
+    export_chem_templates_to_json([cc_N])
+
+In the chained procedure above, we have removed ``OXT`` and protonated ``N1``, which is done by ``make_capped`` that adds hydrogen(s) to matching atom(s) with specified ``capping_names`` within the region of ``allowed_smarts``. The expected outout from ``export_chem_templates_to_json`` is: 
+
+.. code-block:: bash
+
+    Atom # 0 (N1) in mol doesn't have implicit Hs -> continue with next atom... 
+    Molecule doesn't contain wanted_smarts: [NX3h1] -> continue with next pattern... 
+    Molecule doesn't contain pattern: [NX3h1] -> linker label for N-term will not be made. 
+    ******************** New Template Built ********************
+    {
+        "ambiguous": {
+            "CRO": ["CRO_N"]
+        },
+        "residue_templates": {
+            "CRO": {
+                "smiles": "[H]OC1=C([H])C([H])=C(C([H])=C2N=C(C([H])(N([H])[H])C([H])(O[H])C([H])([H])[H])N(C([H])([H])C=O)C2=O)C([H])=C1[H]",
+                "atom_name": ["HOH", "OH", "CZ", "CE1", "HE1", "CD1", "HD1", "CG2", "CB2", "HB2", "CA2", "N2", "C1", "CA1", "HA1", "N1", "H", "H2", "CB1", "HB1", "OG1", "HOG1", "CG1", "HG11", "HG12", "HG13", "N3", "CA3", "HA31", "HA32", "C3", "O3", "C2", "O2", "CD2", "HD2", "CE2", "HE2"],
+                "link_labels": {"30": "C-term"}
+            }
+        }
+    }
+    ************************************************************
+
+To make the C-terminal embedding variant of ``CRO``: 
+
+.. code-block:: python
+
+    # Duplicate and start over from the original chemical component
+    cc_C = copy.deepcopy(CRO_from_cif)
+
+    cc_C = (
+        cc_C
+        # Deprotonate the carboxylate group
+        .make_canonical(acidic_proton_loc = {'[H][O][C](=O)': 0})
+        # Remove atom H2
+        .make_embedded(allowed_smarts = embed_allowed_smarts, leaving_names = {"H2"})
+        # (Re)generate Smiles with all Hs explicit
+        .make_pretty_smiles()
+        # Find linker atoms
+        .make_link_labels_from_patterns(pattern_to_label_mapping = AA_recipe.pattern_to_label_mapping_standard)
+        )
+
+    cc_C.ResidueTemplate_check()
+    # In case there are already residue templates with the same parent (original) residue name
+    cc_C.resname += "_C"
+    export_chem_templates_to_json([cc_C])
+
+In the chained procedure above, we have deprotonated the carboxylate group(s) and removed ``H2``. The deprotonation is done by ``make_canonical`` that deprotonates all protons specified by ``acidic_proton_loc``, which includes a SMARTS pattern and the index of the proton. ``chemtempgen.py`` also includes a constant ``acidic_proton_loc_canonical``, which is potentially useful as a universal protocol to deprotonate the acidic protons to get the canonical protonation state at near physiological pH. 
+
+.. code-block:: python
+
+    # Constants for deprotonate
+    acidic_proton_loc_canonical = {
+            # any carboxylic acid, sulfuric/sulfonic acid/ester, phosphoric/phosphinic acid/ester
+            '[H][O]['+atom+'](=O)': 0 for atom in ('CX3', 'SX4', 'SX3', 'PX4', 'PX3')
+        } | {
+            # any thio carboxylic/sulfuric acid
+            '[H][O]['+atom+'](=S)': 0 for atom in ('CX3', 'SX4')
+        } | {
+            '[H][SX2][a]': 0, # thiophenol
+        }
+
+The expected output is: 
+
+.. code-block:: bash
+
+    ******************** New Template Built ********************
+    {
+        "ambiguous": {
+            "CRO": ["CRO_C"]
+        },
+        "residue_templates": {
+            "CRO_C": {
+                "smiles": "[H]NC([H])(C1=NC(=C([H])C2=C([H])C([H])=C(O[H])C([H])=C2[H])C(=O)N1C([H])([H])C(=O)[O-])C([H])(O[H])C([H])([H])[H]",
+                "atom_name": ["H", "N1", "CA1", "HA1", "C1", "N2", "CA2", "CB2", "HB2", "CG2", "CD1", "HD1", "CE1", "HE1", "CZ", "OH", "HOH", "CE2", "HE2", "CD2", "HD2", "C2", "O2", "N3", "CA3", "HA31", "HA32", "C3", "O3", "OXT", "CB1", "HB1", "OG1", "HOG1", "CG1", "HG11", "HG12", "HG13"],
+                "link_labels": {"1": "N-term"}
+            }
+        }
+    }
+    ************************************************************
+
+If you have generated ``cc``, ``cc_N``, and ``cc_C``, you may write them all into one JSON file: 
+
+.. code-block:: python
+
+    export_chem_templates_to_json([cc, cc_N, cc_C], json_fname = "CRO_templates.json")
+
+And below is the content of ``CRO_templates.json``, which can be loaded by ``mk_prepare_receptor --add_templates CRO_templates.json`` during receptor preparation: 
+
+.. code-block:: bash
+
+    {
+        "ambiguous": {
+            "CRO": ["CRO", "CRO_N", "CRO_C"]
+        },
+        "residue_templates": {
+            "CRO": {
+                "smiles": "[H]NC([H])(C1=NC(=C([H])C2=C([H])C([H])=C(O[H])C([H])=C2[H])C(=O)N1C([H])([H])C=O)C([H])(O[H])C([H])([H])[H]",
+                "atom_name": ["H", "N1", "CA1", "HA1", "C1", "N2", "CA2", "CB2", "HB2", "CG2", "CD1", "HD1", "CE1", "HE1", "CZ", "OH", "HOH", "CE2", "HE2", "CD2", "HD2", "C2", "O2", "N3", "CA3", "HA31", "HA32", "C3", "O3", "CB1", "HB1", "OG1", "HOG1", "CG1", "HG11", "HG12", "HG13"],
+                "link_labels": {"1": "N-term", "27": "C-term"}
+            },
+            "CRO_N": {
+                "smiles": "[H]OC1=C([H])C([H])=C(C([H])=C2N=C(C([H])(N([H])[H])C([H])(O[H])C([H])([H])[H])N(C([H])([H])C=O)C2=O)C([H])=C1[H]",
+                "atom_name": ["HOH", "OH", "CZ", "CE1", "HE1", "CD1", "HD1", "CG2", "CB2", "HB2", "CA2", "N2", "C1", "CA1", "HA1", "N1", "H", "H2", "CB1", "HB1", "OG1", "HOG1", "CG1", "HG11", "HG12", "HG13", "N3", "CA3", "HA31", "HA32", "C3", "O3", "C2", "O2", "CD2", "HD2", "CE2", "HE2"],
+                "link_labels": {"30": "C-term"}
+            },
+            "CRO_C": {
+                "smiles": "[H]NC([H])(C1=NC(=C([H])C2=C([H])C([H])=C(O[H])C([H])=C2[H])C(=O)N1C([H])([H])C(=O)[O-])C([H])(O[H])C([H])([H])[H]",
+                "atom_name": ["H", "N1", "CA1", "HA1", "C1", "N2", "CA2", "CB2", "HB2", "CG2", "CD1", "HD1", "CE1", "HE1", "CZ", "OH", "HOH", "CE2", "HE2", "CD2", "HD2", "C2", "O2", "N3", "CA3", "HA31", "HA32", "C3", "O3", "OXT", "CB1", "HB1", "OG1", "HOG1", "CG1", "HG11", "HG12", "HG13"],
+                "link_labels": {"1": "N-term"}
+            }
+        }
+    }
