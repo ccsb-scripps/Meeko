@@ -1,5 +1,3 @@
-.. _cli_rec_prep:
-
 The input structure is matched against templates to
 guarantee chemical correctness and identify problems with the input structures.
 This allows the user to identify and fix problems, resulting in a molecular
@@ -75,6 +73,7 @@ It is also possible to combine the two types of usage:
 
 in which case the specified filenames have priority over the default basename.
 
+.. _templates:
 
 Templates
 ---------
