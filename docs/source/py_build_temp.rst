@@ -90,6 +90,26 @@ The created ``ChemicalComponent`` object, ``CRO_from_cif``, has a corresponding 
    :width: 100%
    :align: center
 
+As we may see from the picture above, in order to forge ``CRO`` into a linking embedded fragment in a protein, some atoms need to be removed. In this example, we will simply do so by specifying the atom names. ``make_embedded`` calls function ``embed`` on the duplicated object ``cc``, which takes ``embed_allowed_smarts`` as the editable zone and removes atoms matching the names in ``leaving_names``. Here, the ``embed_allowed_smarts`` is chosen to be the SMARTS of altered backbone in residue ``CRO``. Note that by default, ``embed`` removes associated hydrogens for convenience. Therefore, in this case, ``leaving_names = {"H2", "OXT"}`` removes atoms ``H2``, ``OXT`` and the associated hydrogen, ``HXT``. The same task could be alternatively done by the equivalent SMARTS pattern. 
+
+.. code-block:: python
+    # Dupicate CRO_from_cif for editing
+    cc = copy.deepcopy(CRO_from_cif)
+
+    # Specify the editable zone
+    embed_allowed_smarts = "[NX2][CX4][CX3][NX3][CX4][CX3](=O)[OX2]"
+    # Remove atoms by names from the chemical component
+    cc = cc.make_embedded(allowed_smarts = embed_allowed_smarts, leaving_names = {"H2", "OXT"})
+
+    # Draw the edited molecule
+    draw_cc_mol(cc.rdkit_mol)
+
+.. image:: images/embedded_CRO.png
+   :alt: embedded CRO
+   :width: 100%
+   :align: center
+
+
 .. code-block:: python
 
     cc = (
