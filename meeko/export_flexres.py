@@ -71,7 +71,7 @@ def export_pdb_updated_flexres(chorizo, pdbqt_mol):
                 raise RuntimeError(f"{hit_count=} {len(molsetup_matched)=}")
             if hit_count != sum(is_flexres_atom):
                 raise RuntimeError(f"{hit_count=} {sum(is_flexres_atom)=}")
-            new_positions[res_id] = sidechain_positions
+            # new_positions[res_id] = sidechain_positions
 
             # remove root atom(s) (often C-alpha) and first atom after bond
             flex_model = chorizo.residues[res_id].molsetup.flexibility_model
@@ -92,5 +92,6 @@ def export_pdb_updated_flexres(chorizo, pdbqt_mol):
                     to_pop.add(index) 
             for index in to_pop:
                 sidechain_positions.pop(index)
+            new_positions[res_id] = sidechain_positions
     pdbstr = chorizo.to_pdb(new_positions)
     return pdbstr
