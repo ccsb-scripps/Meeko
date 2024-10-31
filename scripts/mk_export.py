@@ -8,6 +8,8 @@ import gzip
 import pathlib
 import sys
 import warnings
+import copy
+import numpy as np
 
 from rdkit import Chem
 
@@ -132,10 +134,15 @@ for filename in docking_results_filenames:
     # write receptor with updated flexres
     if read_json is not None:
         pdb_string = ""
-        for pose in pdbqt_mol:
+        for i in range(pdbqt_mol._pose_data['n_poses']):
+            pose = copy.deepcopy(pdbqt_mol[i])
             model_nr = pose.pose_id + 1
+            pose._positions = np.array([pdbqt_mol._positions[pose.pose_id]])
+            pose._pose_data['n_poses'] = 1  # Update the number of poses to reflect the reduction
+            pose._current_pose = 0  # Reset to the first (and only) pose
             pdb_string += "MODEL " + f"{model_nr:8}" + pathlib.os.linesep
-            pdb_string += export_pdb_updated_flexres(polymer, pose)
+            pol_copy = copy.deepcopy(polymer)
+            pdb_string += export_pdb_updated_flexres(pol_copy, pose)
             pdb_string += "ENDMDL" + pathlib.os.linesep
         if write_pdb is None:
             fn = pathlib.Path(filename).with_suffix("").name + f"{suffix}.pdb"
