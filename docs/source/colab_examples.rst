@@ -64,14 +64,6 @@ The basic docking example is developed after the **implementation of chemical te
 The basic docking example is developed to showcase the usage of **import additional chemical templates** into Meeko. In this example, a small molecule antibiotic (Kanamycin A, PDB token KAN) is docked back to a hollow protein structure of a bacteria aminoglycoside kinase APH(2)-Ia (PDB token 5IQB), together with two metal cofactor Magnesium (Mg2+) ions and the substrate phosphoaminophosphonic acid-guanylate ester (GMPPNP, PDB token GNP) to reproduce the complex structure.
 
 
-[AutoDock-GPU] Covalent Docking
----------------
-
-`Run on Colab! <https://colab.research.google.com/drive/1tf9xOgn6u8eDTeFJtc8GCEGRX-8aR9Bo?usp=sharing>`_
-
-The covalent docking example is based on the **two-point attractor and flexible side chain method**. In this example, a small molecule substrate (Adenosine monophosphate, PDB token AMP) is attached onto the catalytic histidine residue of a hollow protein structure of bacteria RNA 3' cyclase (PDB token 3KGD) to reproduce the covalent intermediate complex structure. A docked pose that closely resembles the original position of the ligand is expected among the top-ranked poses.
-
-
 [AutoDock-GPU] Reactive Docking
 ---------------
 
