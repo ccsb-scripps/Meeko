@@ -3,6 +3,8 @@ from rdkit.Chem import rdDetermineBonds
 from rdkit.Geometry import Point3D
 from .utils.utils import parse_begin_res
 from .utils.utils import mini_periodic_table
+from .rdkit_mol_create import RDKitMolCreate
+from .linked_rdkit_chorizo import ChorizoResidue
 
 
 mini_periodic_table = {v: k for k, v in mini_periodic_table.items()}
@@ -42,8 +44,14 @@ def export_pdb_updated_flexres(chorizo, pdbqt_mol):
             res_id = parse_begin_res(flexres_id[mol_idx])
             atoms = pdbqt_mol.atoms(atom_idxs)
             molsetup_to_pdbqt = pdbqt_mol._pose_data["index_map"][mol_idx]
+            
             molsetup_to_template = chorizo.residues[res_id].molsetup_mapidx
             template_to_molsetup = {j: i for i, j in molsetup_to_template.items()}
+            for k in pdbqt_mol._pose_data:
+                if k not in ('active_atoms', 'pdbqt_string'): 
+                    print(k)
+                    print(pdbqt_mol._pose_data[k])
+                    print('*'*60)
 
             # use index_map stored in PDBQT REMARK
             if molsetup_to_pdbqt:
@@ -51,8 +59,27 @@ def export_pdb_updated_flexres(chorizo, pdbqt_mol):
                 for i, j in molsetup_to_pdbqt.items():
                     template_to_pdbqt[molsetup_to_template[i - 1]] = j - 1
 
+            # use smiles and smiles_index_map in PDBQT REMARK
+            # smiles will be None if it's a typical flexres
+            # but there will be a valid Smiles string if it's a covalent flexres
+            elif pdbqt_mol._pose_data["smiles"][mol_idx] is not None: 
+                
+                covres_mol = RDKitMolCreate.from_pdbqt_mol(pdbqt_mol, 
+                                                           only_cluster_leads=False, 
+                                                           keep_flexres=True)[mol_idx]
+                chorizo.residues[res_id].rdkit_mol = covres_mol
+                chorizo.residues[res_id].atom_names = [atom.GetSymbol() for atom in covres_mol.GetAtoms()]
+                new_positions[res_id] = {idx: coord for idx,coord in enumerate(covres_mol.GetConformer().GetPositions())}
+                
+                
+                pdbstr = chorizo.to_pdb(new_positions)
+                return pdbstr
+
             # use chorizo template to match sidechain
             else:
+                print(type(atoms))
+                print(atoms[0].dtype.names)
+                print(atoms[0])
                 mol = sidechain_to_mol(atoms)
                 key = chorizo.residues[res_id].residue_template_key
                 template = chorizo.residue_chem_templates.residue_templates[key]
@@ -66,6 +93,11 @@ def export_pdb_updated_flexres(chorizo, pdbqt_mol):
             if len(molsetup_matched) != len(template_to_pdbqt):
                 raise RuntimeError(f"{len(molsetup_matched)} {len(template_to_pdbqt)=}")
             is_flexres_atom = chorizo.residues[res_id].is_flexres_atom 
+            print(chorizo.residues[res_id].atom_names)
+            print(is_flexres_atom)
+            print([chorizo.residues[res_id].atom_names[molsetup_to_template[i]] 
+                   for i,v in enumerate(is_flexres_atom)
+                   if v==True])
             hit_count = sum([is_flexres_atom[i] for i in molsetup_matched])
             if hit_count != len(molsetup_matched):
                 raise RuntimeError(f"{hit_count=} {len(molsetup_matched)=}")
@@ -93,5 +125,6 @@ def export_pdb_updated_flexres(chorizo, pdbqt_mol):
             for index in to_pop:
                 sidechain_positions.pop(index)
             new_positions[res_id] = sidechain_positions
+    
     pdbstr = chorizo.to_pdb(new_positions)
     return pdbstr

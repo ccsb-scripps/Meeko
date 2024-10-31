@@ -334,8 +334,8 @@ class RDKitMolCreate:
                     raise RuntimeError("Expected H to have one neighbor")
                 AllChem.SetTerminalAtomCoords(mol, i, neigh[0].GetIdx())
         return mol
-
-
+    
+    
     @staticmethod
     def add_hydrogens(mol, coordinates_list, h_parent):
         """Add hydrogen atoms to ligand RDKit mol, adjust the positions of
