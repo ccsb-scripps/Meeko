@@ -17,6 +17,7 @@ from meeko import PDBQTMolecule
 from meeko import RDKitMolCreate
 from meeko import LinkedRDKitChorizo
 from meeko import export_pdb_updated_flexres
+from meeko.utils.utils import parse_begin_res
 
 
 def cmd_lineparser():
@@ -134,15 +135,16 @@ for filename in docking_results_filenames:
     # write receptor with updated flexres
     if read_json is not None:
         pdb_string = ""
-        for i in range(pdbqt_mol._pose_data['n_poses']):
-            pose = copy.deepcopy(pdbqt_mol[i])
-            model_nr = pose.pose_id + 1
-            pose._positions = np.array([pdbqt_mol._positions[pose.pose_id]])
-            pose._pose_data['n_poses'] = 1  # Update the number of poses to reflect the reduction
-            pose._current_pose = 0  # Reset to the first (and only) pose
+        pose_id_to_iter = [pose.pose_id for pose in pdbqt_mol]
+        iter_pose = copy.deepcopy(pdbqt_mol)
+        for pose_id in pose_id_to_iter:
+            model_nr = pose_id + 1
+            iter_pose._positions = np.array([pdbqt_mol._positions[pose_id]])
+            iter_pose._pose_data['n_poses'] = 1  # Update the number of poses to reflect the reduction
+            iter_pose._current_pose = 0  # Reset to the first (and only) pose
             pdb_string += "MODEL " + f"{model_nr:8}" + pathlib.os.linesep
             pol_copy = copy.deepcopy(polymer)
-            pdb_string += export_pdb_updated_flexres(pol_copy, pose)
+            pdb_string += export_pdb_updated_flexres(pol_copy, iter_pose)
             pdb_string += "ENDMDL" + pathlib.os.linesep
         if write_pdb is None:
             fn = pathlib.Path(filename).with_suffix("").name + f"{suffix}.pdb"
