@@ -1,15 +1,17 @@
-from rdkit import Chem
-from meeko import LinkedRDKitChorizo
-from meeko import PDBQTWriterLegacy
-from meeko import MoleculePreparation
-from meeko import ResidueChemTemplates
-
 import json
 import pathlib
 import pytest
 import os
 
+from meeko import LinkedRDKitChorizo
+from meeko import PDBQTWriterLegacy
+from meeko import MoleculePreparation
+from meeko import ResidueChemTemplates
 import meeko
+
+from rdkit import Chem
+import numpy as np
+
 
 pkgdir = pathlib.Path(meeko.__file__).parents[1]
 meekodir = pathlib.Path(meeko.__file__).parents[0]
@@ -27,7 +29,7 @@ non_sequential_res = pkgdir / "test/linked_rdkit_chorizo_data/non-sequential-res
 has_altloc = pkgdir / "test/linked_rdkit_chorizo_data/has-altloc.pdb"
 has_lys = pkgdir / "test/linked_rdkit_chorizo_data/has-lys.pdb"
 has_lyn = pkgdir / "test/linked_rdkit_chorizo_data/has-lyn.pdb"
-has_lyn_resname_lys = pkgdir / "test/linked_rdkit_chorizo_data/has-lyn-resname-lys.pdb"
+has_lys_resname_lyn = pkgdir / "test/linked_rdkit_chorizo_data/has-lys-resname-lyn.pdb"
 
 
 # TODO: add checks for untested chorizo fields (e.g. input options not indicated here)
@@ -429,12 +431,16 @@ def test_weird_zero_coord():
     with open(has_lys) as f:
         pdbstr = f.read()
     chorizo = LinkedRDKitChorizo.from_pdb_string(pdbstr, chem_templates, mk_prep)
+    #pdbqt_strings = PDBQTWriterLegacy.write_string_from_linked_rdkit_chorizo(chorizo)
+    with open("BANANACUUBER.json", "w") as f:
+        f.write(chorizo.to_json())
     for _, res in chorizo.residues.items():
+        positions = res.rdkit_mol.GetConformer().GetPositions()
         for atom in res.molsetup.atoms:
-            x = float(atom.coord[0])
-            y = float(atom.coord[1])
-            z = float(atom.coord[2])
-            assert x**2 + y**2 + z**2 > 1e-6
+            # there was a bug in which the C-term CYS of has_lys would be
+            # be assigned the erroneous CCYS template,and the extra oxygen
+            # would get coordinates set to zero.
+            assert np.min(np.sum(positions**2, 1)) > 1e-6
 
 def test_auto_LYN():
     with open(has_lyn) as f:
@@ -442,13 +448,16 @@ def test_auto_LYN():
     chorizo = LinkedRDKitChorizo.from_pdb_string(pdbstr, chem_templates, mk_prep)
     assert chorizo.residues[":15"].residue_template_key == "LEU"
     assert chorizo.residues[":16"].residue_template_key == "LYN"
-    assert chorizo.residues[":17"].residue_template_key == "CYX"
+    assert chorizo.residues[":17"].residue_template_key == "CYX-"
     with open(has_lys) as f:
         pdbstr = f.read()
     chorizo = LinkedRDKitChorizo.from_pdb_string(pdbstr, chem_templates, mk_prep)
     assert chorizo.residues[":16"].residue_template_key == "LYS"
-    assert chorizo.residues[":17"].residue_template_key == "CYX"
-    with open(has_lyn_resname_lys) as f:
+    assert chorizo.residues[":17"].residue_template_key == "CYX-"
+    chorizo = LinkedRDKitChorizo.from_pdb_string(pdbstr, chem_templates, mk_prep, set_template={":16": "LYN"})
+    assert chorizo.residues[":16"].residue_template_key == "LYN"
+    assert chorizo.residues[":17"].residue_template_key == "CYX-"
+    with open(has_lys_resname_lyn) as f:
         pdbstr = f.read()
-    chorizo = LinkedRDKitChorizo.from_pdb_string(pdbstr, chem_templates, mk_prep)
-    assert chorizo.residues[":16"].residue_template_key == "LYS"
+    with pytest.raises(RuntimeError) as err_msg:
+        chorizo = LinkedRDKitChorizo.from_pdb_string(pdbstr, chem_templates, mk_prep)
