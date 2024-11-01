@@ -145,23 +145,28 @@
 	"padders": {
 	"5-prime": {
 		"rxn_smarts": "[PX4h1:1]>>[P:1][O:11][C:12]",
-		"adjacent_res_smarts": "[O+0X2h1:11][CX4:12]1CC(n)[OX2]C1"
+		"adjacent_res_smarts": "[O+0X2h1:11][CX4:12]1CC(n)[OX2]C1",
+		"auto_blunt": true
 	},
 	"3-prime": {
 		"rxn_smarts": "[O+0X2h1:1][CX4:2]>>[O:1]([C:2])[P:11]([O-:12])(=[O:13])[O:14][C:15]",
-		"adjacent_res_smarts": "[PX4h1:11]([O-:12])(=[O:13])[O:14][C:15]"
+		"adjacent_res_smarts": "[PX4h1:11]([O-:12])(=[O:13])[O:14][C:15]",
+		"auto_blunt": true
 	},
 	"N-term": {
 		"rxn_smarts": "[C:1](=[O:2])[C:3][N:4]>>[C:1](=[O:2])[C:3][N:4][C:11](=[O:12])[C:13]",
-		"adjacent_res_smarts": "[C:11](=[O:12])[C:13][N]"
+		"adjacent_res_smarts": "[C:11](=[O:12])[C:13][N]",
+		"auto_blunt": true
 	},
 	"C-term": {
 		"rxn_smarts": "[C:1](=[O:2])[C:3][N:4]>>[C:11][N:12][C:1](=[O:2])[C:3][N:4]",
-		"adjacent_res_smarts": "[C](=O)[C:11][N:12]"
+		"adjacent_res_smarts": "[C](=O)[C:11][N:12]",
+		"auto_blunt": true
 	},
 	"dissulfide": {
 		"rxn_smarts": "[C:1][S:2]>>[C:1][S:2][S:11][C:12]",
-		"adjacent_res_smarts": "[S:11][C:12]"
+		"adjacent_res_smarts": "[S:11][C:12]",
+		"auto_blunt": false
 	}
 	},
 

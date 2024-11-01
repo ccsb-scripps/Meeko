@@ -609,7 +609,8 @@ class ResidueChemTemplates:
         for link_label, data in alldata["padders"].items():
             rxn_smarts = data["rxn_smarts"]
             adjacent_res_smarts = data.get("adjacent_res_smarts", None)
-            padders[link_label] = ResiduePadder(rxn_smarts, adjacent_res_smarts)
+            auto_blunt = data.get("auto_blunt", False)
+            padders[link_label] = ResiduePadder(rxn_smarts, adjacent_res_smarts, auto_blunt)
         return cls(residue_templates, padders, ambiguous)
 
     @staticmethod
@@ -830,7 +831,7 @@ class LinkedRDKitChorizo:
         self.residues, self.log = self._get_residues(
             raw_input_mols,
             ambiguous,
-            residue_templates,
+            residue_chem_templates,
             set_template,
             bonds,
             blunt_ends,
@@ -920,10 +921,17 @@ class LinkedRDKitChorizo:
         bonds = find_inter_mols_bonds(raw_input_mols)
         if bonds_to_delete is not None:
             for res1, res2 in bonds_to_delete:
+                popped = ()
                 if (res1, res2) in bonds:
-                    bonds.pop((res1, res2))
+                    popped = bonds.pop((res1, res2))
                 elif (res2, res1) in bonds:
-                    bonds.pop((res2, res1))
+                    popped = bonds.pop((res2, res1))
+                if len(popped) >= 2:
+                    msg = (
+                        "can't delete bonds for residue pairs that have more"
+                        " than one bond between them"
+                    )
+                    raise NotImplementedError(msg)
         chorizo = cls(
             raw_input_mols,
             bonds,
@@ -1007,10 +1015,17 @@ class LinkedRDKitChorizo:
         bonds = find_inter_mols_bonds(raw_input_mols)
         if bonds_to_delete is not None:
             for res1, res2 in bonds_to_delete:
+                popped = ()
                 if (res1, res2) in bonds:
-                    bonds.pop((res1, res2))
+                    popped = bonds.pop((res1, res2))
                 elif (res2, res1) in bonds:
-                    bonds.pop((res2, res1))
+                    popped = bonds.pop((res2, res1))
+                if len(popped) >= 2:
+                    msg = (
+                        "can't delete bonds for residue pairs that have more"
+                        " than one bond between them"
+                    )
+                    raise NotImplementedError(msg)
         chorizo = cls(
             raw_input_mols,
             bonds,
@@ -1140,62 +1155,6 @@ class LinkedRDKitChorizo:
         return rdkit_mol
 
     @staticmethod
-    def _run_matching(raw_input_mol, residue_templates, bonds, residue_key, blunt_ends):
-        """
-
-        Parameters
-        ----------
-        raw_input_mol
-        residue_templates
-        bonds
-        residue_key
-        blunt_ends
-
-        Returns
-        -------
-
-        """
-        if blunt_ends is None:
-            blunt_ends = []
-        raw_atoms_with_bonds = []
-        for (r1, r2), (i, j) in bonds.items():
-            if r1 == residue_key:
-                raw_atoms_with_bonds.append(i)
-            if r2 == residue_key:
-                raw_atoms_with_bonds.append(j)
-        results = []
-        for index, template in enumerate(residue_templates):
-
-            # match intra-residue graph
-            match_stats, mapping = template.match(raw_input_mol)
-            from_raw = {value: key for (key, value) in mapping.items()}
-
-            # match inter-residue bonds
-            gotten = set()
-            for raw_index in raw_atoms_with_bonds:
-                index = from_raw[raw_index]
-                gotten.add(index)
-
-            # blunt ends are treated like fake bonds
-            for res_id, atom_idx in blunt_ends:
-                if res_id == residue_key:
-                    index = from_raw[atom_idx]
-                    gotten.add(index)
-            if blunt_ends is not None:
-                print(f"{gotten=}")
-            expected = set(template.link_labels)
-            result = {
-                "found": gotten.intersection(expected),
-                "missing": expected.difference(gotten),
-                "excess": gotten.difference(expected),
-            }
-            match_stats["bonds"] = result
-            match_stats["mapping"] = mapping
-
-            results.append(match_stats)
-        return results
-
-    @staticmethod
     def _get_best_missing_Hs(results):
         """
 
@@ -1216,7 +1175,7 @@ class LinkedRDKitChorizo:
                 fail_log[-1].append("heavy missing")
             if result["heavy"]["excess"] > 0:
                 fail_log[-1].append("heavy excess")
-            if result["H"]["excess"] > 0:
+            if len(result["H"]["excess"]) > 0:
                 fail_log[-1].append("H excess")
             if len(result["bonds"]["excess"]) > 0:
                 fail_log[-1].append("bonds excess")
@@ -1236,7 +1195,7 @@ class LinkedRDKitChorizo:
         cls,
         raw_input_mols,
         ambiguous,
-        residue_templates,
+        residue_chem_templates,
         set_template,
         bonds,
         blunt_ends,
@@ -1247,7 +1206,7 @@ class LinkedRDKitChorizo:
         ----------
         raw_input_mols
         ambiguous
-        residue_templates
+        residue_chem_templates
         set_template
         bonds
         blunt_ends
@@ -1256,6 +1215,8 @@ class LinkedRDKitChorizo:
         -------
 
         """
+
+        residue_templates = residue_chem_templates.residue_templates
         residues = {}
         log = {
             "chosen_by_fewest_missing_H": {},
@@ -1354,16 +1315,49 @@ class LinkedRDKitChorizo:
                 all_stats["bonded_atoms_excess"].append(bonded_atoms_excess)
 
             passed = []
-            for i in range(len(all_stats["H_excess"])):
+
+            embedded_indices = [index for index, template in enumerate(candidate_templates) if len(template.link_labels) >= 2]
+            # 1st round
+            for i in embedded_indices:
                 if (
                     all_stats["heavy_missing"][i]
                     or all_stats["heavy_excess"][i]
-                    or (all_stats["H_excess"][i] and not excess_H_ok)
-                    #or len(all_stats["bonded_atoms_missing"][i])
+                    or all_stats["H_excess"][i]
+                    or all_stats["bonded_atoms_missing"][i]
                     or len(all_stats["bonded_atoms_excess"][i])
                 ):
                     continue
                 passed.append(i)
+
+            # 2nd round
+            if len(passed) == 0: 
+                for i in embedded_indices:
+                    auto_blunt = set()
+                    for j, padder_label in candidate_templates[i].link_labels.items():
+                        if residue_chem_templates.padders[padder_label].auto_blunt:
+                            auto_blunt.add(j)
+                    if (
+                        all_stats["heavy_missing"][i]
+                        or all_stats["heavy_excess"][i]
+                        or (not set(all_stats["H_excess"][i]) <= set(candidate_templates[i].link_labels) and not excess_H_ok)
+                        or not all_stats["bonded_atoms_missing"][i] <= auto_blunt
+                        or len(all_stats["bonded_atoms_excess"][i])
+                    ):
+                        continue
+                    passed.append(i)
+
+            # 3rd round
+            if len(passed) == 0: 
+                for i in range(len(candidate_templates)):
+                    if (
+                        all_stats["heavy_missing"][i]
+                        or all_stats["heavy_excess"][i]
+                        or (all_stats["H_excess"][i] and not excess_H_ok)
+                        or len(all_stats["bonded_atoms_missing"][i])
+                        or len(all_stats["bonded_atoms_excess"][i])
+                    ):
+                        continue
+                    passed.append(i)
 
             if len(passed) == 0:
                 template_key = None
@@ -1402,12 +1396,11 @@ class LinkedRDKitChorizo:
                         best_idxs.append(index)
 
                 if len(best_idxs) > 1:
-                    m = f"for {residue_key=}, {len(passed)} have passed" + os_linesep
+                    tied = " ".join(candidate_template_keys[i] for i in best_idxs)
+                    m = f"for {residue_key=}, {len(passed)} have passed: "
                     tkeys = [candidate_template_keys[i] for i in passed]
-                    m += f"these are: {tkeys}" + os_linesep
-                    m += "and were evaluated for the number of missing H"
-                    m += "however there was a tie between"  # TODO
-                    logger.error(m)
+                    m += f"{tkeys} and tied for fewest missing H: {tied} "
+                    raise RuntimeError(m)
                 elif len(best_idxs) == 0:
                     raise RuntimeError("unexpected situation")
                 else:
@@ -1905,9 +1898,6 @@ class LinkedRDKitChorizo:
 
     # endregion
 
-    def to_json(self):
-        pass
-
 
 def add_rotamers_to_chorizo_molsetups(rotamer_states_list, chorizo):
     """
@@ -2130,7 +2120,7 @@ class ResiduePadder:
     # reaction should not delete atoms, not even Hs
     # reaction should create bonds at non-real Hs (implicit or explicit rdktt H)
 
-    def __init__(self, rxn_smarts: str, adjacent_res_smarts: str = None): 
+    def __init__(self, rxn_smarts: str, adjacent_res_smarts: str = None, auto_blunt:bool=False): 
         """
         Initialize the ResiduePadder with reaction SMARTS and optional adjacent residue SMARTS.
 
@@ -2147,10 +2137,14 @@ class ResiduePadder:
             and copy their positions to padding atoms. The SMARTS atom labels
             must match those of the product atoms of rxn_smarts that are
             unmapped in the reagents.
+        auto_blunt: bool
+            missing bonds of ChorizoResidues will automatically be blunt if
+            this parameter is true, and raise an error otherwise
         """
 
         # Ensure rxn_smarts has single reactant and single product
         self.rxn = self._validate_rxn_smarts(rxn_smarts)
+        self.auto_blunt = auto_blunt
 
         # Fill in adjacent_smartsmol_mapidx
         if adjacent_res_smarts is None:
@@ -2476,7 +2470,7 @@ class ResidueTemplate:
         # atoms "missing" exist in self.mol but not in input_mol
         # "excess" atoms exist in input_mol but not in self.mol
         result = {
-            "H": {"found": 0, "missing": 0, "excess": 0},
+            "H": {"found": 0, "missing": 0, "excess": []},
             "heavy": {"found": 0, "missing": 0, "excess": 0},
         }
         for atom in self.mol.GetAtoms():
@@ -2486,7 +2480,14 @@ class ResidueTemplate:
         for atom in input_mol.GetAtoms():
             element = "H" if atom.GetAtomicNum() == 1 else "heavy"
             if atom.GetIdx() not in mapping_inv:
-                result[element]["excess"] += 1
+                if element == "H": 
+                    nei_idx = atom.GetNeighbors()[0].GetIdx()
+                    if nei_idx in mapping_inv: 
+                        result[element]["excess"].append(mapping_inv[nei_idx])
+                    else:
+                        result[element]["excess"].append(-1)
+                else:
+                    result[element]["excess"] += 1
         return result, mapping
 
 def rdkit_or_none_to_json(rdkit_mol):
@@ -2599,6 +2600,7 @@ class ResiduePadderEncoder(json.JSONEncoder):
             output_dict = {
                 "rxn_smarts": rdChemReactions.ReactionToSmarts(obj.rxn),
                 "adjacent_smarts": adjacent_smarts,
+                "auto_blunt": obj.auto_blunt,
             }
             # we are not serializing the adjacent_smartsmol_mapidx as that will
             # be rebuilt by the ResiduePadder init
@@ -2825,13 +2827,14 @@ def residue_padder_json_decoder(obj: dict):
     expected_residue_keys = {
         "rxn_smarts",
         "adjacent_smarts",
+        "auto_blunt",
     }
     if set(obj.keys()) != expected_residue_keys:
         return obj
 
     # Constructs a ResiduePadder object and restores the expected attributes
     # adjacent_smartsmol_mapidx is rebuilt by ResiduePadder init
-    residue_padder = ResiduePadder(obj["rxn_smarts"], obj["adjacent_smarts"])
+    residue_padder = ResiduePadder(obj["rxn_smarts"], obj["adjacent_smarts"], obj["auto_blunt"])
 
     return residue_padder
 
