@@ -527,7 +527,7 @@ class PDBQTWriterLegacy:
                 root = molsetup.flexibility_model["root"]
                 if len(graph[root]) != 1:
                     raise RuntimeError(
-                        f"flexible residue {res_id} has {len(graph[root])}",
+                        f"flexible residue {res_id} has {len(graph[root])}"
                         " rotatable bonds from root, but PDBQT is limited to 1"
                     )
                 # set ignore to True for static atoms of flexible sidechains
