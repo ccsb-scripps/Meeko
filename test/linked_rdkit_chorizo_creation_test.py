@@ -30,6 +30,7 @@ has_altloc = pkgdir / "test/linked_rdkit_chorizo_data/has-altloc.pdb"
 has_lys = pkgdir / "test/linked_rdkit_chorizo_data/has-lys.pdb"
 has_lyn = pkgdir / "test/linked_rdkit_chorizo_data/has-lyn.pdb"
 has_lys_resname_lyn = pkgdir / "test/linked_rdkit_chorizo_data/has-lys-resname-lyn.pdb"
+disulfide_adjacent = pkgdir / "test/linked_rdkit_chorizo_data/disulfide_bridge_in_adjacent_residues.pdb"
 
 
 # TODO: add checks for untested chorizo fields (e.g. input options not indicated here)
@@ -461,3 +462,15 @@ def test_auto_LYN():
         pdbstr = f.read()
     with pytest.raises(RuntimeError) as err_msg:
         chorizo = LinkedRDKitChorizo.from_pdb_string(pdbstr, chem_templates, mk_prep)
+
+def test_disulfide_adjacent():
+    """ disulfide bridge in adjacent residues broke a version of the code
+        that assumed only one bond between each pair of residues
+    """
+    with open(disulfide_adjacent, "r") as f:
+        pdb_text = f.read()
+    chorizo = LinkedRDKitChorizo.from_pdb_string(
+        pdb_text,
+        chem_templates,
+        mk_prep,
+    )
