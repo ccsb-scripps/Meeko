@@ -590,7 +590,7 @@ if __name__ == "__main__":
                     root_atom_index=root_atom_index,
                     not_terminal_atoms=[root_atom_index],
                 )
-                res, chain, num = cov_lig.res_id
+                chain, res, num = cov_lig.res_id
                 suffixes = output.get_suffixes(molsetups)
                 for molsetup, suffix in zip(molsetups, suffixes):
                     pdbqt_string, success, error_msg = PDBQTWriterLegacy.write_string(

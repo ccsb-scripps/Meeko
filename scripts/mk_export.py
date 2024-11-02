@@ -8,6 +8,8 @@ import gzip
 import pathlib
 import sys
 import warnings
+import copy
+import numpy as np
 
 from rdkit import Chem
 
@@ -15,6 +17,7 @@ from meeko import PDBQTMolecule
 from meeko import RDKitMolCreate
 from meeko import LinkedRDKitChorizo
 from meeko import export_pdb_updated_flexres
+from meeko.utils.utils import parse_begin_res
 
 
 def cmd_lineparser():
@@ -103,6 +106,16 @@ for filename in docking_results_filenames:
     )
     for i in failures:
         warnings.warn("molecule %d not converted to RDKit/SD File" % i)
+    if sdf_string == "": 
+        warnings.warn("sdf_string does not contain molecular data.")
+        if redirect_stdout or write_pdb: 
+            pass
+        else:
+            print("Output SDF will not be created because there is no pose data for ligand. \n"
+                    + "Maybe the input poses only contain flexible sidechains and \n"
+                    + "keep_flexres_sdf is set to False. \n"
+                    + "Use -k with mk_export.py to retain the flexres and write to output SDF File. ")
+            sys.exit(2)
     if len(failures) == len(pdbqt_mol._atom_annotations["mol_index"]):
         msg = "\nCould not convert to RDKit. Maybe meeko was not used for preparing\n"
         msg += "the input PDBQT for docking, and the SMILES string is missing?\n"
@@ -122,10 +135,16 @@ for filename in docking_results_filenames:
     # write receptor with updated flexres
     if read_json is not None:
         pdb_string = ""
-        for pose in pdbqt_mol:
-            model_nr = pose.pose_id + 1
+        pose_id_to_iter = [pose.pose_id for pose in pdbqt_mol]
+        iter_pose = copy.deepcopy(pdbqt_mol)
+        for pose_id in pose_id_to_iter:
+            model_nr = pose_id + 1
+            iter_pose._positions = np.array([pdbqt_mol._positions[pose_id]])
+            iter_pose._pose_data['n_poses'] = 1  # Update the number of poses to reflect the reduction
+            iter_pose._current_pose = 0  # Reset to the first (and only) pose
             pdb_string += "MODEL " + f"{model_nr:8}" + pathlib.os.linesep
-            pdb_string += export_pdb_updated_flexres(polymer, pose)
+            pol_copy = copy.deepcopy(polymer)
+            pdb_string += export_pdb_updated_flexres(pol_copy, iter_pose)
             pdb_string += "ENDMDL" + pathlib.os.linesep
         if write_pdb is None:
             fn = pathlib.Path(filename).with_suffix("").name + f"{suffix}.pdb"
