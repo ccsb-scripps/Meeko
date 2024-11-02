@@ -211,6 +211,12 @@ def cmd_lineparser():
         type=int,
     )
     config_group.add_argument(
+        "--charge_model",
+        choices=("gasteiger", "espaloma", "zero"),
+        help="default is 'gasteiger', 'zero' sets all zeros",
+        default="gasteiger",
+    )
+    config_group.add_argument(
         "--bad_charge_ok",
         help="NaN and Inf charges allowed in PDBQT",
         action="store_true",
