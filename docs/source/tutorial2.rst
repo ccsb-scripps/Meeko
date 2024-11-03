@@ -99,6 +99,7 @@ To prepare AMP (2-) as an reactive ligand, we specify the reactive phosphoryl at
 The generated ligand PDBQT file, ``AMP.pdbqt``, will contain special AutoDock atom types for the reactive docking. The reactive atom types encode the atom type as well as the adjacency to the reactive atom. In this example: ``P1`` denotes the reactive phosphorus atom (with order number = 1). ``O5`` denotes the neighbor ``OA`` atoms (with order number = 2). Because the original atom type (``OA``) contains 2 letters, an additional increment of +3 is applied to the number suffix. And finally ``C3`` denotes the further ``C`` type atom (aliphatic carbon, with order number = 3). 
 
 .. code-block:: bash
+
     REMARK SMILES Nc1ncnc2c1ncn2[C@@H]1O[C@H](COP(=O)([O-])[O-])[C@@H](O)[C@H]1O
     REMARK SMILES IDX 11 1 22 2 20 3 13 4 12 5 10 6 4 7 3 8 5 9 2 10 6 11 7 12
     REMARK SMILES IDX 8 13 9 14 1 15 23 18 21 20 14 22 15 23 16 24 17 25 18 26
@@ -148,7 +149,6 @@ The generated ligand PDBQT file, ``AMP.pdbqt``, will contain special AutoDock at
     ENDBRANCH  22  23
     ENDBRANCH   4  22
     TORSDOF 7
-
 
 Receptor Preparation
 ===================
@@ -246,5 +246,60 @@ For output control: We are expecting at least two types of files, the receptor P
             3kgd_receptorH.box.pdb <-- PDB file to visualize the grid box
     3kgd_receptorH.reactive_config <-- reactive parameters for AutoDock-GPU
 
+The expected ``3kgd_receptorH_flex.pdbqt`` contains the reactive flexible residue, His309. Note that for the receptor residues, the reactive atom types may include a number prefix as an identifier to distinguish among possible multiple reactive residues. 
+
+.. code-block:: bash
+
+    BEGIN_RES HIS A 309
+    REMARK INDEX MAP 3 1 15 2 18 3 19 4 20 5 21 6 22 7 25 8
+    ROOT
+    ATOM      1  CA  HIS A 309      -1.221 -40.602  -5.650  1.00  0.00     0.177 C 
+    ENDROOT
+    BRANCH   1   2
+    ATOM      2  CB  HIS A 309      -2.472 -39.882  -5.156  1.00  0.00     0.093 C 
+    BRANCH   2   3
+    ATOM      3  CG  HIS A 309      -3.505 -40.770  -4.538  1.00  0.00     0.061 1A3
+    ATOM      4 ND1  HIS A 309      -3.678 -42.083  -4.910  1.00  0.00    -0.242 1N6
+    ATOM      5 CD2  HIS A 309      -4.442 -40.512  -3.593  1.00  0.00     0.107 1A2
+    ATOM      6 CE1  HIS A 309      -4.660 -42.611  -4.192  1.00  0.00     0.196 1A2
+    ATOM      7 NE2  HIS A 309      -5.152 -41.670  -3.401  1.00  0.00    -0.350 1N1
+    ATOM      8 HE2  HIS A 309      -5.940 -41.788  -2.748  1.00  0.00     0.167 1H5
+    ENDBRANCH   2   3
+    ENDBRANCH   1   2
+    END_RES HIS A 309
+
 Docking Calculation
-=================
+===================
+
+The reactive docking method is only implemented in AutoDock-GPU, which also requires grid map computation with AutoGrid4 before the docking calculation. 
+
+The previously generated GPF file (``3kgd_receptorH_rigid.gpf``), together with the PDBQT file of the rigid part of the receptor (``3kgd_receptorH_rigid.pdbqt``), will be used to compute the grid maps: 
+
+.. code-block:: bash
+
+    ./autogrid4 -p 3kgd_receptorH_rigid.gpf
+
+And to run the docking calculation, the ligand PDBQT file (``AMP.pdbqt``), the flexible residue PDBQT file (``3kgd_receptorH_flex.pdbqt``), the special docking parameter file (DPF) for reactive docking (``3kgd_receptorH.reactive_config``), and the map files will be needed. With the following command for docking calculation, the output file will have basename ``AMP``.  
+
+.. code-block:: bash
+
+    ./adgpu --lfile AMP.pdbqt --flexres 3kgd_receptorH_flex.pdbqt --ffile 3kgd_receptorH_rigid.maps.fld --import_dpf 3kgd_receptorH.reactive_config --resnam AMP
+
+
+If you're running these calculations on Google T4 backends, here are the pre-compiled executables of autogrid4 and adgpu specifically for T4: 
+
+- autodock-gpu v1.5.3
+`autodock_gpu_128wi <https://github.com/rwxayheee/Colabs/blob/acd2972f4afbf8c5299ebf0686534f466bf6f81b/Compiled_for_Colab/AutoDock-GPU_v1.5.3/autodock_gpu_128wi>`_
+`adgpu_analysis <https://github.com/rwxayheee/Colabs/blob/acd2972f4afbf8c5299ebf0686534f466bf6f81b/Compiled_for_Colab/AutoDock-GPU_v1.5.3/adgpu_analysis>`_
+
+- autogrid v4.2.6
+`autogrid4 <https://github.com/rwxayheee/Colabs/blob/acd2972f4afbf8c5299ebf0686534f466bf6f81b/Compiled_for_Colab/AutoGird_v4.2.6/autogrid4>`_
+
+Export the Docking Poses
+========================
+
+``mk_export.py`` is a command-line script in Meeko to export docking poses from PDBQT or DLG formats. For this example, if we want to export the ligand docking poses to a (possibly multi-model) SDF file with fully explicit hydrogens: 
+
+.. code-block:: bash
+
+    mk_export.py AMP.dlg -s 3kgd_AMP_adgpu_out.sdf
