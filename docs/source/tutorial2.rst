@@ -92,7 +92,7 @@ Receptor Peparation
     pdb_token="3kgd"
     curl "http://files.rcsb.org/view/${pdb_token}.pdb" -o "${pdb_token}.pdb"
 
-.. code-block:: bash
+.. code-block:: python
 
     python - <<EOF
     from prody import parsePDB, writePDB
@@ -104,6 +104,8 @@ Receptor Peparation
     prody_receptorPDB = f"{pdb_token}_receptor_atoms.pdb"
     writePDB(prody_receptorPDB, receptor_atoms)
     EOF
+
+.. code-block:: bash
 
     # Add CRYST1 card (temporarily required for reduce2)
     cat <(grep "CRYST1" "${pdb_token}.pdb") "${pdb_token}_receptor_atoms.pdb" > "${pdb_token}_receptor.pdb"
@@ -117,7 +119,7 @@ Receptor Peparation
    reduce_opts="approach=add add_flip_movers=True"
    python $reduce2 "${pdb_token}_receptor.pdb" $reduce_opts
 
-.. code-block:: bash
+.. code-block:: python
 
     python - <<EOF
     from prody import parsePDB, writePDB, calcCenter
@@ -129,6 +131,8 @@ Receptor Peparation
     prody_ligandPDB = "LIG.pdb"
     writePDB(prody_ligandPDB, ligand_atoms)
     EOF
+
+.. code-block:: bash
 
     reactive_name_specific="A:309=NE2"
     mk_prepare_receptor.py -i "${pdb_token}_receptorH.pdb" -o "${pdb_token}_receptorH" -p -g \
