@@ -43,7 +43,7 @@ Meeko superseeds the preparation scripts from MGLTools. List advantages here (**
 
    installation
    colab_examples
-   tutorials
+   tutorial
    about
 
 .. toctree::
