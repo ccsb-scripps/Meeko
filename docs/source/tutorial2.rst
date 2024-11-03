@@ -72,10 +72,12 @@ Ligand Peparation
 -----------------
 
 .. code-block:: bash
+
     ligand_smiles="c1nc(c2c(n1)n(cn2)[C@H]3[C@@H]([C@@H]([C@H](O3)COP(=O)([O-])[O-])O)O)N"
     scrub.py $ligand_smiles -o AMP.sdf --ph 6.5 --skip_tautomer --skip_acidbase
 
 .. code-block:: bash
+
     reactive_smarts="COP(=O)([O-])[O-]"
     reactive_smarts_idx=3
     mk_prepare_ligand.py -i AMP.sdf -o AMP.pdbqt \
@@ -89,6 +91,19 @@ Receptor Peparation
 
     pdb_token="3kgd"
     curl "http://files.rcsb.org/view/$pdb_token.pdb" -o "$pdb_token.pdb"
+
+.. code-block:: bash
+
+    python - <<EOF
+    from prody import parsePDB, writePDB
+
+    pdb_token = "3kgd"
+    atoms_from_pdb = parsePDB(pdb_token)
+    receptor_selection = "chain A and not water and not hetero and not resname AMP"
+    receptor_atoms = atoms_from_pdb.select(receptor_selection)
+    prody_receptorPDB = f"{pdb_token}_receptor_atoms.pdb"
+    writePDB(prody_receptorPDB, receptor_atoms)
+    EOF
 
 .. code-block:: bash
 
