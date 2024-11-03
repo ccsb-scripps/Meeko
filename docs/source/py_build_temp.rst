@@ -42,7 +42,7 @@ When an unknown residue is encountered, ``mk_prepare_receptor.py`` attempts to r
 
 Here, we present a quick guide of building potentially complicated residue templates on your own using the ``meeko.chemtempgen`` submodule. In this example, we will be working with residue ``CRO``, a naturally occuring fluorophore in green fluorescent proteins formed by condensation of three consecutive residues Ser-Tyr-Gly. 
 
-Basic usage
+Example usage
 -------------
 
 Before we start, we will import the required modules and optionally, suppress excess rdkit loggings that may occur during the editing of molecular structures. Then we will create a ``ChemicalComponent`` from a definition CIF file, which will be obtained by ``fetch_from_pdb`` (Internet connection is required). 
