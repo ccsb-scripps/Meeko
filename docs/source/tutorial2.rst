@@ -90,7 +90,7 @@ Receptor Peparation
 .. code-block:: bash
 
     pdb_token="3kgd"
-    curl "http://files.rcsb.org/view/$pdb_token.pdb" -o "$pdb_token.pdb"
+    curl "http://files.rcsb.org/view/${pdb_token}.pdb" -o "${pdb_token}.pdb"
 
 .. code-block:: bash
 
@@ -105,9 +105,53 @@ Receptor Peparation
     writePDB(prody_receptorPDB, receptor_atoms)
     EOF
 
+    # Add CRYST1 card (temporarily required for reduce2)
+    cat <(grep "CRYST1" "${pdb_token}.pdb") "${pdb_token}_receptor_atoms.pdb" > "${pdb_token}_receptor.pdb"
+
 .. code-block:: bash
 
    reduce2="$(python -c "import site; print(site.getsitepackages()[0])")/mmtbx/command_line/reduce2.py"
    chmod +x $reduce2
    geostd="$(realpath geostd)"
    export MMTBX_CCP4_MONOMER_LIB=$geostd
+   reduce_opts="approach=add add_flip_movers=True"
+   python $reduce2 "${pdb_token}_receptor.pdb" $reduce_opts
+
+.. code-block:: bash
+
+    python - <<EOF
+    from prody import parsePDB, writePDB, calcCenter
+
+    pdb_token = "3kgd"
+    atoms_from_pdb = parsePDB(pdb_token)
+    ligand_selection = "chain A and resname AMP"
+    ligand_atoms = atoms_from_pdb.select(ligand_selection)
+    prody_ligandPDB = "LIG.pdb"
+    writePDB(prody_ligandPDB, ligand_atoms)
+    EOF
+
+    reactive_name_specific="A:309=NE2"
+    mk_prepare_receptor.py -i "${pdb_token}_receptorH.pdb" -o "${pdb_token}_receptorH" -p -g \
+    --default_altloc A --reactive_name_specific $reactive_name_specific \
+    --box_enveloping "LIG.pdb" --padding 8.0 
+
+.. code-block:: bash
+
+    @> 2510 atoms and 1 coordinate set(s) were parsed in 0.01s.
+
+    Flexible residues:
+    chain resnum is_reactive reactive_atom
+        A    309        True           NE2
+    reactive_flexres={'A:309'}
+
+    For reactive docking, pass the configuration file to AutoDock-GPU:
+        autodock_gpu -C 1 --import_dpf 3kgd_receptorH.reactive_config --flexres 3kgd_receptorH_flex.pdbqt -L <ligand_filename>
+
+
+    Files written:
+        3kgd_receptorH_flex.pdbqt <-- flexible receptor input file
+        3kgd_receptorH_rigid.pdbqt <-- static (i.e., rigid) receptor input file
+        boron-silicon-atom_par.dat <-- atomic parameters for B and Si (for autogrid)
+        3kgd_receptorH_rigid.gpf <-- autogrid input file
+            3kgd_receptorH.box.pdb <-- PDB file to visualize the grid box
+    3kgd_receptorH.reactive_config <-- reactive parameters for AutoDock-GPU
