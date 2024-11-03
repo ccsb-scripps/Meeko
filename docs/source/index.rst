@@ -37,7 +37,7 @@ Meeko superseeds the preparation scripts from MGLTools. List advantages here (**
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :hidden:
    :caption: Getting started
 
