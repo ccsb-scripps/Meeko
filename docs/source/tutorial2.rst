@@ -6,7 +6,7 @@ Reactive Docking
 
 This is a reactive docking example that uses the AutoDock-GPU executable to generate the near-attack conformation of a small molecule and a protein receptor. 
 
-Follow the instructions to set up the environment and run this example on your own device (Linux, MacOS or WSL). To run this example in a Colab notebook, see :ref:`colab_examples`. 
+Follow the instructions to set up the environment and run this command-line example on your own device (Linux, MacOS or WSL). To run this example in a Colab notebook, see :ref:`colab_examples`. 
 
 .. contents::
    :local:
@@ -96,10 +96,66 @@ To prepare AMP (2-) as an reactive ligand, we specify the reactive phosphoryl at
     --reactive_smarts $reactive_smarts \
     --reactive_smarts_idx $reactive_smarts_idx
 
-The expected output
+The generated ligand PDBQT file, ``AMP.pdbqt``, will contain special AutoDock atom types for the reactive docking. The reactive atom types encode the atom type as well as the adjacency to the reactive atom. In this example: ``P1`` denotes the reactive phosphorus atom (with order number = 1). ``O5`` denotes the neighbor ``OA`` atoms (with order number = 2). Because the original atom type (``OA``) contains 2 letters, an additional increment of +3 is applied to the number suffix. And finally ``C3`` denotes the further ``C`` type atom (aliphatic carbon, with order number = 3). 
+
+.. code-block:: bash
+    REMARK SMILES Nc1ncnc2c1ncn2[C@@H]1O[C@H](COP(=O)([O-])[O-])[C@@H](O)[C@H]1O
+    REMARK SMILES IDX 11 1 22 2 20 3 13 4 12 5 10 6 4 7 3 8 5 9 2 10 6 11 7 12
+    REMARK SMILES IDX 8 13 9 14 1 15 23 18 21 20 14 22 15 23 16 24 17 25 18 26
+    REMARK SMILES IDX 19 27
+    REMARK H PARENT 1 16 1 17 23 19 21 21
+    ROOT
+    ATOM      1  C   UNL     1       0.091  -0.756   0.545  1.00  0.00     0.253 C 
+    ATOM      2  C   UNL     1       0.369  -1.495  -0.773  1.00  0.00     0.195 C 
+    ATOM      3  C   UNL     1       1.476  -0.670  -1.387  1.00  0.00     0.179 C 
+    ATOM      4  C   UNL     1       2.147  -0.047  -0.164  1.00  0.00     0.178 C 
+    ATOM      5  O   UNL     1       1.163   0.124   0.832  1.00  0.00    -0.347 OA
+    ENDROOT
+    BRANCH   1   6
+    ATOM      6  N   UNL     1      -1.156   0.007   0.449  1.00  0.00    -0.285 N 
+    ATOM      7  C   UNL     1      -4.095  -1.786   1.544  1.00  0.00     0.226 A 
+    ATOM      8  N   UNL     1      -5.018  -0.824   1.216  1.00  0.00    -0.217 NA
+    ATOM      9  N   UNL     1      -2.764  -1.577   1.316  1.00  0.00    -0.216 NA
+    ATOM     10  C   UNL     1      -4.639   0.363   0.654  1.00  0.00     0.155 A 
+    ATOM     11  C   UNL     1      -2.392  -0.395   0.766  1.00  0.00     0.167 A 
+    ATOM     12  C   UNL     1      -3.282   0.566   0.430  1.00  0.00     0.150 A 
+    ATOM     13  N   UNL     1      -2.654   1.617  -0.131  1.00  0.00    -0.231 NA
+    ATOM     14  C   UNL     1      -1.348   1.232  -0.108  1.00  0.00     0.204 A 
+    BRANCH  10  15
+    ATOM     15  N   UNL     1      -5.614   1.348   0.310  1.00  0.00    -0.382 N 
+    ATOM     16  H   UNL     1      -5.332   2.257  -0.120  1.00  0.00     0.158 HD
+    ATOM     17  H   UNL     1      -6.627   1.168   0.488  1.00  0.00     0.158 HD
+    ENDBRANCH  10  15
+    ENDBRANCH   1   6
+    BRANCH   2  18
+    ATOM     18  O   UNL     1       0.753  -2.832  -0.545  1.00  0.00    -0.386 OA
+    ATOM     19  H   UNL     1       1.495  -2.835   0.115  1.00  0.00     0.211 HD
+    ENDBRANCH   2  18
+    BRANCH   3  20
+    ATOM     20  O   UNL     1       2.354  -1.419  -2.197  1.00  0.00    -0.387 OA
+    ATOM     21  H   UNL     1       2.901  -2.009  -1.617  1.00  0.00     0.211 HD
+    ENDBRANCH   3  20
+    BRANCH   4  22
+    ATOM     22  C   UNL     1       2.798   1.302  -0.496  1.00  0.00     0.201 C3
+    BRANCH  22  23
+    ATOM     23  O   UNL     1       3.411   1.842   0.657  1.00  0.00    -0.348 O5
+    BRANCH  23  24
+    ATOM     24  P   UNL     1       5.100   1.600   0.586  1.00  0.00     0.060 P1
+    ATOM     25  O   UNL     1       5.699   2.493  -0.477  1.00  0.00    -0.326 O5
+    ATOM     26  O   UNL     1       5.775   1.996   2.085  1.00  0.00    -0.790 O5
+    ATOM     27  O   UNL     1       5.459  -0.015   0.231  1.00  0.00    -0.790 O5
+    ENDBRANCH  23  24
+    ENDBRANCH  22  23
+    ENDBRANCH   4  22
+    TORSDOF 7
+
 
 Receptor Peparation
 ===================
+
+The preparation of a rigid receptor consists of two steps. The receptor structure is first sourced from a PDB file and sent to ``reduce2.py`` for hydrogen addition and optimization, and then, the conversion to a tangible receptor PDBQT file is done by ``mk_prepare_receptor.py``.
+
+In this example, we will retrieve the PDB structure by token ``3kgd`` from
 
 .. code-block:: bash
 
