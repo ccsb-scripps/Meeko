@@ -23,6 +23,7 @@ Prerequisites and Environment Setup
 -----------------------------------
 
 1. **Create a new virtual environment (recommended)**
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 
@@ -32,6 +33,7 @@ Prerequisites and Environment Setup
 In this tutorial, we will use ``micromamba`` as the example package manager. Visit `this official guide  <https://mamba.readthedocs.io/en/latest/installation/micromamba-installation.html>`_ for a quick install and setup of micromamba. There are many equivalent ways to manage Python packages, such as ``conda`` and ``mamba``. You can easily adapt the commands to your preferred tool, as the syntax is largely compatible across these package managers. 
 
 2. Install the required Python packages through `conda-forge`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 
@@ -40,6 +42,7 @@ In this tutorial, we will use ``micromamba`` as the example package manager. Vis
 Expose ``reduce2.py`` to system ``PATH``
 
 3. Install the additional packages and data from GitHub repositories
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - (Python package) Meeko 
 
