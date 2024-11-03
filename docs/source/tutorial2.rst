@@ -71,6 +71,16 @@ Expose ``reduce2.py`` to system ``PATH``
 Ligand Peparation
 -----------------
 
+.. code-block:: bash
+    ligand_smiles="c1nc(c2c(n1)n(cn2)[C@H]3[C@@H]([C@@H]([C@H](O3)COP(=O)([O-])[O-])O)O)N"
+    scrub.py $ligand_smiles -o AMP.sdf --ph 6.5 --skip_tautomer --skip_acidbase
+
+.. code-block:: bash
+    reactive_smarts="COP(=O)([O-])[O-]"
+    reactive_smarts_idx=3
+    mk_prepare_ligand.py -i AMP.sdf -o AMP.pdbqt \
+    --reactive_smarts $reactive_smarts \
+    --reactive_smarts_idx $reactive_smarts_idx
 
 Receptor Peparation
 -----------------
