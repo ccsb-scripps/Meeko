@@ -15,7 +15,7 @@ from rdkit import Chem
 
 from meeko import PDBQTMolecule
 from meeko import RDKitMolCreate
-from meeko import LinkedRDKitChorizo
+from meeko import Polymer
 from meeko import export_pdb_updated_flexres
 from meeko.utils.utils import parse_begin_res
 
@@ -75,7 +75,7 @@ if redirect_stdout and len(docking_results_filenames) > 1:
 if read_json is not None:
     with open(read_json) as f:
         json_string = f.read()
-    polymer = LinkedRDKitChorizo.from_json(json_string)
+    polymer = Polymer.from_json(json_string)
 else:
     polymer = None
     if write_pdb is not None:

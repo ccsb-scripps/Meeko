@@ -497,7 +497,7 @@ class ChemicalComponent:
         return self
     
     def ResidueTemplate_check(self) -> bool:
-        # ResidueTemplate.check from linked_rdkit_chorizo
+        # ResidueTemplate.check from polymer
         ps = Chem.SmilesParserParams()
         ps.removeHs = False
         mol = Chem.MolFromSmiles(self.smiles_exh, ps)
