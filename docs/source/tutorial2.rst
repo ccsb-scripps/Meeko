@@ -19,6 +19,8 @@ The reactive docking example is based on reactive docking method that has been d
 
 This tutorial is intended to showcase the Meeko usage in the preparation of receptor and ligand for reactive docking. 
 
+.. _env_setup_like_colab:
+
 Prerequisites and Environment Setup
 ===================================
 
