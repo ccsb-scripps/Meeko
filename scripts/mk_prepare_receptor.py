@@ -16,9 +16,9 @@ from meeko import MoleculePreparation
 from meeko import MoleculeSetup
 from meeko import ResidueChemTemplates
 from meeko import PDBQTWriterLegacy
-from meeko import LinkedRDKitChorizo
-from meeko import LinkedRDKitChorizoEncoder
-from meeko import ChorizoCreationError
+from meeko import Polymer
+from meeko import PolymerEncoder
+from meeko import PolymerCreationError
 from meeko import reactive_typer
 from meeko import get_reactive_config
 from meeko import gridbox
@@ -497,7 +497,7 @@ if args.add_templates is not None:
         sys.exit(2)
 templates = ResidueChemTemplates.from_dict(res_chem_templates)
 
-# create chorizos
+# create polymers
 if args.read_with_prody is not None:
     if not _got_prody:
         print(_prody_import_error, file=sys.stderr)
@@ -509,7 +509,7 @@ if args.read_with_prody is not None:
         parser = SUPPORTED_PRODY_FORMATS[ext]
         input_obj = parser(args.read_with_prody, altloc="all")
         try:
-            chorizo = LinkedRDKitChorizo.from_prody(
+            polymer = Polymer.from_prody(
                 input_obj,
                 templates,
                 mk_prep,
@@ -520,14 +520,14 @@ if args.read_with_prody is not None:
                 wanted_altloc=wanted_altloc,
                 default_altloc=args.default_altloc,
             )
-        except ChorizoCreationError as e:
+        except PolymerCreationError as e:
             print(e)
             sys.exit(1)
 else:
     with open(args.read_pdb) as f:
         pdb_string = f.read()
     try:
-        chorizo = LinkedRDKitChorizo.from_pdb_string(
+        polymer = Polymer.from_pdb_string(
             pdb_string,
             templates,  # residue_templates, padders, ambiguous,
             mk_prep,
@@ -538,7 +538,7 @@ else:
             wanted_altloc=wanted_altloc,
             default_altloc=args.default_altloc,
         )
-    except ChorizoCreationError as e:
+    except PolymerCreationError as e:
         print(e)
         sys.exit(1)
 
@@ -546,12 +546,12 @@ else:
 # Use residue name in the input structure file to find reactive atom name
 # According to the mapping of residue name and reactive atom name
 for res_id in reactive_flexres:
-    if res_id not in chorizo.residues:
+    if res_id not in polymer.monomers:
         print("resid %s not found in input receptor file" % res_id)
         sys.exit(2)
     res_atom = reactive_flexres_name[res_id]
     if not res_atom:
-        input_resname = chorizo.residues[res_id].input_resname
+        input_resname = polymer.monomers[res_id].input_resname
         if input_resname in reactive_atom:
             reactive_flexres_name[res_id] = reactive_atom[input_resname]
         else:
@@ -584,20 +584,20 @@ for res_id in reactive_flexres:
     # get reactive atom types
     reactive_aname = reactive_flexres_name[res_id]
     reactive_atomi = atom_name_to_molsetup_index(
-        chorizo.residues[res_id], reactive_aname
+        polymer.monomers[res_id], reactive_aname
     )
     if reactive_atomi is None:
         print(f"cannot find reactive atom name {reactive_aname} from residue {res_id} in input receptor file")
         sys.exit(2)
-    reactive_atypes = assign_reactive_types_by_index(chorizo.residues[res_id].molsetup, reactive_atomi)
+    reactive_atypes = assign_reactive_types_by_index(polymer.monomers[res_id].molsetup, reactive_atomi)
     # set reactive atom types
-    nr_atom = len(chorizo.residues[res_id].molsetup.atoms)
+    nr_atom = len(polymer.monomers[res_id].molsetup.atoms)
     for atom_index in range(nr_atom):
         if (
-            chorizo.residues[res_id].molsetup.atoms[atom_index].atom_type
+            polymer.monomers[res_id].molsetup.atoms[atom_index].atom_type
             != reactive_atypes[atom_index]
         ):
-            chorizo.residues[res_id].molsetup.atoms[
+            polymer.monomers[res_id].molsetup.atoms[
                 atom_index
             ].atom_type = f"{reactive_prefix}{reactive_atypes[atom_index]}"
     reactive_prefix += 1
@@ -606,7 +606,7 @@ for res_id in reactive_flexres:
 all_flexres = nonreactive_flexres.union(reactive_flexres)
 
 for res_id in all_flexres:
-    chorizo.flexibilize_sidechain(res_id, mk_prep)
+    polymer.flexibilize_sidechain(res_id, mk_prep)
 
 
 any_lig_base_types = [
@@ -640,14 +640,14 @@ if args.write_json is not None:
     else:  # args.write_json is empty list (was used without arg)
         fn = str(outpath) + ".json"
     with open(fn, "w") as f:
-        json.dump(chorizo, f, cls=LinkedRDKitChorizoEncoder)
+        json.dump(polymer, f, cls=PolymerEncoder)
     written_files_log["filename"].append(fn)
     written_files_log["description"].append("parameterized receptor")
 
 if args.write_pdb is not None:
     fn = args.write_pdb[0]
     with open(fn, "w") as f:
-        f.write(chorizo.to_pdb())
+        f.write(polymer.to_pdb())
     written_files_log["filename"].append(fn)
     written_files_log["description"].append("receptor")
 
@@ -661,7 +661,7 @@ if args.write_pdbqt is not None:
     else:
         fn_base = str(outpath)
 
-    pdbqt_tuple = PDBQTWriterLegacy.write_from_linked_rdkit_chorizo(chorizo)
+    pdbqt_tuple = PDBQTWriterLegacy.write_from_polymer(polymer)
     rigid_pdbqt, flex_pdbqt_dict = pdbqt_tuple
 
     if len(all_flexres) == 0:
@@ -688,8 +688,8 @@ if args.write_pdbqt is not None:
     with open(rigid_fn, "w") as f:
         f.write(rigid_pdbqt)
 
-def warn_flexres_outside_box(chorizo, box_center, box_size):
-    for res_id, res in chorizo.residues.items():
+def warn_flexres_outside_box(polymer, box_center, box_size):
+    for res_id, res in polymer.monomers.items():
         if not res.is_movable:
             continue
         for atom in res.molsetup.atoms:
@@ -717,7 +717,7 @@ if not skip_gpf:
         # to be 5 Angstromg away from CB along the CA->CB vector
         box_centers = []
         for res_id in reactive_flexres:
-            molsetup = chorizo.residues[res_id].molsetup
+            molsetup = polymer.monomers[res_id].molsetup
             calpha_idx = [
                 atom.index for atom in molsetup.atoms if atom.pdbinfo.name == "CA"
             ]
@@ -856,7 +856,7 @@ if not skip_gpf:
         with open(box_fn, "w") as f:
             f.write(gridbox.box_to_pdb_string(box_center, box_size, spacing=1.0))
 
-    warn_flexres_outside_box(chorizo, box_center, box_size)
+    warn_flexres_outside_box(polymer, box_center, box_size)
 
 
 # configuration info for AutoDock-GPU reactive docking

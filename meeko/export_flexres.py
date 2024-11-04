@@ -35,7 +35,7 @@ def sidechain_to_mol(pdbqt_atoms):
     Chem.SanitizeMol(mol)
     return mol
 
-def export_pdb_updated_flexres(chorizo, pdbqt_mol):
+def export_pdb_updated_flexres(polymer, pdbqt_mol):
     flexres_id = pdbqt_mol._pose_data["mol_index_to_flexible_residue"]
     new_positions = {}
     for mol_idx, atom_idxs in pdbqt_mol._atom_annotations["mol_index"].items():
@@ -44,7 +44,7 @@ def export_pdb_updated_flexres(chorizo, pdbqt_mol):
             atoms = pdbqt_mol.atoms(atom_idxs)
             molsetup_to_pdbqt = pdbqt_mol._pose_data["index_map"][mol_idx]
             
-            molsetup_to_template = chorizo.residues[res_id].molsetup_mapidx
+            molsetup_to_template = polymer.monomers[res_id].molsetup_mapidx
             template_to_molsetup = {j: i for i, j in molsetup_to_template.items()}
             
             # use smiles and smiles_index_map in PDBQT REMARK
@@ -52,8 +52,8 @@ def export_pdb_updated_flexres(chorizo, pdbqt_mol):
             # but there will be a valid Smiles string if it's a covalent flexres
             if pdbqt_mol._pose_data["smiles"][mol_idx] is not None: 
 
-                orig_resmol = Chem.Mol(chorizo.residues[res_id].rdkit_mol)
-                orig_atomnames = chorizo.residues[res_id].atom_names
+                orig_resmol = Chem.Mol(polymer.monomers[res_id].rdkit_mol)
+                orig_atomnames = polymer.monomers[res_id].atom_names
                 
                 backbone_SMARTS = "[NX3]([H])[CX4][CX3](=O)"
                 expected_names = ('N', 'H', 'CA', 'C', 'O')
@@ -107,8 +107,8 @@ def export_pdb_updated_flexres(chorizo, pdbqt_mol):
                 combined_res.RemoveAtom(CA_index)
                 combined_res = combined_res.GetMol()
 
-                chorizo.residues[res_id].rdkit_mol = combined_res
-                chorizo.residues[res_id].atom_names = [atom.GetSymbol() for atom in combined_res.GetAtoms()]
+                polymer.monomers[res_id].rdkit_mol = combined_res
+                polymer.monomers[res_id].atom_names = [atom.GetSymbol() for atom in combined_res.GetAtoms()]
                 new_positions[res_id] = {idx: coord for idx,coord in enumerate(combined_res.GetConformer().GetPositions())}
 
             else: # use templates
@@ -120,11 +120,11 @@ def export_pdb_updated_flexres(chorizo, pdbqt_mol):
                         template_to_pdbqt[molsetup_to_template[i - 1]] = j - 1
 
 
-                # use chorizo template to match sidechain
+                # use polymer template to match sidechain
                 else:
                     mol = sidechain_to_mol(atoms)
-                    key = chorizo.residues[res_id].residue_template_key
-                    template = chorizo.residue_chem_templates.residue_templates[key]
+                    key = polymer.monomers[res_id].residue_template_key
+                    template = polymer.residue_chem_templates.residue_templates[key]
                     _, template_to_pdbqt = template.match(mol)
 
                 sidechain_positions = {}
@@ -134,7 +134,7 @@ def export_pdb_updated_flexres(chorizo, pdbqt_mol):
                     sidechain_positions[i] = tuple(atoms["xyz"][j])
                 if len(molsetup_matched) != len(template_to_pdbqt):
                     raise RuntimeError(f"{len(molsetup_matched)} {len(template_to_pdbqt)=}")
-                is_flexres_atom = chorizo.residues[res_id].is_flexres_atom 
+                is_flexres_atom = polymer.monomers[res_id].is_flexres_atom 
                 hit_count = sum([is_flexres_atom[i] for i in molsetup_matched])
                 if hit_count != len(molsetup_matched):
                     raise RuntimeError(f"{hit_count=} {len(molsetup_matched)=}")
@@ -143,7 +143,7 @@ def export_pdb_updated_flexres(chorizo, pdbqt_mol):
                 # new_positions[res_id] = sidechain_positions
 
                 # remove root atom(s) (often C-alpha) and first atom after bond
-                flex_model = chorizo.residues[res_id].molsetup.flexibility_model
+                flex_model = polymer.monomers[res_id].molsetup.flexibility_model
                 root_body_idx = flex_model["root"]
                 graph = flex_model["rigid_body_graph"]
                 conn = flex_model["rigid_body_connectivity"]
@@ -163,5 +163,5 @@ def export_pdb_updated_flexres(chorizo, pdbqt_mol):
                     sidechain_positions.pop(index)
                 new_positions[res_id] = sidechain_positions
     
-    pdbstr = chorizo.to_pdb(new_positions)
+    pdbstr = polymer.to_pdb(new_positions)
     return pdbstr

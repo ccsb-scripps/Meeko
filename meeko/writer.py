@@ -496,9 +496,9 @@ class PDBQTWriterLegacy:
         return success, error_msg
 
     @classmethod
-    def write_string_from_linked_rdkit_chorizo(cls, chorizo):
-        rigid_pdbqt_string, flex_pdbqt_dict = cls.write_from_linked_rdkit_chorizo(
-            chorizo
+    def write_string_from_polymer(cls, polymer):
+        rigid_pdbqt_string, flex_pdbqt_dict = cls.write_from_polymer(
+            polymer
         )
         flex_pdbqt_string = ""
         for res_id, pdbqt_string in flex_pdbqt_dict.items():
@@ -506,12 +506,12 @@ class PDBQTWriterLegacy:
         return rigid_pdbqt_string, flex_pdbqt_string
 
     @classmethod
-    def write_from_linked_rdkit_chorizo(cls, chorizo):
+    def write_from_polymer(cls, polymer):
         rigid_pdbqt_string = ""
         flex_pdbqt_dict = {}
         atom_count = 0
         flex_atom_count = 0
-        for res_id, residue in chorizo.get_valid_residues().items():
+        for res_id, monomer in polymer.get_valid_monomers().items():
             chain, resnum = res_id.split(":")
             if resnum[-1].isalpha():
                 icode = resnum[-1]
@@ -519,9 +519,9 @@ class PDBQTWriterLegacy:
             else:
                 icode = ""
                 resnum = int(resnum)
-            molsetup = residue.molsetup
-            resname = residue.input_resname
-            if residue.is_movable:
+            molsetup = monomer.molsetup
+            resname = monomer.input_resname
+            if monomer.is_movable:
                 original_ignore = {atom.index: atom.is_ignore for atom in molsetup.atoms}
                 graph = molsetup.flexibility_model["rigid_body_graph"]
                 root = molsetup.flexibility_model["root"]
@@ -532,7 +532,7 @@ class PDBQTWriterLegacy:
                     )
                 # set ignore to True for static atoms of flexible sidechains
                 # to exclude them from the PDBQT string
-                for atom_idx, is_flex in enumerate(residue.is_flexres_atom):
+                for atom_idx, is_flex in enumerate(monomer.is_flexres_atom):
                         molsetup.atoms[atom_idx].is_ignore = not is_flex
                 this_flex_pdbqt, ok, err = PDBQTWriterLegacy.write_string(
                     molsetup, remove_smiles=True, add_index_map=True
@@ -554,7 +554,7 @@ class PDBQTWriterLegacy:
                 flex_pdbqt_dict[res_id] = this_flex_pdbqt
 
             for atom_idx, atom in enumerate(molsetup.atoms):
-                if atom.is_ignore or residue.is_flexres_atom[atom_idx]:
+                if atom.is_ignore or monomer.is_flexres_atom[atom_idx]:
                     continue
                 atom_type = atom.atom_type
                 coord = atom.coord
