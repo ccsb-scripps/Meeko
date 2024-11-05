@@ -13,11 +13,7 @@ just_three_residues = pkgdir / "test/polymer_data/just-three-residues.pdb"
 j3r_docked = pkgdir / "test/polymer_data/just-three-residues_vina_flexres.pdbqt"
 j3r_idx_docked = pkgdir / "test/polymer_data/just-three-residues_vina_flexres_idxmap.pdbqt"
 
-meekodir = pathlib.Path(meeko.__file__).parents[0]
-
-with open(meekodir / "data" / "residue_chem_templates.json") as f:
-    t = json.load(f)
-chem_templates = ResidueChemTemplates.from_dict(t)
+chem_templates = ResidueChemTemplates.create_from_defaults()
 mk_prep = MoleculePreparation(
     merge_these_atom_types=["H"],
     charge_model="gasteiger",

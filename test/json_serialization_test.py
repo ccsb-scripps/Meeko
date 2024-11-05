@@ -34,7 +34,6 @@ from meeko.utils.pdbutils import PDBAtomInfo
 # from ..meeko.utils.pdbutils import PDBAtomInfo
 
 pkgdir = pathlib.Path(meeko.__file__).parents[1]
-meekodir = pathlib.Path(meeko.__file__).parents[0]
 
 # Test Data
 ahhy_example = pkgdir / "test/polymer_data/AHHY.pdb"
@@ -43,9 +42,7 @@ just_one_ALA_missing = (
 )
 
 # Polymer creation data
-with open(meekodir / "data" / "residue_chem_templates.json") as f:
-    t = json.load(f)
-chem_templates = ResidueChemTemplates.from_dict(t)
+chem_templates = ResidueChemTemplates.create_from_defaults()
 mk_prep = MoleculePreparation()
 
 

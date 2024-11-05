@@ -2,6 +2,7 @@ import pathlib
 import json
 import logging
 import traceback
+from importlib_resources import files
 from os import linesep as os_linesep
 from sys import exc_info
 from typing import Union
@@ -30,6 +31,7 @@ from .chemtempgen import build_linked_CCs
 
 import numpy as np
 
+data_path = files("meeko.data")
 periodic_table = Chem.GetPeriodicTable()
 
 try:
@@ -591,27 +593,85 @@ class ResidueChemTemplates:
         as input to allow users to modify the input dict in Python
         """
 
-        # alldata = json.loads(json_string)
-        ambiguous = alldata["ambiguous"]
+        ambiguous = {k: v.copy() for k, v in alldata["ambiguous"].items()}
         residue_templates = {}
         padders = {}
         for key, data in alldata["residue_templates"].items():
-            link_labels = None
-            if "link_labels" in data:
-                link_labels = {
-                    int(key): value for key, value in data["link_labels"].items()
-                }
-            # print(key)
-            res_template = ResidueTemplate(
-                data["smiles"], link_labels, data.get("atom_name", None)
-            )
+            res_template = cls.residue_template_from_dict(data)
             residue_templates[key] = res_template
         for link_label, data in alldata["padders"].items():
-            rxn_smarts = data["rxn_smarts"]
-            adjacent_res_smarts = data.get("adjacent_res_smarts", None)
-            auto_blunt = data.get("auto_blunt", False)
-            padders[link_label] = ResiduePadder(rxn_smarts, adjacent_res_smarts, auto_blunt)
+            padders[link_label] = cls.padder_from_dict(data)
         return cls(residue_templates, padders, ambiguous)
+
+    @staticmethod
+    def residue_template_from_dict(data):
+        if "link_labels" in data:
+            link_labels = {int(k): v for k, v in data["link_labels"].items()}
+        else:
+            link_labels = None
+        atom_names = data.get("atom_name", None)
+        return ResidueTemplate(data["smiles"], link_labels, atom_names)
+
+    @staticmethod
+    def padder_from_dict(data):
+        rxn_smarts = data["rxn_smarts"]
+        adjacent_res_smarts = data.get("adjacent_res_smarts", None)
+        auto_blunt = data.get("auto_blunt", False)
+        padder = ResiduePadder(rxn_smarts, adjacent_res_smarts, auto_blunt)
+        return padder
+
+    def add_dict(self, data, overwrite=False):
+        bad_keys = set(data) - {"ambiguous", "residue_templates", "padders"}
+        if bad_keys:
+            raise ValueError("unexpected keys: {bad_keys}")
+        new_ambiguous = data.get("ambiguous", {}) 
+        if overwrite:
+            self.ambiguous.update(new_ambiguous)
+        else:
+            new_ambiguous = {k: v.copy() for k, v in new_ambiguous.items()}
+            new_ambiguous.update(self.ambiguous)
+            self.ambiguous = new_ambiguous
+        for key, value in data.get("residue_templates", {}).items():
+            if overwrite or key not in self.residue_templates:
+                res_template = self.residue_template_from_dict(value)
+                self.residue_templates[key] = res_template
+        for link_label, value in data.get("padders", {}).items():
+            if overwrite or key not in self.padders:
+                padder = self.padder_from_dict(data)
+                self.padders[link_label] = padder
+        return
+
+    @staticmethod
+    def lookup_filename(filename, data_path):
+        p = pathlib.Path(filename)
+        if not p.exists():
+            if (data_path / p).exists():
+                filename = str(data_path / p)
+            elif (data_path / (p.name + ".json")).exists():
+                filename = str(data_path / (p.name + ".json"))
+            else:
+                raise ValueError(f"can't find {filename} in current dir or {data_path}")
+        return filename
+
+    @classmethod
+    def from_json_file(cls, filename):
+        filename = cls.lookup_filename(filename, data_path)
+        with open(filename) as f:
+            jsonstr = f.read()
+        data = json.loads(jsonstr)
+        return cls.from_dict(data)
+
+    @classmethod
+    def create_from_defaults(cls):
+        return cls.from_json_file("residue_chem_templates")
+
+    def add_json_file(self, filename):
+        filename = self.lookup_filename(filename, data_path)
+        with open(filename) as f:
+            jsonstr = f.read()
+        data = json.loads(jsonstr)
+        self.add_dict(data)
+        return
 
     @staticmethod
     def _check_missing_padders(residue_templates, padders):
