@@ -22,7 +22,7 @@ This tutorial is intended to showcase the Meeko usage in the preparation of rece
 Prerequisites and Environment Setup
 ===================================
 
-Follow the instructions in the previous tutorial for environment setup: :ref:`env_setup_like_colab:`. 
+Follow the instructions in the previous tutorial for environment setup: :ref:`env_setup_like_colab`. 
 
 Ligand Conformer Generation
 ===========================
@@ -54,7 +54,7 @@ Receptor Preparation
 
 The preparation of a rigid receptor consists of two steps. The receptor structure is first sourced from a PDB file and sent to ``reduce2.py`` for hydrogen addition and optimization, and then, the conversion to a tangible receptor PDBQT file is done by ``mk_prepare_receptor.py``.
 
-The first step (hydrogen addition and optimization) of this example will be the same as the reactive docking tutorial :ref:`tutorial2`. You may skip to the second step from here :ref:`covalent_receptor_prep` if you already have ``3kgd_receptorH.pdb`` or an equivalent (a protonated receptor PDB file). If not, we will begin from retrieving the PDB structure by token ``3kgd`` from RCSB PDB. 
+The first step (hydrogen addition and optimization) of this example will be the same as the reactive docking tutorial :ref:`tutorial2`. You may skip the steps and proceed to the next ``mk_prepare_receptor.py`` code block if you already have ``3kgd_receptorH.pdb`` or an equivalent (a protonated receptor PDB file). If not, we will begin from retrieving the PDB structure by token ``3kgd`` from RCSB PDB. 
 
 .. code-block:: bash
 
@@ -110,8 +110,6 @@ After running the last command above, ``reduce2.py`` will conclude a normal exec
    prody_ligandPDB = "LIG.pdb"
    writePDB(prody_ligandPDB, ligand_atoms)
    EOF
-
-.. _covalent_receptor_prep:
 
 Now we're ready with the H-optimized receptor structure ``3kgd_receptorH.pdb`` and the position of the original ligand PDB file ``LIG.pdb``, we will proceed to receptor preparation. Here, we will specify that the flexible residue in the receptor is His309 in PDB structure ``3kgd``, a bacteria RNA 3’ cyclase – The full argument will be ``-f "A:309"``. Additionally, we will let the default AltLoc ID to be ``A`` for any residues with alternate locations. 
 
