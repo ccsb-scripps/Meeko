@@ -36,11 +36,6 @@ else:
 
 path_to_this_script = pathlib.Path(__file__).resolve()
 
-pkg_dir = pathlib.Path(pkg_init_path).parents[0]
-templates_fn = str(pkg_dir / "data" / "residue_chem_templates.json")
-with open(templates_fn) as f:
-    res_chem_templates = json.load(f)
-
 
 def parse_cmdline_res(string):
     """ "A:5,7,BB:12C  ->  "A:5", "A:7", "BB:12C" """
@@ -174,7 +169,7 @@ def get_args():
     config_group.add_argument("-n", "--set_template", help="e.g. A:5,7=CYX,B:17=HID")
     config_group.add_argument("-d", "--delete_residues", help="e.g. A:350,B:15,16,17")
     config_group.add_argument("-b", "--blunt_ends", help="e.g. A:123,200=2,A:1=0")
-    config_group.add_argument("--add_templates", help="[.json]", metavar="JSON_FILENAME")
+    config_group.add_argument("--add_templates", help="[.json]", metavar="JSON_FILENAME", nargs="+", default=[])
     config_group.add_argument("--mk_config", help="[.json]", metavar="JSON_FILENAME")
     config_group.add_argument(
         "-a", "--allow_bad_res",
@@ -479,23 +474,9 @@ else:
     mk_prep = MoleculePreparation()
 
 # load templates for mapping
-if args.add_templates is not None:
-    with open(args.add_templates) as f:
-        more_templates = json.load(f)
-    bad_keys = set()
-    for key, values in more_templates.items():
-        if key not in res_chem_templates:
-            bad_keys.add(key)
-        else:
-            res_chem_templates[key].update(values)
-    if len(bad_keys):
-        msg = "Unrecognized keys provided in add_templates:" + os_linesep
-        msg += f"{bad_keys=}" + os_linesep
-        msg += f"allowed keys: {res_chem_templates.keys()}" + os_linesep
-        msg += f"see template file: {templates_fn}" + os_linesep
-        print(msg, file=sys.stderr)
-        sys.exit(2)
-templates = ResidueChemTemplates.from_dict(res_chem_templates)
+templates = ResidueChemTemplates.create_from_defaults()
+for fn in args.add_templates:
+    templates.add_json_file(fn)
 
 # create polymers
 if args.read_with_prody is not None:

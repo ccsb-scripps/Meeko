@@ -14,7 +14,6 @@ import numpy as np
 
 
 pkgdir = pathlib.Path(meeko.__file__).parents[1]
-meekodir = pathlib.Path(meeko.__file__).parents[0]
 
 ahhy_example = pkgdir / "test/polymer_data/AHHY.pdb"
 just_one_ALA_missing = (
@@ -35,9 +34,7 @@ disulfide_adjacent = pkgdir / "test/polymer_data/disulfide_bridge_in_adjacent_re
 
 # TODO: add checks for untested polymer fields (e.g. input options not indicated here)
 
-with open(meekodir / "data" / "residue_chem_templates.json") as f:
-    t = json.load(f)
-chem_templates = ResidueChemTemplates.from_dict(t)
+chem_templates = ResidueChemTemplates.create_from_defaults()
 mk_prep = MoleculePreparation(
     merge_these_atom_types=["H"],
     charge_model="gasteiger",
