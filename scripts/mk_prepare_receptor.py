@@ -148,6 +148,7 @@ def get_args():
     io_group.add_argument(
         "--write_pdb",
         help="prepared receptor (must specify filename)",
+        nargs="*",
         metavar="PDB_FILENAME",
     )
     io_group.add_argument(
