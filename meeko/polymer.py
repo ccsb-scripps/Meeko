@@ -2,7 +2,7 @@ import pathlib
 import json
 import logging
 import traceback
-from importlib_resources import files
+from importlib.resources import files
 from os import linesep as os_linesep
 from sys import exc_info
 from typing import Union
@@ -31,7 +31,7 @@ from .chemtempgen import build_linked_CCs
 
 import numpy as np
 
-data_path = files("meeko.data")
+data_path = files("meeko") / "data"
 periodic_table = Chem.GetPeriodicTable()
 
 try:

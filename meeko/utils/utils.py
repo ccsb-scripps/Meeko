@@ -6,7 +6,6 @@
 #
 
 import os
-import importlib
 from operator import itemgetter
 
 
@@ -100,23 +99,6 @@ mini_periodic_table = {
     87: "Fr",
     88: "Ra",
 }
-
-
-def path_module(module_name):
-    try:
-        from importlib import util
-
-        specs = util.find_spec(module_name)
-        if specs is not None:
-            return specs.submodule_search_locations[0]
-    except:
-        try:
-            _, path, _ = imp.find_module(module_name)
-            abspath = os.path.abspath(path)
-            return abspath
-        except ImportError:
-            return None
-    return None
 
 
 def getNameExt(fname):
