@@ -173,7 +173,7 @@ And to run the docking calculation, the ligand PDBQT file (``HIE_AMP.pdbqt``) an
 
    touch empty
    ./adgpu --lfile empty --flexres HIE_AMP.pdbqt \
-   --ffile 3kgd_receptorH_rigid.maps.fld\
+   --ffile 3kgd_receptorH_rigid.maps.fld \
    --resnam HIE_AMP
 
 If you're running these calculations on Google T4 backends, here are the pre-compiled executables of autogrid4 and adgpu specifically for T4: :ref:`T4_executables` 
