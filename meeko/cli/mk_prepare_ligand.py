@@ -494,9 +494,7 @@ class Output:
         else:
             return tuple("mk%d" % (i + 1) for i in range(len(molsetups)))
 
-
-if __name__ == "__main__":
-
+def main():
     args, config, backend, is_covalent = cmd_lineparser()
     input_molecule_filename = args.input_molecule_filename
 
@@ -656,3 +654,7 @@ if __name__ == "__main__":
     elif input_mol_with_failure > 0:
         print("Some molecules encountered errors!")
         sys.exit(4)  # partial failure
+    return
+
+if __name__ == '__main__':
+    sys.exit(main())

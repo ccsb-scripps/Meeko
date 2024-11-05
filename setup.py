@@ -21,7 +21,7 @@ def find_files(directory):
 
 setup(
     name="meeko",
-    version='0.6.0-alpha.3',
+    version='0.6.0',
     author="Forli Lab",
     author_email="forli@scripps.edu",
     url="https://github.com/ccsb-scripps/meeko",
@@ -29,20 +29,10 @@ setup(
     long_description=open(os.path.join(base_dir, 'README.md')).read(),
     long_description_content_type="text/markdown",
     packages=find_packages(),
-    scripts=["scripts/mk_prepare_ligand.py",
-             "scripts/mk_prepare_receptor.py",
-             "scripts/mk_export.py",
-           #"scripts/dry.py",
-           #"scripts/mapwater.py",
-           #"scripts/wet.py"],
-            ],
-    package_data={"meeko" : ["data/*", "data/params/*"]},
-    data_files=[("", ["README.md", "LICENSE"]),
-                ("scripts", find_files("scripts"))],
     include_package_data=True,
     zip_safe=False,
     install_requires=['numpy>=1.18'],
-    python_requires='>=3.5',
+    python_requires='>=3.9, <3.12',
     license="LGPL-2.1",
     keywords=["molecular modeling", "drug design",
             "docking", "autodock"],
@@ -51,20 +41,22 @@ setup(
         'Environment :: Other Environment',
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: Apache Software License',
+        'License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)',
         'Natural Language :: English',
         'Operating System :: MacOS :: MacOS X',
-        #'Operating System :: Microsoft :: Windows',
         'Operating System :: OS Independent',
         'Operating System :: POSIX :: Linux',
         'Programming Language :: C++',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python',
         'Topic :: Scientific/Engineering :: Bio-Informatics',
         'Topic :: Scientific/Engineering :: Chemistry',
         'Topic :: Software Development :: Libraries'
-    ]
+    ],
+    entry_points={
+        'console_scripts': [
+            'mk_export.py=meeko.cli.mk_export:main',
+            'mk_prepare_ligand.py=meeko.cli.mk_prepare_ligand:main',
+            'mk_prepare_receptor.py=meeko.cli.mk_prepare_receptor:main'
+        ]
+    }
 )

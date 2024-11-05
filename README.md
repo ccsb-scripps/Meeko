@@ -1,7 +1,7 @@
 # Meeko: preparation of small molecules for AutoDock
 
 [![API stability](https://img.shields.io/badge/stable%20API-no-orange)](https://shields.io/)
-[![PyPI version fury.io](https://img.shields.io/badge/version-0.6.0--alpha.3-green.svg)](https://pypi.python.org/pypi/meeko/)
+[![PyPI version fury.io](https://img.shields.io/badge/version-0.6.0-green.svg)](https://pypi.python.org/pypi/meeko/)
 
 Meeko reads an RDKit molecule object and writes a PDBQT string (or file)
 for [AutoDock-Vina](https://github.com/ccsb-scripps/AutoDock-Vina)
@@ -293,7 +293,6 @@ naming scheme for atoms and residues, e.g., `HIE` or `HID`
 instead of `HIS`.
 
 ### 2. Prepare protein pdbqt
-Here, `wk.pdb` was written by waterkit.
 Here, `wk.pdb` was written by waterkit. The example below will center a gridbox of specified size on the given reactive residue.
 
 ```console
