@@ -71,10 +71,10 @@ Ligand Preparation
 
 Ligand Preparation is the process that generates ligand input files for docking calculation and virtual screening. At present, AutoDock Vina and AutoDock-GPU need the ligand input files in the PDBQT format. In this example, we will use ``mk_prepare_ligand.py``, a command-line script in Meeko, to prepare such ligand PDBQT files. 
 
-Prepare a Single Ligand from a Smiles string
+Prepare a Single Ligand from a Smiles String
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-`Imatinib <https://pubchem.ncbi.nlm.nih.gov/compound/Imatinib>_` is a small-molecule drug. You can find the SMILES string for Imatinib from various reliable chemical databases and resources, including but not limited to `PubChem <https://pubchem.ncbi.nlm.nih.gov/>_` and `DrugBank <https://go.drugbank.com/>`_. 
+`Imatinib <https://pubchem.ncbi.nlm.nih.gov/compound/Imatinib>`_ is a small-molecule drug. You can find the SMILES string for Imatinib from various reliable chemical databases and resources, including but not limited to `PubChem <https://pubchem.ncbi.nlm.nih.gov/>`_ and `DrugBank <https://go.drugbank.com/>`_. 
 
 ``scrub.py`` is a command-line script in Scrubber that generates 3D conformers of protomers and tautomers for given small molecules at a specified (range of) pH. Given a pH range of 5 to 9, the output protomers will include those which make up no less than 1% of the total population at pH = 7. Based on the reference pKa values, the amine nitrogens and the pyridine nitrogen will be considered for acid/base enumeration. With the ``meeko_tutorial_py39`` micromamba environment active, run ``scrub.py`` to generate 3D conformers of Imatinib from the SMILES string. 
 
@@ -101,12 +101,127 @@ In case there are multiple molecules in the SDF file, ``mk_prepare_ligand.py`` n
     mk_prepare_ligand.py -i imatinib.sdf --multimol_prefix imatinib_protomer
 
 
+Prepare Ligands in Batch from a ``.smi`` File
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In preparation for virtual screening, it is possible to prepare ligands in batch from a ``.smi`` File. There is one such example file at ``tutorials/imatinib/step-4/mols.smi`` from `Forlilab tutorials <https://github.com/forlilab/tutorials>`_. Follow the example commands to process ``mols.smi``: 
+
+.. code-block:: bash
+
+    smi_file="tutorials/imatinib/step-4/mols.smi"
+    scrub.py $smi_file -o mols.sdf
+
+At the end of the execution, the expected standard output will tell you the total number of isomers written to the multi-molecule SDF file ``mols.sdf``. This will help you estimate the expected file size and system requirements beforehand. 
+
+.. code-block:: bash
+
+    Scrub completed.
+    Summary of what happened:
+    Input molecules supplied: 491
+    mols processed: 491, skipped by rdkit: 0, failed: 0
+    nr isomers (tautomers and acid/base conjugates): 741 (avg. 1.509 per mol)
+    nr conformers:  741 (avg. 1.000 per isomer, 1.509 per mol)
+
+For ``mols.sdf``, we will run ``mk_prepare_ligand.py`` with ``--multimol_prefix mols_pdbqt``, a directory to be created to hold the ligand PDBQT files. If you expect a large number of isomers (potentially millions), consider writing to a temporary directory or scratch space to manage storage efficiently. 
+
+.. code-block:: bash
+
+    mk_prepare_ligand.py -i mols.sdf --multimol_outdir mols_pdbqt
+
 Receptor Preparation
 ====================
 
-Receptor Preparation is 
+Receptor Preparation is the process that generates receptor input files for docking calculation and virtual screening. It typically begins with a PDB file of a biomacromolecule system, with or without coordinates of explicit hydrogens. At present, AutoDock Vina and AutoDock-GPU may require different types of files as receptor inputs. ``mk_prepare_receptor.py`` is the command-line script in Meeko that is designed to handle the different situations. 
 
+For AutoDock-Vina
+~~~~~~~~~~~~~~~~~
 
+Docking with AutoDock-Vina requires the following receptor input files: 
+
+- Receptor PDBQT file
+- (Optional) a TXT file that contains the box specifications, which can be re-used as the config file for Vina
+
+Starting from a provided PDB file at ``tutorials/imatinib/step-3/2hzn_protein.pdb`` from `Forlilab tutorials <https://github.com/forlilab/tutorials>`_, the generation of a Receptor PDBQT file is very straightforward: 
+
+.. code-block:: bash
+
+    pdb_file="tutorials/imatinib/step-3/2hzn_protein.pdb"
+    mk_prepare_receptor.py --read_pdb $pdb_file -o rec_2hzn -p --allow_bad_res
+
+Here, we use ``-o`` to set the basename of the output files to ``rec_2hzn`` with request ``-p``. The execution will generate only the receptor PDBQT file, ``rec_2hzn.pdbqt``. In addition, option ``--allow_bad_res`` is used to ignore residues with missing heavy atoms in the input PDB files. 
+
+Note that ``--read_pdb``, which uses the PDB parser in RDKit, is not the only way for ``mk_prepare_receptor.py`` to parse a receptor PDB file. The alternate is ``-i`` (short for ``--read_with_prody``) and it requires ProDy as an additional dependency. If you wish to use the ProDy parser, run ``pip install prody`` to install ProDy. 
+
+To generate the TXT file that has the box dimension, we must find a way to define the wanted docking box. In this example, we will use a provided PDB file of ligand Imatinib at ``tutorials/imatinib/step-3/xray-imatinib.pdb`` that has been aligned to the expected binding site of the provided receptor PDB file. 
+
+.. code-block:: bash
+
+    pdb_file="tutorials/imatinib/step-3/2hzn_protein.pdb"
+    lig_file="tutorials/imatinib/step-3/xray-imatinib.pdb"
+    mk_prepare_receptor.py --read_pdb $pdb_file -o rec_2hzn -p -v --allow_bad_res \
+    --box_enveloping $lig_file --padding 5
+
+Here, we add the ``-v`` to request the Vina-style box files to be generated along with the receptor PDBQT files. To define the box, we are using the combination of ``--box_enveloping`` and ``--padding``, which is to sete the center of the box by the given object, and the size of the box by a constant padding in each dimension around the given object. Note that this is not the only way to define the box. Read the help message printed from ``mk_prepare_receptor.py -h`` to learn about other combinations. 
+
+At the end of the execution with ``-p -v``, the expected standard output will be: 
+
+.. code-block:: bash
+
+    Files written:
+      rec_2hzn.pdbqt <-- static (i.e., rigid) receptor input file
+    rec_2hzn.box.txt <-- Vina-style box dimension file
+    rec_2hzn.box.pdb <-- PDB file to visualize the grid box
+
+.. _receptor_preparation_for_vina_with_adf4sf:
+
+For AutoDock-Vina (and with AutoDock4 Scoring Function)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To use the AutoDock4 Scoring Function in AutoDock-Vina, an additional step needs to be taken to compute the grid maps prior to the docking calculation. At present, this is only possible with AutoGrid, and therefore needs a (GPF) Grid Parameter File for it. Using ``mk_prepare_receptor.py`` option ``-g``, such GPF file can be generated in the same step  as the receptor PDBQT file as well as the box dimension files. Here's an example: 
+
+.. code-block:: bash
+
+    pdb_file="tutorials/imatinib/step-3/2hzn_protein.pdb"
+    lig_file="tutorials/imatinib/step-3/xray-imatinib.pdb"
+    mk_prepare_receptor.py --read_pdb $pdb_file -o rec_2hzn -p -v -g --allow_bad_res \
+    --box_enveloping $lig_file --padding 5
+
+At the end of the execution with ``-p -v -g``, the expected standard output is now: 
+
+.. code-block:: bash
+
+    Files written:
+                rec_2hzn.pdbqt <-- static (i.e., rigid) receptor input file
+    boron-silicon-atom_par.dat <-- atomic parameters for B and Si (for autogrid)
+                  rec_2hzn.gpf <-- autogrid input file
+              rec_2hzn.box.txt <-- Vina-style box dimension file
+              rec_2hzn.box.pdb <-- PDB file to visualize the grid box
+
+To compute the grid maps, the GPF file (``rec_2hzn.gpf``) will be the input command file for AutoGrid. The receptor PDBQT file (``rec_2hzn.pdbqt``) and the additional parameter file (``boron-silicon-atom_par.dat``) need to be in the same directory from which AutoGrid is run. 
+
+For AutoDock-GPU
+~~~~~~~~~~~~~~~~
+
+At present, AutoDock-GPU also needs the pre-computed grid maps from AutoGrid. Therefore, Receptor Preparation for docking calculations with AutoDock-GPU is similar to preparation in the previous section :ref:`receptor_preparation_for_vina_with_adf4sf`. But in this case, we can drop the ``-v`` option as the Vina-style box definition TXT file is no longer needed for AutoGrid-GPU. 
+
+Below is the sample command: 
+
+.. code-block:: bash
+
+    pdb_file="tutorials/imatinib/step-3/2hzn_protein.pdb"
+    lig_file="tutorials/imatinib/step-3/xray-imatinib.pdb"
+    mk_prepare_receptor.py --read_pdb $pdb_file -o rec_2hzn -p -g --allow_bad_res \
+    --box_enveloping $lig_file --padding 5
+
+And the expected standard output will be: 
+
+.. code-block:: bash
+
+    Files written:
+                rec_2hzn.pdbqt <-- static (i.e., rigid) receptor input file
+    boron-silicon-atom_par.dat <-- atomic parameters for B and Si (for autogrid)
+                  rec_2hzn.gpf <-- autogrid input file
+              rec_2hzn.box.pdb <-- PDB file to visualize the grid box
 
 Molecular Docking (Single Ligand)
 =================================
