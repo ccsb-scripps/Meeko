@@ -46,13 +46,6 @@ Install the additional packages and data from GitHub repositories
    git clone --single-branch --branch develop https://github.com/forlilab/scrubber.git
    cd scrubber; pip install --use-pep517 -e .; cd ..
 
-- (Python package) Ringtail
-
-.. code-block:: bash
-
-   git clone --single-branch --branch develop https://github.com/forlilab/Ringtail.git
-   cd Ringtail; pip install --use-pep517 -e .; cd ..
-
 - (Example files for this tutorial) Forlilab Tutorials
 
 .. code-block:: bash
@@ -252,8 +245,8 @@ With that, the standard output and the list of generated files from ``mk_prepare
               rec_2hzn.box.txt <-- Vina-style box dimension file
               rec_2hzn.box.pdb <-- PDB file to visualize the grid box
 
-Export Poses from Molecular Docking (Single Ligand)
-===================================================
+Export Poses from Docking
+=========================
 
 From AutoDock-Vina
 ~~~~~~~~~~~~~~~~~~
@@ -319,6 +312,11 @@ With that, the output DLG file will be named ``imatinib_protomer-1_flexres.dlg``
     mk_export.py $docked_dlg -j $rec_json -p imatinib_protomer-1_flexres_adgpu_out.pdb
 
 At present, all docking poses will be exported, whether they are cluster leads or not. 
+
+Processing the Screening (Batch Docking) Results
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To process results from Screening (Batch Docking), please use the `Ringtail <https://github.com/forlilab/Ringtail>`_ package for SQL-based data management, streamlined analysis and filtering. The documentation of Ringtail can be found `here <https://ringtail.readthedocs.io/en/latest/>`_. 
 
 What's Next?
 ^^^^^^^^^^^^
