@@ -22,8 +22,7 @@ Creating a PDBQT string from an RDKit molecule
 
 At this point, ``pdbqt_string`` can be written to a file for
 docking with AutoDock-GPU or Vina, or passed directly to Vina within Python
-using `set_ligand_from_string(pdbqt_string)`. For context, see
-[the docs on using Vina from Python](https://autodock-vina.readthedocs.io/en/latest/docking_python.html).
+using ``set_ligand_from_string (pdbqt_string)``. For context, see `the docs on using Vina from Python <https://autodock-vina.readthedocs.io/en/latest/docking_python.html>`_.
 
 One advantage of this approach is that input PDBQT files are not written to the filesystem.
 The PDBQT format is lossy, because it lacks bond orders and non-polar hydrogens,

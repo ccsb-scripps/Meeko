@@ -28,8 +28,7 @@ For Vina's output PDBQT files, omit ``is_dlg=True``.
     rdkitmol_list = RDKitMolCreate.from_pdbqt_mol(pdbqt_mol)
 
 When using Vina from Python, the output string can be passed directly.
-See [the docs](https://autodock-vina.readthedocs.io/en/latest/docking_python.html)
-for context on the `v` object.
+See `the docs <https://autodock-vina.readthedocs.io/en/latest/docking_python.html>`_ for context on the ``Vina`` object.
 
 .. code-block:: python
 

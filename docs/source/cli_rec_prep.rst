@@ -51,7 +51,8 @@ Write flags
 -----------
 
 The option flags starting with ``--write`` in  ``mk_prepare_receptor`` can
-be used both with an argument to specify the outpuf filename:
+be used both with an argument to specify the outpuf filename: 
+
 .. code-block:: bash
 
     --write_pdbqt myenzyme.pdbqt --write_json myenzyme.json

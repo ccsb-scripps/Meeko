@@ -3,7 +3,7 @@
 Basic Docking 
 -------------------------------------
 
-This tutorial provides practice examples and a step-by-step guide for the two basic procedures, Ligand Preparation and Receptor Preparation, with Meeko for molecular docking and virtual screening with `AutoDock Vina <https://github.com/ccsb-scripps/AutoDock-Vina>`_ and `AutoDock-GPU <https://github.com/ccsb-scripps/AutoDock-GPU>`_. It is based on, but not a full version of the tutorial materials in `Forlilab tutorials <https://github.com/forlilab/tutorials>`_. 
+This tutorial provides practice examples and a step-by-step guide for the two basic procedures, **Ligand Preparation** and **Receptor Preparation**, with Meeko for molecular docking and virtual screening with `AutoDock Vina <https://github.com/ccsb-scripps/AutoDock-Vina>`_ and `AutoDock-GPU <https://github.com/ccsb-scripps/AutoDock-GPU>`_. It is based on, but not a full version of the tutorial materials in `Forlilab tutorials <https://github.com/forlilab/tutorials>`_. 
 
 .. contents::
    :local:
