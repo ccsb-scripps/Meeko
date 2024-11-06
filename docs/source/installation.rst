@@ -56,7 +56,7 @@ install all dependencies except Prody and install Meeko from source.
 
 Meeko uses Prody to parse PDB and mmCIF files. Without prody, PDB files
 can be parsed with the command line option ``--read_pdb`` and with the Python
-method ``LinkedRDKitChorizo.from_pdb_string()``. However, without ProDy it
+method ``Polymer.from_pdb_string()``. However, without ProDy it
 won't be possible to read mmCIF files or use tethered docking. Prody developers
 are working to support Python 3.12, so it is possible that Prody will work
 on Python 3.12 soon.

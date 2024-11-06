@@ -1,39 +1,37 @@
 Meeko
 =====
 
-Preparation of molecules for AutoDock
--------------------------------------
+Parameterization of molecules for AutoDock
+------------------------------------------
 
-Meeko assigns parameters to small organic molecules (a.k.a. ligands), and to
-biological polymers (proteins and nucleic acids).
+Meeko assigns parameters to small organic molecules, often called ligands,
+and to proteins and to nucleic acids, often called receptors.
 This includes assigning atom types, partial charges, setting
 bonds as rotatable or fixed, and making receptor sidechains flexible.
-It does not calculate 3D positions or assign protonation states of ligands
-but for receptors it allows the user to manually choose the protonation
-variant of tritable amino acids.
 
-Meeko write the input PDBQT files for AutoDock-Vina and AutoDock-GPU, and it
-It also converts the output files from docking, which are PDBQT for Vina and
-DLG for AutoDock-GPU, into useful file formats that other software besides
-AutoDock can read: SDF for ligands and PDB for receptor.
+Write input and process output
+------------------------------
+
+Meeko writes the input PDBQT files for AutoDock-Vina and AutoDock-GPU, and it
+also converts the output files from docking, which are PDBQT for Vina and
+DLG for AutoDock-GPU, into SDF for ligands and PDB for receptor.
+
+Python API
+----------
+
+Meeko is written in Python and exposes functions and classes that operate on
+RDKit molecules for the ligands, leveraging RDKit's popularity to facilitate
+integration with external software. Command line scripts are also available.
 
 AutoDock ecosystem
 ------------------
 
-Meeko by itself it's not very useful. It is part of a larger collection of
-tools to computationally dock ligands onto receptors.
+To run a docking, more packages are required besides Meeko:
 
- * interface with RDKit by desing, for Python scripting
  * AutoDock-Vina
- * AutoDOck-GPU
+ * AutoDock-GPU
  * Ringtail
- * Molscrub
- * RSD3 website
 
-Comparison to MGLTools
-----------------------
-
-Meeko superseeds the preparation scripts from MGLTools. List advantages here (**TODO**).
 
 
 .. toctree::
@@ -44,7 +42,6 @@ Meeko superseeds the preparation scripts from MGLTools. List advantages here (**
    installation
    colab_examples
    tutorials
-   about
 
 .. toctree::
    :maxdepth: 2
