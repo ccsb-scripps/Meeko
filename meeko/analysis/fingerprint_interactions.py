@@ -7,7 +7,12 @@
 import os
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+    _got_pandas = True
+except ImportError as error:
+    _got_pandas = False
+    _pandas_import_error = error
 
 from .interactions import Hydrophobic, Reactive, Metal
 from .interactions import HBDonor, HBAcceptor, WaterDonor, WaterAcceptor
@@ -89,6 +94,10 @@ class FingerprintInteractions:
                 found between the molecules and the receptor
 
         """
+
+        if not _got_pandas:
+            raise _pandas_import_error
+
         count = 0
         resid_to_idx_encoder = {}
         columns = [[], []]
