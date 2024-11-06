@@ -289,21 +289,44 @@ With that, the output DLG file will be named ``imatinib_protomer-1.dlg``. Simila
 
 Note that by default, only the cluster leads will be exported to the SDF file. To export all generated poses in the DLG file, add the ``--all_dlg_poses`` option when exporting the poses. 
 
-From Flexible Receptor Docking
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+From Flexible Receptor Docking (with AutoDock-Vina)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Here we will use AutoDock-GPU as the docking engine to demonstrate result processing from flexible receptor docking. A flexible docking example with Vina can be found `here in the Vina documentation <https://autodock-vina.readthedocs.io/en/latest/docking_flexible.html>`_. With AutoDock-GPU, the required files (generated from the previous steps) and the command to run a flexible docking calculation of a single ligand is as follows: 
+With AutoDock-Vina, the required files (generated from the previous steps) and the command to run a flexible docking calculation of a single ligand is as follows: 
 
 .. code-block:: bash
 
     lig_name="imatinib_protomer-1"
-    lig_pdbqt="${lig_resnam}.pdbqt"
+    lig_pdbqt="${lig_name}.pdbqt"
+    rec_prefix="rec_2hzn"
+    flexres_pdbqt="${rec_prefix}_flex.pdbqt"
+    rec_pdbqt="${rec_prefix}_rigid.pdbqt"
+    config_txt="${rec_prefix}.box.txt"
+    ./vina --ligand $lig_pdbqt --flex $flexres_pdbqt --receptor $rec_pdbqt --config $config_txt --out ${lig_name}_flexres.pdbqt
+
+With that, the output PDBQT file will be named ``imatinib_protomer-1_flexres.pdbqt``. If given the receptor JSON file (``rec_2hzn.json``) generated when the other receptor files were created, ``mk_export.py`` is able to reconstruct the atomistic structures of the full receptor and export the updated models to a multi-model PDB file (``imatinib_protomer-1_flexres_vina_out.pdb``) with the following command: 
+
+.. code-block:: bash
+
+    rec_json="rec_2hzn.json"
+    docked_pdbqt="imatinib_protomer-1_flexres.pdbqt"
+    mk_export.py $docked_pdbqt -j $rec_json -p imatinib_protomer-1_flexres_vina_out.pdb
+
+From Flexible Receptor Docking (with AD-GPU)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+With AutoDock-GPU, the required files (generated from the previous steps) and the command to run a flexible docking calculation of a single ligand is as follows: 
+
+.. code-block:: bash
+
+    lig_name="imatinib_protomer-1"
+    lig_pdbqt="${lig_name}.pdbqt"
     rec_prefix="rec_2hzn"
     flexres_pdbqt="${rec_prefix}_flex.pdbqt"
     rec_map_fld="${rec_prefix}_rigid.maps.fld"
     ./adgpu --lfile $lig_pdbqt --flexres $flexres_pdbqt --ffile $rec_map_fld --resnam ${lig_name}_flexres
 
-With that, the output DLG file will be named ``imatinib_protomer-1_flexres.dlg``. If given the receptor JSON file (``rec_2hzn.json``) generated when the other receptor files were created, ``mk_export.py`` is able to reconstruct the atomistic structures of the full receptor and export the updated models to a PDB file as follows: 
+With that, the output DLG file will be named ``imatinib_protomer-1_flexres.dlg``. Again, if given the receptor JSON file (``rec_2hzn.json``) generated when the other receptor files were created, ``mk_export.py`` is able to export the updated models to a PDB file (``imatinib_protomer-1_flexres_adgpu_out.pdb``): 
 
 .. code-block:: bash
 
