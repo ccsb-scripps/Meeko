@@ -1,20 +1,20 @@
-Meeko
-=====
+Meeko: interface for AutoDock
+=============================
 
-Parameterization of molecules for AutoDock
-------------------------------------------
+Parameterization of molecules
+-----------------------------
 
-Meeko assigns parameters to small organic molecules, often called ligands,
-and to proteins and to nucleic acids, often called receptors.
-This includes assigning atom types, partial charges, setting
-bonds as rotatable or fixed, and making receptor sidechains flexible.
+Meeko assigns parameters to small organic molecules, referred to as ligands,
+and to proteins and nucleic acids, referred to as receptors.
+Parameterization includes assigning atom types, partial charges, setting
+bonds as rotatable, and making receptor sidechains flexible.
 
-Write input and process output
-------------------------------
+Prepare input and convert output
+--------------------------------
 
-Meeko writes the input PDBQT files for AutoDock-Vina and AutoDock-GPU, and it
-also converts the output files from docking, which are PDBQT for Vina and
-DLG for AutoDock-GPU, into SDF for ligands and PDB for receptor.
+Meeko writes the input PDBQT files (or strings in Python) for AutoDock-Vina
+and AutoDock-GPU, and exports docking results in SDF format for ligands and
+in PDB format for receptor.
 
 Python API
 ----------
@@ -48,6 +48,7 @@ To run a docking, more packages are required besides Meeko:
    :hidden:
    :caption: Ligand preparation
 
+   Overview <lig_overview>
    cli_lig_prep
    In Python <py_lig_prep>
 
