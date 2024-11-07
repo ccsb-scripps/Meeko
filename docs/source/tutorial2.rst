@@ -8,10 +8,6 @@ This is a reactive docking example that uses the AutoDock-GPU executable to gene
 
 Follow the instructions to set up the environment and run this command-line example on your own device (Linux, MacOS or WSL). To run this example in a Colab notebook, see :ref:`colab_examples`. 
 
-.. contents::
-   :local:
-   :depth: 2
-
 Introduction
 ============
 
@@ -43,13 +39,6 @@ Install the required Python packages through ``conda-forge``
 
 Install the additional packages and data from GitHub repositories
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-- (Python package) Meeko 
-
-.. code-block:: bash
-
-   git clone --single-branch --branch develop https://github.com/forlilab/Meeko.git
-   cd Meeko; pip install --use-pep517 -e .; cd ..
 
 - (Python package) scrubber 
 

@@ -8,10 +8,6 @@ This is a tethered (two-point attached covalent) docking example that uses the A
 
 Follow the instructions to set up the environment and run this command-line example on your own device (Linux, MacOS or WSL). To run this example in a Colab notebook, see :ref:`colab_examples`. 
 
-.. contents::
-   :local:
-   :depth: 2
-
 Introduction
 ============
 
