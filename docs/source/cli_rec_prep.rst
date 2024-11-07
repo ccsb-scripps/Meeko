@@ -99,10 +99,7 @@ It is also possible to combine the two types of usage:
 
 .. code-block:: bash
 
-    --output_basename myenzyme
-    --write_pdbqt
-    --write_json
-    --write_vina_box box_for_myenzyme.txt
+    --output_basename myenzyme --write_pdbqt --write_json --write_vina_box box_for_myenzyme.txt
 
 in which case the specified filenames have priority over the default basename. 
 
@@ -111,11 +108,13 @@ Residue selection and assignment language
 
 Meeko uses the **chain ID** and **residue number** to identify a residue. The arguments involving selection of residues: 
 
-.. option:: -d, --delete_residues <residues>
+.. code-block:: bash
 
-.. option:: -f, --flexres <residues>
+    -d, --delete_residues <residues>
 
-.. option:: -r, --reactive_flexres <residues>
+    -f, --flexres <residues>
+
+    -r, --reactive_flexres <residues>
 
 use the compact selection language that specify residues efficiently. The chain ID and the residue number(s) are separated by a colon (``:``) delimiter. Each residue number is combined with the most recent chain ID that precedes it, resulting in an expanded list of chain-residue pairs. 
 
@@ -123,27 +122,22 @@ For an input like ``A:5,7,BB:12C``, this selection language represents: ``residu
 
 The arguments involving assignment of residues to properties: 
 
-.. option:: -n, --set_template <template>
+.. code-block:: bash
 
-.. option:: -b, --blunt_ends <positions>
+    -n, --set_template <template>
 
-.. option:: --wanted_altloc <location>
+    -b, --blunt_ends <positions>
 
-.. option:: -s, --reactive_name_specific <residue:atom>
+    --wanted_altloc <location>
 
-use the residue selection lanaguge described above, followed by an equal sign (``=``) as the delimiter and the assigned value, which could be the name of a residue template, the atom index for the blunt end, the wanted altloc ID, or the atom name of the reactive atom. Each residue selection is comibned with the most recent assignment that precedes it, resulting in an expanded list of residue-assignment pairs. 
+    -s, --reactive_name_specific <residue:atom>
+
+use the residue selection lanaguge described above, followed by an equal sign (``=``) as the delimiter and the assigned value, which could be the name of a residue template, the atom index for the blunt end, the wanted altloc ID, or the atom name of the reactive atom. Each residue selection is comibned with the most recent assignment that precedes it, resulting in a further expanded list of residue-assignment pairs. 
 
 For an input like ``"A:5,7=CYX,A:19A,B:17=HID``, this assignment language represents: ``residues (number) 5 in Chain A are set to (template name) CYX`` and ``residue (number) 19 A in Chain A, and residue (number) 17 in Chain B are set to (template name) HID``. 
 
-Usage
------
-
-.. code-block:: bash
-
-   mk_prepare_receptor.py [OPTIONS]
-
 Options
-~~~~~~~
+-------
 
 Input/Output Options
 ^^^^^^^^^^^^^^^^^^^^
@@ -199,10 +193,6 @@ Receptor Perception Options
 
    Load additional templates from one or more JSON files.
 
-.. option:: --mk_config <JSON_FILENAME>
-
-   Specify a JSON configuration file for receptor preparation.
-
 .. option:: -a, --allow_bad_res
 
    (Flag) Ignore residues with missing atoms instead of raising an error.
@@ -215,9 +205,9 @@ Receptor Perception Options
 
    Specify alternate locations for particular residues, e.g., `:5=B,B:17=A`.
 
-.. option:: -f, --flexres <residues>
+.. option:: --mk_config <JSON_FILENAME>
 
-   Define flexible residues by chain ID and residue number, e.g., `-f ":42,B:23"`.
+   Specify a JSON configuration file for receptor preparation.
 
 Grid Box Options
 ----------------
@@ -242,8 +232,12 @@ Grid Box Options
 
    Set padding around atoms specified in `--box_enveloping` (in Å).
 
-Reactive Options
-----------------
+Flexible and/or Reactive Options
+--------------------------------
+
+.. option:: -f, --flexres <residues>
+
+   Define flexible residues by chain ID and residue number, e.g., `-f ":42,B:23"`. 
 
 .. option:: -r, --reactive_flexres <residues>
 
