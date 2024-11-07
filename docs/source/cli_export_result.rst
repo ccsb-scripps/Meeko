@@ -1,6 +1,16 @@
 mk_export.py
 ============
 
+A command-line script to export docking poses of ligand (and flexible residues) to an SD file (.sdf), and to export the full receptor structures with updated conformations of flexible residues to a PDB file. Currently supports PDBQT files from AutoDock-Vina and DLG files from AutoDock-GPU that have the REMARK lines containing Smiles and index mapping information. 
+
+Basic usage
+-----------
+
+.. code-block:: bash
+
+    mk_export.py vina_results.pdbqt -s vina_results.sdf
+    mk_export.py autodock-gpu_results.dlg -s autodock-gpu_results.sdf
+
 About
 -----
 
@@ -12,13 +22,7 @@ from AutoDock-GPU contains docked poses in PDBQT blocks, plus additional informa
 Meeko generates RDKit molecules from PDBQT using the SMILES
 string in the REMARK lines. The REMARK lines also have the mapping of atom indices
 between SMILES and PDBQT. SD files with docked coordinates are written
-from RDKit molecules.
-
-.. code-block:: bash
-
-    mk_export.py molecule.pdbqt -s molecule.sdf
-    mk_export.py vina_results.pdbqt -s vina_results.sdf
-    mk_export.py autodock-gpu_results.dlg -s autodock-gpu_results.sdf
+from RDKit molecules. 
 
 Why this matters
 ~~~~~~~~~~~~~~~~
@@ -44,22 +48,18 @@ docking, as probably rigorous Hs positions will be replaced by the
 RDKit geometry rules, which are empirical and much simpler than most
 force fields.
 
-Usage
------
+Options
+-------
 
-.. code-block:: bash
-
-    mk_export.py [OPTIONS] docking_results_filename(s)
-
-Positional Argument
-~~~~~~~~~~~~~~~~~~~
+Positional Argument (Input)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. option:: docking_results_filename
 
    One or more docking output files in either PDBQT format (from Vina) or DLG format (from AD-GPU).
 
-Options
-~~~~~~~
+Output Options
+~~~~~~~~~~~~~~
 
 .. option:: --suffix <suffix>
 
