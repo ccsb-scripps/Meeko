@@ -140,7 +140,7 @@ Options
 -------
 
 Input/Output Options
-^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~
 
 .. option:: --read_pdb <PDB_FILENAME>
 
@@ -175,7 +175,7 @@ Input/Output Options
    Save the prepared receptor in PDB format. Must specify the filename.
 
 Receptor Perception Options
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. option:: -n, --set_template <template>
 
@@ -210,7 +210,7 @@ Receptor Perception Options
    Specify a JSON configuration file for receptor preparation.
 
 Grid Box Options
-^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~
 
 .. option:: --box_size <X Y Z>
 
@@ -233,7 +233,7 @@ Grid Box Options
    Set padding around atoms specified in `--box_enveloping` (in Å).
 
 Flexible and/or Reactive Options
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. option:: -f, --flexres <residues>
 
