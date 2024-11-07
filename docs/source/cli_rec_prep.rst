@@ -210,7 +210,7 @@ Receptor Perception Options
    Specify a JSON configuration file for receptor preparation.
 
 Grid Box Options
-----------------
+^^^^^^^^^^^^^^^^
 
 .. option:: --box_size <X Y Z>
 
@@ -233,7 +233,7 @@ Grid Box Options
    Set padding around atoms specified in `--box_enveloping` (in Å).
 
 Flexible and/or Reactive Options
---------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. option:: -f, --flexres <residues>
 
@@ -266,36 +266,3 @@ Flexible and/or Reactive Options
 .. option:: --r_eq_14_scaling <factor>
 
    Scale r_eq for 1-4 interactions across reactive atoms. Default is 0.5.
-
-Examples
---------
-
-Basic usage to read a PDB file and specify output basename:
-
-.. code-block:: bash
-
-   python mk_prepare_receptor.py --read_pdb receptor.pdb -o output_basename
-
-Using ProDy to read a PDB file and output PDBQT files:
-
-.. code-block:: bash
-
-   python mk_prepare_receptor.py -i receptor.pdb --write_pdbqt receptor_output.pdbqt
-
-Saving receptor configuration as JSON:
-
-.. code-block:: bash
-
-   python mk_prepare_receptor.py -j receptor.json -i receptor.pdb
-
-Defining grid box size and center:
-
-.. code-block:: bash
-
-   python mk_prepare_receptor.py --box_size 20 20 20 --box_center 10 10 10
-
-Defining reactive flexible residues and adjusting grid box:
-
-.. code-block:: bash
-
-   python mk_prepare_receptor.py -r ":42,B:23" --box_center_off_reactive_res
