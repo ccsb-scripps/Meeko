@@ -1,7 +1,7 @@
 mk_prepare_ligand.py
 ====================
 
-A command-line script for ligand preparation to generate the ligand PDBQT file. Currently support SD files (.sdf), Mol2 files (.mol2) and Mol files (.mol), but SDF is strongly preferred. 
+A command-line script for ligand preparation that generates the ligand PDBQT file(s). Currently supports SD files (.sdf), Mol2 files (.mol2) and Mol files (.mol), but SDF is strongly preferred as input files. 
 
 Basic usage
 -----------
@@ -103,6 +103,56 @@ Molecule Preparation Options
 
    Specify SMARTS-based atom typing in JSON format.
 
-.. option:: -v, --verbose
+.. option:: -aa, --add_atom_types <JSON>
 
-   (Flag) Print detailed information about the molecule setup process.
+   Specify additional atom types to assign in JSON format, with SMARTS patterns and atom type names.
+
+.. option:: --double_bond_penalty <penalty>
+
+   Set a penalty value; values greater than 100 prevent breaking double bonds.
+
+.. option:: --charge_model <model>
+
+   Choose the charge model: `gasteiger`, `espaloma`, or `zero`. Default is `gasteiger`; `zero` sets all charges to zero.
+
+.. option:: --bad_charge_ok
+
+   (Flag) Allow NaN and Inf charges in the PDBQT output.
+
+.. option:: --add_index_map
+
+   (Flag) Include a map of atom indices from the input to the PDBQT file.
+
+.. option:: --remove_smiles
+
+   (Flag) Exclude SMILES from being written as a remark in the PDBQT output.
+
+Reactive Docking Options
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. option:: --reactive_smarts <SMARTS>
+
+   Provide a SMARTS pattern for defining the reactive group.
+
+.. option:: --reactive_smarts_idx <index>
+
+   Specify the 1-based index of the reactive atom within the SMARTS pattern provided by `--reactive_smarts`.
+
+Covalent Docking (Tethered) Options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. option:: --receptor <filename>
+
+   Specify the receptor file. Supported formats depend on ProDy availability, such as `.pdb` and `.mmcif`.
+
+.. option:: --rec_residue <residue>
+
+   Specify the residue in the receptor for attachment, e.g., `A:LYS:204`.
+
+.. option:: --tether_smarts <SMARTS>
+
+   Provide a SMARTS pattern defining the ligand atoms used for attachment to the receptor.
+
+.. option:: --tether_smarts_indices <IDX IDX>
+
+   Specify the 1-based indices of the two atoms in the SMARTS pattern that will be attached (default: `1 2`).
