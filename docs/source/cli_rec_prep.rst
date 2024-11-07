@@ -1,5 +1,22 @@
-mk_prepare_receptor
-===================
+mk_prepare_receptor.py
+======================
+
+A command-line script for receptor preparation from a PDB/CIF file, setting up various properties (flexible/reactive residues, box specifications, etc.), and writing useful input files (PDBQT, GPF, box configuration file for Vina) for docking. 
+
+Basic usage
+-----------
+
+.. code-block:: bash
+
+    mk_prepare_receptor.py -i examples/system.pdb --write_pdbqt prepared.pdbqt
+
+This is equivalent to: 
+
+.. code-block:: bash
+
+    mk_prepare_receptor.py -i examples/system.pdb -o prepared -p
+
+Read more about the syntax in :ref:`Write flags` and :ref:`Options`. 
 
 About
 -----
@@ -33,47 +50,6 @@ Residue name is primary key unless user overrides.
 
 Currently not supported: capped residues from charmm-gui.
 
-Basic usage
-~~~~~~~~~~~
-
-.. code-block:: bash
-
-    mk_prepare_receptor -i examples/system.pdb --write_pdbqt prepared.pdbqt
-
-Protonation states
-~~~~~~~~~~~~~~~~~~
-
-
-Adding templates
-~~~~~~~~~~~~~~~~
-
-Write flags
-~~~~~~~~~~~
-
-The option flags starting with ``--write`` in  ``mk_prepare_receptor`` can
-be used both with an argument to specify the outpuf filename: 
-
-.. code-block:: bash
-
-    --write_pdbqt myenzyme.pdbqt --write_json myenzyme.json
-
-and without the filename argument as long as a default basename is provided:
-
-.. code-block:: bash
-
-    --output_basename myenzyme --write_pdbqt --write_json
-
-It is also possible to combine the two types of usage:
-
-.. code-block:: bash
-
-    --output_basename myenzyme
-    --write_pdbqt
-    --write_json
-    --write_vina_box box_for_myenzyme.txt
-
-in which case the specified filenames have priority over the default basename.
-
 .. _templates:
 
 Templates
@@ -101,24 +77,80 @@ example, consider modeling an alkyl chain as a polymer, in which the monomer
 is a single carbon atom. Our template SMILES would be "[H]C[H]". The RDKit
 molecule will have three atoms and the carbon will have two implicit hydrogens.
 The implicit hydrogens correspond to bonds to adjacent residues in the
-processed polymer.
+processed polymer. 
+
+Write flags
+~~~~~~~~~~~
+
+The option flags starting with ``--write`` in  ``mk_prepare_receptor`` can
+be used both with an argument to specify the outpuf filename: 
+
+.. code-block:: bash
+
+    --write_pdbqt myenzyme.pdbqt --write_json myenzyme.json
+
+and without the filename argument as long as a default basename is provided:
+
+.. code-block:: bash
+
+    --output_basename myenzyme --write_pdbqt --write_json
+
+It is also possible to combine the two types of usage:
+
+.. code-block:: bash
+
+    --output_basename myenzyme
+    --write_pdbqt
+    --write_json
+    --write_vina_box box_for_myenzyme.txt
+
+in which case the specified filenames have priority over the default basename. 
+
+Residue selection and assignment language
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Meeko uses the **chain ID** and **residue number** to identify a residue. The arguments involving selection of residues: 
+
+.. option:: -d, --delete_residues <residues>
+
+.. option:: -f, --flexres <residues>
+
+.. option:: -r, --reactive_flexres <residues>
+
+use the compact selection language that specify residues efficiently. The chain ID and the residue number(s) are separated by a colon (``:``) delimiter. Each residue number is combined with the most recent chain ID that precedes it, resulting in an expanded list of chain-residue pairs. 
+
+For an input like ``A:5,7,BB:12C``, this selection language represents: ``residues (number) 5 and 7 in Chain A`` and ``residue (number) 12C in Chain BB``. 
+
+The arguments involving assignment of residues to properties: 
+
+.. option:: -n, --set_template <template>
+
+.. option:: -b, --blunt_ends <positions>
+
+.. option:: --wanted_altloc <location>
+
+.. option:: -s, --reactive_name_specific <residue:atom>
+
+use the residue selection lanaguge described above, followed by an equal sign (``=``) as the delimiter and the assigned value, which could be the name of a residue template, the atom index for the blunt end, the wanted altloc ID, or the atom name of the reactive atom. Each residue selection is comibned with the most recent assignment that precedes it, resulting in an expanded list of residue-assignment pairs. 
+
+For an input like ``"A:5,7=CYX,A:19A,B:17=HID``, this assignment language represents: ``residues (number) 5 in Chain A are set to (template name) CYX`` and ``residue (number) 19 A in Chain A, and residue (number) 17 in Chain B are set to (template name) HID``. 
 
 Usage
 -----
 
 .. code-block:: bash
 
-   python mk_prepare_receptor.py [OPTIONS]
+   mk_prepare_receptor.py [OPTIONS]
 
 Options
 ~~~~~~~
 
 Input/Output Options
-~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^
 
 .. option:: --read_pdb <PDB_FILENAME>
 
-   Read a PDB file directly (not in PDBQT format) without using ProDy.
+   Read a PDB file using the PDB parser in RDKit.
 
 .. option:: -i, --read_with_prody <MACROMOL_FILENAME>
 
@@ -136,10 +168,6 @@ Input/Output Options
 
    Save the receptor's parameterized configuration to JSON format. Defaults to `--output_basename` if unspecified.
 
-.. option:: --write_pdb <PDB_FILENAME> [*]
-
-   Save the prepared receptor in PDB format. Must specify the filename.
-
 .. option:: -g, --write_gpf <GPF_FILENAME> [*]
 
    Output an AutoGrid input file (GPF). Defaults to `--output_basename` if not specified.
@@ -148,8 +176,12 @@ Input/Output Options
 
    Generate a configuration file for Vina with grid box dimensions. Defaults to `--output_basename` if not specified.
 
+.. option:: --write_pdb <PDB_FILENAME> [*]
+
+   Save the prepared receptor in PDB format. Must specify the filename.
+
 Receptor Perception Options
----------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. option:: -n, --set_template <template>
 
