@@ -193,4 +193,4 @@ It is also possible to export the docking poses to a multi-model PDB file with u
    --default_altloc A -f $flexres \
    --box_enveloping "LIG.pdb" --padding 8.0 
 
-   mk_export.py HIE_AMP.dlg -s 3kgd_HIE_AMP_adgpu_out.sdf -k 3kgd_receptorH.json -p 3kgd_HIE_AMP_adgpu_out.pdb
+   mk_export.py HIE_AMP.dlg -s 3kgd_HIE_AMP_adgpu_out.sdf -j 3kgd_receptorH.json -p 3kgd_HIE_AMP_adgpu_out.pdb
