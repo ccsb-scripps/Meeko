@@ -1,3 +1,9 @@
+mk_prepare_receptor
+===================
+
+About
+-----
+
 The input structure is matched against templates to
 guarantee chemical correctness and identify problems with the input structures.
 This allows the user to identify and fix problems, resulting in a molecular
@@ -27,28 +33,22 @@ Residue name is primary key unless user overrides.
 
 Currently not supported: capped residues from charmm-gui.
 
-mk_prepare_receptor
-===================
-
 Basic usage
------------
+~~~~~~~~~~~
 
 .. code-block:: bash
 
     mk_prepare_receptor -i examples/system.pdb --write_pdbqt prepared.pdbqt
 
-
-
-
 Protonation states
-------------------
+~~~~~~~~~~~~~~~~~~
 
 
 Adding templates
-----------------
+~~~~~~~~~~~~~~~~
 
 Write flags
------------
+~~~~~~~~~~~
 
 The option flags starting with ``--write`` in  ``mk_prepare_receptor`` can
 be used both with an argument to specify the outpuf filename: 
@@ -77,7 +77,7 @@ in which case the specified filenames have priority over the default basename.
 .. _templates:
 
 Templates
----------
+~~~~~~~~~
 
 The templates contain SMILES strings that are used to create the RDKit
 molecules that constitute every residue in the processed model. In this way,
@@ -102,3 +102,174 @@ is a single carbon atom. Our template SMILES would be "[H]C[H]". The RDKit
 molecule will have three atoms and the carbon will have two implicit hydrogens.
 The implicit hydrogens correspond to bonds to adjacent residues in the
 processed polymer.
+
+Usage
+-----
+
+.. code-block:: bash
+
+   python mk_prepare_receptor.py [OPTIONS]
+
+Options
+~~~~~~~
+
+Input/Output Options
+~~~~~~~~~~~~~~~~~~~~
+
+.. option:: --read_pdb <PDB_FILENAME>
+
+   Read a PDB file directly (not in PDBQT format) without using ProDy.
+
+.. option:: -i, --read_with_prody <MACROMOL_FILENAME>
+
+   Read a PDB or mmCIF file using ProDy (if installed). ProDy can be installed from PyPI or conda-forge.
+
+.. option:: -o, --output_basename <basename>
+
+   Specify a default basename for output files created by `--write` options when no filename is specified.
+
+.. option:: -p, --write_pdbqt <PDBQT_FILENAME> [*]
+
+   Output PDBQT files with `_rigid` or `_flex` suffixes for flexible residues. Defaults to `--output_basename` if no filename is provided.
+
+.. option:: -j, --write_json <JSON_FILENAME> [*]
+
+   Save the receptor's parameterized configuration to JSON format. Defaults to `--output_basename` if unspecified.
+
+.. option:: --write_pdb <PDB_FILENAME> [*]
+
+   Save the prepared receptor in PDB format. Must specify the filename.
+
+.. option:: -g, --write_gpf <GPF_FILENAME> [*]
+
+   Output an AutoGrid input file (GPF). Defaults to `--output_basename` if not specified.
+
+.. option:: -v, --write_vina_box <VINA_BOX_FILENAME> [*]
+
+   Generate a configuration file for Vina with grid box dimensions. Defaults to `--output_basename` if not specified.
+
+Receptor Perception Options
+---------------------------
+
+.. option:: -n, --set_template <template>
+
+   Assign templates to residues, e.g., `A:5,7=CYX,B:17=HID`.
+
+.. option:: -d, --delete_residues <residues>
+
+   Specify residues to delete, e.g., `A:350,B:15,16,17`.
+
+.. option:: -b, --blunt_ends <positions>
+
+   Blunt end definitions, e.g., `A:123,200=2,A:1=0`.
+
+.. option:: --add_templates <JSON_FILENAME> [*]
+
+   Load additional templates from one or more JSON files.
+
+.. option:: --mk_config <JSON_FILENAME>
+
+   Specify a JSON configuration file for receptor preparation.
+
+.. option:: -a, --allow_bad_res
+
+   (Flag) Ignore residues with missing atoms instead of raising an error.
+
+.. option:: --default_altloc <location>
+
+   Define a default alternate location for residues, overridden by `--wanted_altloc`.
+
+.. option:: --wanted_altloc <location>
+
+   Specify alternate locations for particular residues, e.g., `:5=B,B:17=A`.
+
+.. option:: -f, --flexres <residues>
+
+   Define flexible residues by chain ID and residue number, e.g., `-f ":42,B:23"`.
+
+Grid Box Options
+----------------
+
+.. option:: --box_size <X Y Z>
+
+   Set the size of the grid box in Angstroms (x, y, z).
+
+.. option:: --box_center <X Y Z>
+
+   Define the center of the grid box in Angstroms (x, y, z).
+
+.. option:: --box_center_off_reactive_res
+
+   (Flag) Shift the grid box center 5 Å along the CA-CB bond from CB. Applicable only when there is one reactive flexible residue.
+
+.. option:: --box_enveloping <FILENAME>
+
+   Adjust the grid box to enclose atoms in the specified file. Supported formats: `.sdf`, `.mol`, `.mol2`, `.pdb`, `.pdbqt`.
+
+.. option:: --padding <value>
+
+   Set padding around atoms specified in `--box_enveloping` (in Å).
+
+Reactive Options
+----------------
+
+.. option:: -r, --reactive_flexres <residues>
+
+   Define reactive flexible residues by chain ID and residue number, e.g., `-r ":42,B:23"`. Maximum of 8 reactive residues.
+
+.. option:: --reactive_name <residue:atom>
+
+   Specify the reactive atom name for a residue type, e.g., `--reactive_name "TRP:NE1"`. Can be repeated for multiple assignments.
+
+.. option:: -s, --reactive_name_specific <residue:atom>
+
+   Specify the reactive atom for an individual residue by residue ID, e.g., `-s "A:42=NE2"`. The residue becomes reactive.
+
+.. option:: --r_eq_12 <value>
+
+   Set the equilibrium distance (r_eq) for reactive atoms in 1-2 interactions. Default is 1.8 Å.
+
+.. option:: --eps_12 <value>
+
+   Set the epsilon value for reactive atoms in 1-2 interactions. Default is 2.5.
+
+.. option:: --r_eq_13_scaling <factor>
+
+   Scale r_eq for 1-3 interactions across reactive atoms. Default is 0.5.
+
+.. option:: --r_eq_14_scaling <factor>
+
+   Scale r_eq for 1-4 interactions across reactive atoms. Default is 0.5.
+
+Examples
+--------
+
+Basic usage to read a PDB file and specify output basename:
+
+.. code-block:: bash
+
+   python mk_prepare_receptor.py --read_pdb receptor.pdb -o output_basename
+
+Using ProDy to read a PDB file and output PDBQT files:
+
+.. code-block:: bash
+
+   python mk_prepare_receptor.py -i receptor.pdb --write_pdbqt receptor_output.pdbqt
+
+Saving receptor configuration as JSON:
+
+.. code-block:: bash
+
+   python mk_prepare_receptor.py -j receptor.json -i receptor.pdb
+
+Defining grid box size and center:
+
+.. code-block:: bash
+
+   python mk_prepare_receptor.py --box_size 20 20 20 --box_center 10 10 10
+
+Defining reactive flexible residues and adjusting grid box:
+
+.. code-block:: bash
+
+   python mk_prepare_receptor.py -r ":42,B:23" --box_center_off_reactive_res
