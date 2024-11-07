@@ -1,7 +1,7 @@
 # Meeko: preparation of small molecules for AutoDock
 
 [![API stability](https://img.shields.io/badge/stable%20API-no-orange)](https://shields.io/)
-[![PyPI version fury.io](https://img.shields.io/badge/version-0.6.0--alpha.3-green.svg)](https://pypi.python.org/pypi/meeko/)
+[![PyPI version fury.io](https://img.shields.io/badge/version-0.6.0-green.svg)](https://pypi.python.org/pypi/meeko/)
 [![Documentation Status](https://readthedocs.org/projects/meeko/badge/?version=readthedocs)](https://meeko.readthedocs.io/en/readthedocs/?badge=readthedocs)
 
 Meeko reads an RDKit molecule object and writes a PDBQT string (or file)
@@ -218,7 +218,6 @@ naming scheme for atoms and residues, e.g., `HIE` or `HID`
 instead of `HIS`.
 
 ### 2. Prepare protein pdbqt
-Here, `wk.pdb` was written by waterkit.
 Here, `wk.pdb` was written by waterkit. The example below will center a gridbox of specified size on the given reactive residue.
 
 ```console
@@ -272,12 +271,12 @@ and it is suffixed with `reactive_config`.
 ADGPU -I *.reactive_config -L sufex1.pdbqt -N sufex1_docked_ -F *_flex.pdbqt -C 1
 ```
 
-## Chorizo docs temporary placeholder
+## Polymer docs temporary placeholder
 
 Current init is a builder method designed to parse PDB files and topology
-objects. It is not designed to chorizify a polymer that already exists
+objects. It is not designed to monomerize a polymer that already exists
 as a single RDKit molecule, or to build a single polymer molecule from the
-individual chorizo residues. To do that, one would have to react residues
+individual residues (monomers). To do that, one would have to react residues
 with each other. Padding could be adapted.
 
 

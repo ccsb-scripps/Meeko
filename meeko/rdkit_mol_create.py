@@ -8,7 +8,7 @@
 from rdkit import Chem
 from rdkit.Geometry import Point3D
 from rdkit.Chem import AllChem
-import io
+from io import StringIO
 import json
 import os
 
@@ -180,11 +180,20 @@ class RDKitMolCreate:
     }
 
     @classmethod
-    def from_pdbqt_mol(cls, pdbqt_mol, only_cluster_leads=False): # TODO add pseudo-water (W atoms, variable nr each pose)
+    def from_pdbqt_mol(
+        cls,
+        pdbqt_mol,
+        only_cluster_leads=False,
+        keep_flexres=False,
+    ):
+        # todo: add pseudo-water (W atoms, variable nr each pose)
         if only_cluster_leads and len(pdbqt_mol._pose_data["cluster_leads_sorted"]) == 0:
             raise RuntimeError("no cluster_leads in pdbqt_mol but only_cluster_leads=True")
         mol_list = []
         for mol_index in pdbqt_mol._atom_annotations["mol_index"]:
+            flexres_id = pdbqt_mol._pose_data["mol_index_to_flexible_residue"][mol_index]
+            if flexres_id is not None and not keep_flexres:
+                continue
             smiles = pdbqt_mol._pose_data['smiles'][mol_index]
             index_map = pdbqt_mol._pose_data['smiles_index_map'][mol_index]
             h_parent = pdbqt_mol._pose_data['smiles_h_parent'][mol_index]
@@ -325,8 +334,8 @@ class RDKitMolCreate:
                     raise RuntimeError("Expected H to have one neighbor")
                 AllChem.SetTerminalAtomCoords(mol, i, neigh[0].GetIdx())
         return mol
-
-
+    
+    
     @staticmethod
     def add_hydrogens(mol, coordinates_list, h_parent):
         """Add hydrogen atoms to ligand RDKit mol, adjust the positions of
@@ -444,10 +453,10 @@ class RDKitMolCreate:
         return rdmol, energy
 
     @staticmethod
-    def write_sd_string(pdbqt_mol, only_cluster_leads=False):
-        sio = io.StringIO()
+    def write_sd_string(pdbqt_mol, only_cluster_leads=False, keep_flexres=False):
+        sio = StringIO()
         f = Chem.SDWriter(sio)
-        mol_list = RDKitMolCreate.from_pdbqt_mol(pdbqt_mol, only_cluster_leads)
+        mol_list = RDKitMolCreate.from_pdbqt_mol(pdbqt_mol, only_cluster_leads, keep_flexres)
         failures = [i for i, mol in enumerate(mol_list) if mol is None]
         combined_mol = RDKitMolCreate.combine_rdkit_mols(mol_list)
         if combined_mol is None:
@@ -471,6 +480,8 @@ class RDKitMolCreate:
             if len(pdbqt_mol._pose_data[key_in_pdbqt]) == nr_poses:
                 available_properties[key_in_mol] = key_in_pdbqt
         mol_level_data = json.loads(combined_mol.GetProp("meeko"))
+        if pdbqt_mol.name is not None:
+            combined_mol.SetProp("_Name", pdbqt_mol.name)
         for conformer in combined_mol.GetConformers():
             i = conformer.GetId()
             j = pose_idxs[i]

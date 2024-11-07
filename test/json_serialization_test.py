@@ -6,10 +6,10 @@ import pathlib
 import pytest
 
 from meeko import (
-    ChorizoResidue,
-    ChorizoResidueEncoder,
-    LinkedRDKitChorizo,
-    LinkedRDKitChorizoEncoder,
+    Monomer,
+    MonomerEncoder,
+    Polymer,
+    PolymerEncoder,
     MoleculePreparation,
     MoleculeSetup,
     MoleculeSetupEncoder,
@@ -23,7 +23,7 @@ from meeko import (
     PDBQTWriterLegacy,
 )
 
-from meeko import linked_rdkit_chorizo
+from meeko import polymer
 from meeko.molsetup import Atom, Bond, Ring, RingClosureInfo, Restraint
 
 from rdkit import Chem
@@ -34,62 +34,59 @@ from meeko.utils.pdbutils import PDBAtomInfo
 # from ..meeko.utils.pdbutils import PDBAtomInfo
 
 pkgdir = pathlib.Path(meeko.__file__).parents[1]
-meekodir = pathlib.Path(meeko.__file__).parents[0]
 
 # Test Data
-ahhy_example = pkgdir / "test/linked_rdkit_chorizo_data/AHHY.pdb"
+ahhy_example = pkgdir / "test/polymer_data/AHHY.pdb"
 just_one_ALA_missing = (
-    pkgdir / "test/linked_rdkit_chorizo_data/just-one-ALA-missing-CB.pdb"
+    pkgdir / "test/polymer_data/just-one-ALA-missing-CB.pdb"
 )
 
-# Chorizo creation data
-with open(meekodir / "data" / "residue_chem_templates.json") as f:
-    t = json.load(f)
-chem_templates = ResidueChemTemplates.from_dict(t)
+# Polymer creation data
+chem_templates = ResidueChemTemplates.create_from_defaults()
 mk_prep = MoleculePreparation()
 
 
 # region Fixtures
 @pytest.fixture
-def populated_rdkit_chorizo():
+def populated_polymer():
     file = open(ahhy_example)
     pdb_str = file.read()
-    chorizo = LinkedRDKitChorizo.from_pdb_string(
+    polymer = Polymer.from_pdb_string(
         pdb_str, chem_templates, mk_prep, blunt_ends=[("A:1", 0)]
     )
-    return chorizo
+    return polymer
 
 
 @pytest.fixture
-def populated_rdkit_chorizo_missing():
+def populated_polymer_missing():
     file = open(just_one_ALA_missing)
     pdb_str = file.read()
-    chorizo = LinkedRDKitChorizo.from_pdb_string(
+    polymer = Polymer.from_pdb_string(
         pdb_str,
         chem_templates,
         mk_prep,
         blunt_ends=[("A:1", 0), ("A:1", 2)],
         allow_bad_res=True,
     )
-    return chorizo
+    return polymer
 
 
 @pytest.fixture
-def populated_rdkit_chorizo_residue(populated_rdkit_chorizo):
-    chorizo = populated_rdkit_chorizo
-    return chorizo.residues["A:1"]
+def populated_monomer(populated_polymer):
+    polymer = populated_polymer
+    return polymer.monomers["A:1"]
 
 
 @pytest.fixture
-def populated_rdkit_molsetup(populated_rdkit_chorizo_residue):
-    residue = populated_rdkit_chorizo_residue
-    return residue.molsetup
+def populated_rdkit_molsetup(populated_monomer):
+    monomer = populated_monomer
+    return monomer.molsetup
 
 
 @pytest.fixture
-def populated_residue_chem_templates(populated_rdkit_chorizo):
-    chorizo = populated_rdkit_chorizo
-    return chorizo.residue_chem_templates
+def populated_residue_chem_templates(populated_polymer):
+    polymer = populated_polymer
+    return polymer.residue_chem_templates
 
 
 @pytest.fixture
@@ -140,59 +137,59 @@ def test_rdkit_molsetup_encoding_decoding(populated_rdkit_molsetup):
     return
 
 
-def test_chorizo_residue_encoding_decoding(populated_rdkit_chorizo_residue):
+def test_monomer_encoding_decoding(populated_monomer):
     """
-    Takes a fully populated ChorizoResidue, checks that it can be serialized to JSON and deserialized back into an
+    Takes a fully populated Monomer, checks that it can be serialized to JSON and deserialized back into an
     object without any errors, then checks that the deserialized object matches the starting object and that the
-    attribute types, values, and structure of the deserialized object are as expected for an ChorizoResidue.
+    attribute types, values, and structure of the deserialized object are as expected for an Monomer.
 
     Parameters
     ----------
-    populated_rdkit_chorizo_residue: ChorizoResidue
-        Takes as input a populated ChorizoResidue object.
+    populated_monomer: Monomer
+        Takes as input a populated Monomer object.
 
     Returns
     -------
     None
     """
-    # Starts by getting a ChorizoResidue object, converting it to a json string, and then decoding the string into
-    # a new ChorizoResidue object
-    starting_residue = populated_rdkit_chorizo_residue
-    json_str = json.dumps(starting_residue, cls=ChorizoResidueEncoder)
-    decoded_residue = json.loads(
-        json_str, object_hook=linked_rdkit_chorizo.chorizo_residue_json_decoder
+    # Starts by getting a Monomer object, converting it to a json string, and then decoding the string into
+    # a new Monomer object
+    starting_monomer = populated_monomer
+    json_str = json.dumps(starting_monomer, cls=MonomerEncoder)
+    decoded_monomer = json.loads(
+        json_str, object_hook=polymer.monomer_json_decoder
     )
 
-    # Asserts that the starting and ending objects have the expected ChorizoResidue type
-    assert isinstance(starting_residue, ChorizoResidue)
-    assert isinstance(decoded_residue, ChorizoResidue)
+    # Asserts that the starting and ending objects have the expected Monomer type
+    assert isinstance(starting_monomer, Monomer)
+    assert isinstance(decoded_monomer, Monomer)
 
-    check_residue_equality(decoded_residue, starting_residue)
+    check_monomer_equality(decoded_monomer, starting_monomer)
     return
 
 
-def test_pdbqt_writing_from_decoded_chorizo(populated_rdkit_chorizo):
+def test_pdbqt_writing_from_decoded_polymer(populated_polymer):
     """
-    Takes a fully populated ChorizoResidue, writes a PDBQT string from it, encodes and decodes it, writes
-    another PDBQT string from the decoded chorizo, and then checks that the PDBQT strings are identical.
+    Takes a fully populated Polymer, writes a PDBQT string from it, encodes and decodes it, writes
+    another PDBQT string from the decoded polymer, and then checks that the PDBQT strings are identical.
 
     Parameters
     ----------
-    populated_rdkit_chorizo: LinkedRDKitChorizo
-        Takes as input a populated LinkedRDKitChorizo object.
+    populated_polymer: Polymer
+        Takes as input a populated Polymer object.
 
     Returns
     -------
     None
     """
 
-    starting_chorizo = populated_rdkit_chorizo
-    starting_pdbqt = PDBQTWriterLegacy.write_from_linked_rdkit_chorizo(starting_chorizo)
-    json_str = json.dumps(starting_chorizo, cls=LinkedRDKitChorizoEncoder)
-    decoded_chorizo = json.loads(
-        json_str, object_hook=linked_rdkit_chorizo.linked_rdkit_chorizo_json_decoder
+    starting_polymer = populated_polymer
+    starting_pdbqt = PDBQTWriterLegacy.write_from_polymer(starting_polymer)
+    json_str = json.dumps(starting_polymer, cls=PolymerEncoder)
+    decoded_polymer = json.loads(
+        json_str, object_hook=polymer.polymer_json_decoder
     )
-    decoded_pdbqt = PDBQTWriterLegacy.write_from_linked_rdkit_chorizo(decoded_chorizo) 
+    decoded_pdbqt = PDBQTWriterLegacy.write_from_polymer(decoded_polymer) 
     assert decoded_pdbqt == starting_pdbqt
     return
 
@@ -218,7 +215,7 @@ def test_residue_template_encoding_decoding(populated_residue_template):
     starting_template = populated_residue_template
     json_str = json.dumps(starting_template, cls=ResidueTemplateEncoder)
     decoded_template = json.loads(
-        json_str, object_hook=linked_rdkit_chorizo.residue_template_json_decoder
+        json_str, object_hook=polymer.residue_template_json_decoder
     )
 
     # Asserts that the starting and ending objects have the expected ResidueTemplate type
@@ -250,7 +247,7 @@ def test_residue_padder_encoding_decoding(populated_residue_padder):
     starting_padder = populated_residue_padder
     json_str = json.dumps(starting_padder, cls=ResiduePadderEncoder)
     decoded_padder = json.loads(
-        json_str, object_hook=linked_rdkit_chorizo.residue_padder_json_decoder
+        json_str, object_hook=polymer.residue_padder_json_decoder
     )
 
     # Asserts that the starting and ending objects have the expected ResiduePadder type
@@ -282,7 +279,7 @@ def test_residue_chem_templates_encoding_decoding(populated_residue_chem_templat
     starting_templates = populated_residue_chem_templates
     json_str = json.dumps(starting_templates, cls=ResidueChemTemplatesEncoder)
     decoded_templates = json.loads(
-        json_str, object_hook=linked_rdkit_chorizo.residue_chem_templates_json_decoder
+        json_str, object_hook=polymer.residue_chem_templates_json_decoder
     )
 
     # Asserts that the starting and ending objects have the expected ResidueChemTemplates type
@@ -294,41 +291,41 @@ def test_residue_chem_templates_encoding_decoding(populated_residue_chem_templat
     return
 
 
-def test_linked_rdkit_chorizo_encoding_decoding(
-    populated_rdkit_chorizo, populated_rdkit_chorizo_missing
+def test_polymer_encoding_decoding(
+    populated_polymer, populated_polymer_missing
 ):
     """
-    Takes a fully populated LinkedRDKitChorizo, checks that it can be serialized to JSON and deserialized back into an
+    Takes a fully populated Polymer, checks that it can be serialized to JSON and deserialized back into an
     object without any errors, then checks that the deserialized object matches the starting object and that the
-    attribute types, values, and structure of the deserialized object are as expected for an LinkedRDKitChorizo.
+    attribute types, values, and structure of the deserialized object are as expected for a Polymer.
 
     Parameters
     ----------
-    populated_rdkit_chorizo: LinkedRDKitChorizo
-        Takes as input a populated LinkedRDKitChorizo object.
+    populated_polymer: Polymer
+        Takes as input a populated Polymer object.
 
     Returns
     -------
     None
     """
-    # Starts by getting a LinkedRDKitChorizo object, converting it to a json string, and then decoding the string into
-    # a new LinkedRDKitChorizo object
-    chorizos = (
-        populated_rdkit_chorizo,
-        populated_rdkit_chorizo_missing,
+    # Starts by getting a Polymer object, converting it to a json string, and then decoding the string into
+    # a new Polymer object
+    polymers = (
+        populated_polymer,
+        populated_polymer_missing,
     )
-    for starting_chorizo in chorizos:
-        json_str = json.dumps(starting_chorizo, cls=LinkedRDKitChorizoEncoder)
-        decoded_chorizo = json.loads(
-            json_str, object_hook=linked_rdkit_chorizo.linked_rdkit_chorizo_json_decoder
+    for starting_polymer in polymers:
+        json_str = json.dumps(starting_polymer, cls=PolymerEncoder)
+        decoded_polymer = json.loads(
+            json_str, object_hook=polymer.polymer_json_decoder
         )
 
-        # Asserts that the starting and ending objects have the expected LinkedRDKitChorizo type
-        assert isinstance(starting_chorizo, LinkedRDKitChorizo)
-        assert isinstance(decoded_chorizo, LinkedRDKitChorizo)
+        # Asserts that the starting and ending objects have the expected Polymer type
+        assert isinstance(starting_polymer, Polymer)
+        assert isinstance(decoded_polymer, Polymer)
 
-        # Checks that the two chorizos are equal
-        check_linked_rdkit_chorizo_equality(decoded_chorizo, starting_chorizo)
+        # Checks that the two polymers are equal
+        check_polymer_equality(decoded_polymer, starting_polymer)
     return
 
 
@@ -554,39 +551,39 @@ def check_restraint_equality(decoded_obj: Restraint, starting_obj: Restraint):
     return
 
 
-def check_residue_equality(decoded_obj: ChorizoResidue, starting_obj: ChorizoResidue):
+def check_monomer_equality(decoded_obj: Monomer, starting_obj: Monomer):
     """
-    Asserts that two ChorizoResidue objects are equal, and that the decoded_obj input has fields contain correctly typed
+    Asserts that two Monomer objects are equal, and that the decoded_obj input has fields contain correctly typed
     data.
 
     Parameters
     ----------
-    decoded_obj: ChorizoResidue
-        A ChorizoResidue object that we want to check is correctly typed and contains the correct data.
-    starting_obj: ChorizoResidue
-        A ChorizoResidue object with the desired values to check the decoded object against.
+    decoded_obj: Monomer
+        A Monomer object that we want to check is correctly typed and contains the correct data.
+    starting_obj: Monomer
+        A Monomer object with the desired values to check the decoded object against.
 
     Returns
     -------
     None
     """
-    # Goes through the Chorizo Residue's fields and checks that they are the expected type and match the ChorizoResidue
-    # object before serialization (that we have effectively rebuilt the ChorizoResidue)
+    # Goes through the Monomer's fields and checks that they are the expected type and match the Monomer
+    # object before serialization (that we have effectively rebuilt the Monomer)
 
     # RDKit Mols - Check whether we can test for equality with RDKit Mols
-    # assert decoded_residue.raw_rdkit_mol == starting_residue.raw_rdkit_mol
+    # assert decoded_monomer.raw_rdkit_mol == starting_residue.raw_rdkit_mol
     assert type(decoded_obj.raw_rdkit_mol) == type(starting_obj.raw_rdkit_mol)
     if isinstance(decoded_obj.raw_rdkit_mol, Chem.rdchem.Mol):
         assert Chem.MolToSmiles(decoded_obj.raw_rdkit_mol) == Chem.MolToSmiles(
             starting_obj.raw_rdkit_mol
         )
-    # assert decoded_residue.rdkit_mol == starting_residue.rdkit_mol
+    # assert decoded_monomer.rdkit_mol == starting_monomer.rdkit_mol
     assert type(decoded_obj.rdkit_mol) == type(starting_obj.rdkit_mol)
     if isinstance(decoded_obj.rdkit_mol, Chem.rdchem.Mol):
         assert Chem.MolToSmiles(decoded_obj.rdkit_mol) == Chem.MolToSmiles(
             starting_obj.rdkit_mol
         )
-    # assert decoded_residue.padded_mol == starting_residue.padded_mol
+    # assert decoded_monomer.padded_mol == starting_monomer.padded_mol
     assert type(decoded_obj.padded_mol) == type(starting_obj.padded_mol)
     if isinstance(decoded_obj.padded_mol, Chem.rdchem.Mol):
         assert Chem.MolToSmiles(decoded_obj.padded_mol) == Chem.MolToSmiles(
@@ -608,7 +605,6 @@ def check_residue_equality(decoded_obj: ChorizoResidue, starting_obj: ChorizoRes
     # Bools
     assert decoded_obj.is_flexres_atom == starting_obj.is_flexres_atom
     assert decoded_obj.is_movable == starting_obj.is_movable
-    assert decoded_obj.user_deleted == starting_obj.user_deleted
     return
 
 
@@ -712,26 +708,35 @@ def check_residue_padder_equality(
     starting_obj_rxn_smarts = rdChemReactions.ReactionToSmarts(starting_obj.rxn)
     assert decoded_obj_rxn_smarts == starting_obj_rxn_smarts
 
-    assert isinstance(decoded_obj.adjacent_smartsmol, Chem.rdchem.Mol)
     assert (
         decoded_obj.adjacent_smartsmol_mapidx == starting_obj.adjacent_smartsmol_mapidx
     )
+
+    decoded_adj = decoded_obj.adjacent_smartsmol
+    starting_adj = starting_obj.adjacent_smartsmol
+    assert isinstance(decoded_adj, Chem.rdchem.Mol) or decoded_adj is None
+    if decoded_adj is None:
+        assert decoded_adj == starting_adj
+    else:
+        decoded_adj_smarts = Chem.MolToSmarts(decoded_adj)
+        starting_adj_smarts = Chem.MolToSmarts(starting_adj)
+        assert decoded_adj_smarts == starting_adj_smarts
     return
 
 
-def check_linked_rdkit_chorizo_equality(
-    decoded_obj: LinkedRDKitChorizo, starting_obj: LinkedRDKitChorizo
+def check_polymer_equality(
+    decoded_obj: Polymer, starting_obj: Polymer
 ):
     """
-    Asserts that two LinkedRDKitChorizo objects are equal, and that the decoded_obj input has fields contain correctly
+    Asserts that two Polymer objects are equal, and that the decoded_obj input has fields contain correctly
     typed data.
 
     Parameters
     ----------
-    decoded_obj: LinkedRDKitChorizo
-        A LinkedRDKitChorizo object that we want to check is correctly typed and contains the correct data.
-    starting_obj: LinkedRDKitChorizo
-        A LinkedRDKitChorizo object with the desired values to check the decoded object against.
+    decoded_obj: Polymer
+        A Polymer object that we want to check is correctly typed and contains the correct data.
+    starting_obj: Polymer
+        A Polymer object with the desired values to check the decoded object against.
 
     Returns
     -------
@@ -745,13 +750,13 @@ def check_linked_rdkit_chorizo_equality(
     )
 
     # Loops through residues, checks that the decoded and starting obj share the same set of keys, that all the residues
-    # are represented as ChorizoResidue objects, and that the decoding and starting obj ChorizoResidues are equal.
-    assert decoded_obj.residues.keys() == starting_obj.residues.keys()
-    for key in decoded_obj.residues:
+    # are represented as Monomer objects, and that the decoding and starting obj Monomers are equal.
+    assert decoded_obj.monomers.keys() == starting_obj.monomers.keys()
+    for key in decoded_obj.monomers:
         correct_val_type = correct_val_type & isinstance(
-            decoded_obj.residues[key], ChorizoResidue
+            decoded_obj.monomers[key], Monomer
         )
-        check_residue_equality(decoded_obj.residues[key], starting_obj.residues[key])
+        check_monomer_equality(decoded_obj.monomers[key], starting_obj.monomers[key])
     assert correct_val_type
 
     # Checks log equality
