@@ -1,0 +1,42 @@
+REMARK SMILES CCCCCC(=O)C(=O)c1ccc(O)cc1O
+REMARK SMILES IDX 5 1 4 2 3 3 2 4 1 5 6 6 7 7 8 8 9 9 10 10 11 11 16 12 12 13
+REMARK SMILES IDX 15 14 13 15 17 16 14 18
+REMARK H PARENT 17 17 14 19
+ROOT
+ATOM      1  C   UNL     1      -1.386   0.712   0.619  1.00  0.00     0.085 C 
+ENDROOT
+BRANCH   1   2
+ATOM      2  C   UNL     1      -2.024   0.889  -0.766  1.00  0.00     0.008 C 
+BRANCH   2   3
+ATOM      3  C   UNL     1      -3.560   0.903  -0.712  1.00  0.00     0.000 C 
+BRANCH   3   4
+ATOM      4  C   UNL     1      -4.152  -0.483  -0.413  1.00  0.00    -0.003 C 
+ATOM      5  C   UNL     1      -5.675  -0.459  -0.497  1.00  0.00     0.004 C 
+ENDBRANCH   3   4
+ENDBRANCH   2   3
+ENDBRANCH   1   2
+BRANCH   1   6
+ATOM      6  C   UNL     1       0.110   0.825   0.528  1.00  0.00     0.203 C 
+ATOM      7  O   UNL     1       0.645   1.957   0.677  1.00  0.00    -0.290 OA
+BRANCH   6   8
+ATOM      8  C   UNL     1       0.945  -0.352   0.195  1.00  0.00     0.232 C 
+ATOM      9  O   UNL     1       0.383  -1.414  -0.188  1.00  0.00    -0.285 OA
+BRANCH   8  10
+ATOM     10  C   UNL     1       2.425  -0.313   0.289  1.00  0.00     0.068 A 
+ATOM     11  C   UNL     1       3.049   0.337   1.370  1.00  0.00     0.020 A 
+ATOM     12  C   UNL     1       3.225  -0.953  -0.681  1.00  0.00     0.130 A 
+ATOM     13  C   UNL     1       4.441   0.360   1.476  1.00  0.00     0.047 A 
+ATOM     14  C   UNL     1       4.623  -0.925  -0.564  1.00  0.00     0.093 A 
+ATOM     15  C   UNL     1       5.232  -0.270   0.509  1.00  0.00     0.119 A 
+BRANCH  12  16
+ATOM     16  O   UNL     1       2.634  -1.602  -1.765  1.00  0.00    -0.507 OA
+ATOM     17  H   UNL     1       3.190  -2.064  -2.476  1.00  0.00     0.293 HD
+ENDBRANCH  12  16
+BRANCH  15  18
+ATOM     18  O   UNL     1       6.622  -0.253   0.606  1.00  0.00    -0.508 OA
+ATOM     19  H   UNL     1       7.093   0.213   1.372  1.00  0.00     0.293 HD
+ENDBRANCH  15  18
+ENDBRANCH   8  10
+ENDBRANCH   6   8
+ENDBRANCH   1   6
+TORSDOF 8

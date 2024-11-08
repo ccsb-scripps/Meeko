@@ -1,0 +1,32 @@
+REMARK SMILES C=CCOCC[NH+](CC)CC
+REMARK SMILES IDX 5 1 6 2 7 3 8 5 9 6 10 7 11 8 4 9 3 10 2 11 1 12
+REMARK H PARENT 7 4
+ROOT
+ATOM      1  C   UNL     1       1.040  -0.811  -1.248  1.00  0.00     0.221 C 
+ENDROOT
+BRANCH   1   2
+ATOM      2  C   UNL     1      -0.207  -1.304  -0.494  1.00  0.00     0.291 C 
+BRANCH   2   3
+ATOM      3  N   UNL     1      -1.208  -0.222  -0.259  1.00  0.00    -0.333 N 
+ATOM      4  H   UNL     1      -1.063   0.525  -0.980  1.00  0.00     0.348 HD
+BRANCH   3   5
+ATOM      5  C   UNL     1      -1.009   0.408   1.074  1.00  0.00     0.258 C 
+ATOM      6  C   UNL     1      -1.889   1.645   1.291  1.00  0.00     0.071 C 
+ENDBRANCH   3   5
+BRANCH   3   7
+ATOM      7  C   UNL     1      -2.596  -0.718  -0.469  1.00  0.00     0.258 C 
+ATOM      8  C   UNL     1      -3.058  -1.761   0.561  1.00  0.00     0.071 C 
+ENDBRANCH   3   7
+ENDBRANCH   2   3
+ENDBRANCH   1   2
+BRANCH   1   9
+ATOM      9  O   UNL     1       1.749   0.121  -0.461  1.00  0.00    -0.372 OA
+BRANCH   9  10
+ATOM     10  C   UNL     1       2.869   0.591  -1.179  1.00  0.00     0.187 C 
+BRANCH  10  11
+ATOM     11  C   UNL     1       3.627   1.565  -0.327  1.00  0.00    -0.007 C 
+ATOM     12  C   UNL     1       4.200   1.188   0.819  1.00  0.00     0.006 C 
+ENDBRANCH  10  11
+ENDBRANCH   9  10
+ENDBRANCH   1   9
+TORSDOF 7

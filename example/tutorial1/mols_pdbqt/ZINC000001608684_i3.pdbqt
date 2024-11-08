@@ -1,0 +1,32 @@
+REMARK SMILES CCCCN=c1cc(Cl)nc(N)[nH]1
+REMARK SMILES IDX 5 1 6 2 13 3 11 4 10 5 7 6 8 7 9 9 12 10 4 13 3 14 2 15 1 16
+REMARK H PARENT 13 8 12 11 12 12
+ROOT
+ATOM      1  N   UNL     1       0.225   1.037  -0.475  1.00  0.00    -0.268 NA
+ENDROOT
+BRANCH   1   2
+ATOM      2  C   UNL     1       1.309   0.328  -0.309  1.00  0.00     0.130 A 
+ATOM      3  N   UNL     1       2.485   0.976  -0.069  1.00  0.00    -0.311 N 
+ATOM      4  C   UNL     1       3.648   0.290   0.111  1.00  0.00     0.200 A 
+ATOM      5  N   UNL     1       3.651  -1.067   0.050  1.00  0.00    -0.203 NA
+ATOM      6  C   UNL     1       1.308  -1.079  -0.377  1.00  0.00     0.087 A 
+ATOM      7  C   UNL     1       2.510  -1.759  -0.189  1.00  0.00     0.136 A 
+ATOM      8  H   UNL     1       2.496   2.021  -0.019  1.00  0.00     0.171 HD
+ATOM      9  Cl  UNL     1       2.556  -3.509  -0.261  1.00  0.00    -0.062 Cl
+BRANCH   4  10
+ATOM     10  N   UNL     1       4.867   0.989   0.364  1.00  0.00    -0.369 N 
+ATOM     11  H   UNL     1       4.883   2.032   0.414  1.00  0.00     0.159 HD
+ATOM     12  H   UNL     1       5.758   0.463   0.502  1.00  0.00     0.159 HD
+ENDBRANCH   4  10
+ENDBRANCH   1   2
+BRANCH   1  13
+ATOM     13  C   UNL     1      -1.131   0.546  -0.727  1.00  0.00     0.144 C 
+BRANCH  13  14
+ATOM     14  C   UNL     1      -1.776   0.048   0.575  1.00  0.00     0.023 C 
+BRANCH  14  15
+ATOM     15  C   UNL     1      -3.135  -0.630   0.337  1.00  0.00    -0.002 C 
+ATOM     16  C   UNL     1      -4.220   0.357  -0.092  1.00  0.00     0.004 C 
+ENDBRANCH  14  15
+ENDBRANCH  13  14
+ENDBRANCH   1  13
+TORSDOF 5
