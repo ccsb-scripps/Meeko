@@ -33,9 +33,10 @@ files from various sources.
 
 Templates are matched on a per residue basis. Each residue is represented
 as an instance of a PolymerResidue object, which contains:
- - an RDKit molecule that represents the actual state
- - a padded RDKit molecule containing a few atoms from the adjacent residues
- - parameters such as partial charges
+
+ * an RDKit molecule that represents the actual state
+ * a padded RDKit molecule containing a few atoms from the adjacent residues
+ * parameters such as partial charges
 
 The positions are set by the input, and the connectivity and formal charges
 are defined by the templates. Heavy atoms must match exactly. If heavy atoms
