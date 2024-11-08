@@ -40,9 +40,8 @@ Originally from `Forlilab tutorials <https://github.com/forlilab/tutorials>`_
 
 .. code-block:: bash
 
-  git clone --branch docwork --depth=1 --filter=tree:0 \
-  https://github.com/rwxayheee/Meeko.git; cd Colabs; \
-  git sparse-checkout set --no-cone Compiled_for_Colab; git checkout
+  git clone --branch docwork --depth=1 --filter=tree:0 https://github.com/rwxayheee/Meeko.git
+  cd Meeko; git sparse-checkout set --no-cone example; git checkout; cd ..
 
 Ligand Preparation
 ==================
