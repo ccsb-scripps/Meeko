@@ -5,12 +5,16 @@ Parameterization of RDKit molecules is controlled by several parameters
 that can be used when creating an instance of ``MoleculePreparation``.
 Many of such parameters are exposed to the command line script, 
 ``mk_prepare_ligand.py``. Here, we cover the most relevant options, and
-how to use them both from command line and Python scripts.
+how to use them both from command line and Python scripts. Familiarity with
+Python and with the command line is required.
 
-Configuring MoleculePreparation in Python and command line
-----------------------------------------------------------
+Configuring MoleculePreparation
+-------------------------------
 
-In Python, an instance of ``MoleculePreparation`` is configured by passing
+From Python
+^^^^^^^^^^^
+
+An instance of ``MoleculePreparation`` is configured by passing
 any number of optional parameters during initialization:
 
 .. code-block:: python
@@ -30,26 +34,41 @@ parameters: ``mk_prep = MoleculePreparation()``.
 Parameters can be in a dictionary and use the ``from_config`` constructor:
 
 .. code-block:: python
+
    config_dict = {"merge_these_atom_types": (), "charge_model": "gasteiger"}
    mk_prep = MoleculePreapration.form_config(config_dict)
 
 The configuration dictionary can be written to a JSON file:
 
 .. code-block:: python
+
    import json
+
    with open("my_config.json", "w") as f:
        json.dump(config_dict, f)
 
-And the command line script ``mk_prepare_ligand.py`` can read the JSON file
-using the ``-c`` or ``--config_file`` option:
+
+From command line
+^^^^^^^^^^^^^^^^^
+
+The command line script ``mk_prepare_ligand.py`` can read a JSON file
+using the ``-c`` or ``--config_file`` option. The JSON file corresponding
+to the Python example above is:
+
+.. code-block:: json
+
+   {"merge_these_atom_types": ["H"], "charge_model": "gasteiger"}
+
 
 .. code-block:: bash
+
    mk_prepare_ligand.py -i mol.sdf -c my_config.json
 
 Here, ``mol.sdf`` is some file in the current working directory.
 Alternatively, each parameter can be passed directly:
 
 .. code-block:: bash
+
    mk_prepare_ligand.py -i mol.sdf --charge_model gasteiger --merge_these_atom_types H
 
 
@@ -68,10 +87,13 @@ Option name is ``merge_these_atom_types``. To prevent merging of any atom
 types set the variable to an empty tuple in Python:
 
 .. code-block:: python
+
    mk_prep = MoleculePreparation(merge_these_atom_types=())
 
 or pass no parameters in command line
+
 .. code-block:: bash
+
    mk_prepare_ligand.py -i mol.sdf --merge_these_atom_types
 
 
@@ -79,7 +101,39 @@ or pass no parameters in command line
 Modifying atom types
 --------------------
 
-Atom typing relies on
+Atom typing relies on SMARTS patterns to identify chemical substructures.
+AutoDock4 atom types are set by default. The easiest way to modify typing
+is to add new SMARTS that will superseed the existing ones. For example, let's
+assume we want to type hydrogens bound to aromatic carbons as ``HX``. By default,
+hydrogens bound to carbon are typed ``H``. A SMARTS pattern to matches
+hydrogen bound to carbon is ``"[H][c]"``. From command line:
+
+.. code-block:: bash
+
+   mk_prepare_ligand.py --add_atom_types '[{"smarts": "[H]c", "atype": "HX"}]' -i mol.sdf
+
+We pass a JSON string to ``--add_atom_types`` that is a list of dictionaries. Each
+dictionary has a ``"smarts"`` and ``"atype"`` key, and an optional ``"IDX"`` key
+that can be used to specify a list of atom indices (0-based) of the atoms in the SMARTS
+string that will be typed. By default ``IDX = [0]``.
+
+The equivalent from Python is:
+
+.. code-block:: python
+
+   mk_prep = MoleculePreparation(
+       add_atom_types=[{"smarts": "c[H]", "atype": "HX", "IDX": [1]}],
+   )
+
+Note that we swapped the order of the atoms in the SMARTS, and are now
+explicitly defining the ``"IDX"`` key to type the second atom in the SMARTS.
+
+The full set of atom types can also be specified. This can only be done from
+Python or by passing the equivalent configuration JSON file to ``mk_prepare_ligand.py``.
+The easiest way to do so, is to put all SMARTS in a JSON file. See the default
+file for an example, it is located at ``meeko/data/params/ad4_types.json``.
+
+
 
 
 No rigid macrocycles

@@ -1,9 +1,6 @@
 Basic ligand preparation
 ========================
 
-This covers the fundamentals both from command line and Python API.
-
-
 Command line script
 -------------------
 
@@ -51,12 +48,9 @@ and creates PDBQT strings for all molecules in the input file:
     
     # iterate over molecules in SD file
     for mol in Chem.SDMolSupplier(input_filename, removeHs=False):
-        preparator = MoleculePreparation()
-        molsetup_list = preparator.prepare(mol)
+        mk_prep = MoleculePreparation()
+        molsetup_list = mk_prep(mol)
 
-        # as of v0.6.0, the preparator always returns one molecule setup,
-        # unless it is configured for reactive docking, which it is not
-        # in this case. So we just grab the first (and only) element
         molsetup = molsetup_list[0]
 
         pdbqt_string = PDBQTWriterLegacy.write_string(molsetup)
@@ -65,3 +59,8 @@ and creates PDBQT strings for all molecules in the input file:
 The ``pdbqt_string`` can be written to a file for docking with AutoDock-GPU or
 AutoDock-Vina, or passed directly to Vina within Python using Vina's Python API,
 and avoiding writing PDBQT files to the filesystem.
+
+Note that calling ``mk_prep`` returns a list of molecule setups.
+As of v0.6.0, this list constains only one element  unless ``mk_prep`` is
+configured for reactive docking, which is not the case in this example. This is
+why we are considering the first (and only) molecule setup in the list.
