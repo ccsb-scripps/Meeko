@@ -14,6 +14,37 @@ Basic usage
     # prepare ligand PDBQT files in batch from a multiple-molecule input file
     mk_prepare_ligand.py -i multi_mol.sdf --multimol_outdir folder_for_pdbqt_files
 
+Example: Prepare ligand from a multi-molecule SDF, output PDBQT in (multiple) tar.gz of a certain size
+~~~~~~~~
+
+.. code-block:: bash
+
+   lig_sdf="Meeko/example/tutorial1/mols.sdf"
+   mk_prepare_ligand.py -i $lig_sdf --multimol_prefix mol_batch -z --multimol_targz_size 100
+
+Example: Prepare ligand with the macrocycle-typing option turned off
+~~~~~~~~
+.. code-block:: bash
+
+   lig_sdf="Meeko/example/cli_lig_prep/Rifamycin_PubChem.sdf"
+   mk_prepare_ligand.py -i $lig_sdf -o Rifamycin_rigidmacro.pdbqt --rigid_macrocycles
+
+   # current default allows flexible macrocycles
+   mk_prepare_ligand.py -i $lig_sdf -o Rifamycin_flexmacro.pdbqt 
+
+Example: Prepare ligand with the espaloma charge model 
+~~~~~~~~
+
+Python module espaloma and its dependencies are required. Visit `the official documentation for installation guide <https://espaloma.wangyq.net/install.html>`_. 
+
+.. code-block:: bash
+
+   mk_prepare_ligand.py -i $lig_sdf -o AMP_espaloma.pdbqt --charge_model espaloma
+
+   # current default charge model is gasteiger
+   mk_prepare_ligand.py -i $lig_sdf -o AMP_gasteiger.pdbqt 
+
+
 Options
 -------
 
@@ -46,7 +77,7 @@ Input/Output Options
 
 .. option:: --multimol_targz_size <size>
 
-   Define the number of PDBQT files per `.tar.gz` archive. Default is 10000.
+   Define the number of PDBQT files per `.tar.gz` archive. Default is 10000. Only effective when used with `-z, --multimol_targz`. 
 
 .. option:: -, --
 

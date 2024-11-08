@@ -11,6 +11,32 @@ Basic usage
     mk_export.py vina_results.pdbqt -s vina_results.sdf
     mk_export.py autodock-gpu_results.dlg -s autodock-gpu_results.sdf
 
+
+Example: Write all poses from DLG file to output SDF
+~~~~~~~~
+
+.. code-block:: bash
+
+   dock_dlg="Meeko/example/cli_export_result/3kgd_AMP_adgpu_out.dlg"
+   mk_export.py $dock_dlg -s 3kgd_AMP_adgpu_out.sdf --all_dlg_poses
+
+Example: Write with the flexible sidechain to output SDF
+~~~~~~~~
+
+.. code-block:: bash
+
+   dock_pdbqt="Meeko/example/cli_export_result/1fpu_PRC_vina_out.pdbqt"
+   mk_export.py $dock_pdbqt -s vina_results.sdf -k
+
+Example: Export full receptor with updated sidechains to output PDB
+~~~~~~~~
+
+.. code-block:: bash
+
+   dock_pdbqt="Meeko/example/cli_export_result/1fpu_PRC_vina_out.pdbqt"
+   rec_json="Meeko/example/cli_export_result/1fpu_receptorFH.json"
+   mk_export.py $dock_pdbqt -j $rec_json -p vina_results.pdb
+
 About
 -----
 

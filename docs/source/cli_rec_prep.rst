@@ -136,6 +136,8 @@ use the residue selection lanaguge described above, followed by an equal sign (`
 
 For an input like ``"A:5,7=CYX,A:19A,B:17=HID``, this assignment language represents: ``residues (number) 5 in Chain A are set to (template name) CYX`` and ``residue (number) 19 A in Chain A, and residue (number) 17 in Chain B are set to (template name) HID``. 
 
+At present, Meeko always requires **chain ID** and **residue number** to identify a residue (cofactor, ligand, or ion). The only exception occurs when the chain ID in the input file is empty; in this case, the chain ID should be omitted from the selection language, i.e. ``"A:19,:17"`` represents: ``residue (number) 19 in Chain A`` and ``residue (number) 17 with an empty chain ID``. 
+
 Options
 -------
 
