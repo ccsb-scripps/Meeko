@@ -1,21 +1,5 @@
-mk_prepare_ligand.py
-====================
-
-A command-line script for ligand preparation that generates the ligand PDBQT file(s). Currently supports SD files (.sdf), Mol2 files (.mol2) and Mol files (.mol), but SDF is strongly preferred as input files. 
-
-Basic usage
------------
-
-.. code-block:: bash
-
-    # write a single ligand PDBQT file from a single-molecule input file
-    mk_prepare_ligand.py -i molecule.sdf -o molecule.pdbqt
-
-    # prepare ligand PDBQT files in batch from a multiple-molecule input file
-    mk_prepare_ligand.py -i multi_mol.sdf --multimol_outdir folder_for_pdbqt_files
-
-Options
--------
+Options of mk_prepare_ligand.py
+===============================
 
 Input/Output Options
 ~~~~~~~~~~~~~~~~~~~~
