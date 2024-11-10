@@ -50,7 +50,7 @@ class AtomTyper:
                     0
                 ]  # by default, the first atom in the smarts gets parameterized
                 if "IDX" in line:
-                    idxs = [i - 1 for i in line["IDX"]]  # convert from 1- to 0-indexing
+                    idxs = [i for i in line["IDX"]]
                 # match SMARTS
                 hits = molsetup.find_pattern(smarts)
                 for atompar in line:
@@ -103,7 +103,7 @@ class AtomTyper:
                 # atom indexes in smarts string
                 smarts_idxs = [0]
                 if "IDX" in line:
-                    smarts_idxs = [i - 1 for i in line["IDX"]]
+                    smarts_idxs = [i for i in line["IDX"]]
                 for smarts_idx in smarts_idxs:
                     for hit in hits:
                         parent_idx = hit[smarts_idx]
@@ -131,7 +131,7 @@ class AtomTyper:
                                 # replace SMARTS indexes by the atomic index
                                 elif key in ["z", "x"]:
                                     for i in offatom[key]:
-                                        idx = hit[i - 1]
+                                        idx = hit[i]
                                         tmp[parent_idx][-1]["offatom"][key].append(idx)
                                 # convert degrees to radians
                                 elif key in ["theta", "phi"]:
@@ -217,7 +217,7 @@ class AtomTyper:
             hits = molsetup.find_pattern(smarts)
             if len(hits) == 0:
                 continue  # non-rotatable bonds get dihedrals
-            idxs = [i - 1 for i in line["IDX"]]
+            idxs = [i for i in line["IDX"]]
             tid = line["id"] if "id" in line else None
             fourier_series = []
             term_indices = {}

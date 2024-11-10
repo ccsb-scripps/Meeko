@@ -26,8 +26,9 @@ integration with external software that also interfaces with RDKit.
 Command line scripts
 --------------------
 
-There are three scripts: ``mk_prepare_ligand.py``, ``mk_prepare_receptor.py``,
-and ``mk_export.py``.
+There are two scripts to write the input files for docking,
+``mk_prepare_ligand.py`` and ``mk_prepare_receptor.py``, and one script to
+convert docking output files  ``mk_export.py``.
 
 Running a docking
 -----------------

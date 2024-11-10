@@ -52,19 +52,21 @@ From command line
 ^^^^^^^^^^^^^^^^^
 
 The command line script ``mk_prepare_ligand.py`` can read a JSON file
-using the ``-c`` or ``--config_file`` option. The JSON file corresponding
-to the Python example above is:
+using the ``-c`` or ``--config_file`` option. The contents of a JSON file
+corresponding to the Python example above is:
 
 .. code-block:: json
 
    {"merge_these_atom_types": ["H"], "charge_model": "gasteiger"}
 
+Passing the filename to the script with option ``-c``:
 
 .. code-block:: bash
 
    mk_prepare_ligand.py -i mol.sdf -c my_config.json
 
 Here, ``mol.sdf`` is some file in the current working directory.
+
 Alternatively, each parameter can be passed directly:
 
 .. code-block:: bash
@@ -132,12 +134,45 @@ The full set of atom types can also be specified. This can only be done from
 Python or by passing the equivalent configuration JSON file to ``mk_prepare_ligand.py``.
 The easiest way to do so, is to put all SMARTS in a JSON file. See the default
 file for an example, it is located at ``meeko/data/params/ad4_types.json``.
+The ``IDX`` key can be used as described above. Entries are matched in the
+order they appear in the file, the last SMARTS pattern that matches an atom is
+the one that determines the atom type.
+Then the filename can be passed to option ``-p/--load_atom_params``.
 
 
+Rigidifying bonds
+-----------------
 
+By default, single bonds are made rotatable except bonds in rings and amide bonds.
+Thioamide and amidine bonds are also not rotatable.
+Tertiary amides with non-equivalent substituents on the nitrogen are still made
+rotatable, which often leads to unreasonable geometries, but is necessary to
+visit both amide rotamers during docking.
 
-No rigid macrocycles
---------------------
+Here, we configure Meeko to make single bonds in some conjugated systems rigid,
+as defined byt the SMARTS ``"C=CC=C"``, and rigidify all amide bonds matched
+by ``"[CX3](=O)[NX3]"``, which includes tertiary amides but not thioamides or
+amidines:
 
-Hydrated docking
-----------------
+.. code-block:: bash
+
+   mk_prepare_ligand.py\
+     --rigidify_bonds_smarts "C=CC=C"\
+     --rigidify_bonds_indices 2 3\
+     --rigidify_bonds_smarts "[CX3](=O)[NX3]"\
+     --rigidify_bonds_indices 1 3\
+     -i mol.sdf
+
+The equivalent code in Python to initialize the molecule preparator is: 
+
+.. code-block:: python
+
+   mk_prep = MoleculePreparation(
+       rigidify_bonds_smarts = ["C=CC=C", "[CX3](=O)[NX3]"],
+       rigidify_bonds_indices = [(1, 2), (0, 2)],
+)
+
+The indices are the indices of the atoms in the SMARTS strings. Note that
+we use 0-based indices from the Python API, but 1-based indices from the
+command line script. In a future version of Meeko we may use 0-based indices
+everywhere.

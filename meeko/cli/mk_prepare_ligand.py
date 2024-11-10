@@ -192,10 +192,11 @@ def cmd_lineparser():
     )
     config_group.add_argument(
         "-p",
-        "--atom_type_smarts",
-        dest="atom_type_smarts_json",
+        "--load_atom_params",
+        nargs="+",
         action="store",
-        help="SMARTS based atom typing (JSON format)",
+        default=["ad4_types"],
+        help="filename with SMARTS defined atom types (JSON format)",
     )
     config_group.add_argument(
         "-aa",
@@ -296,9 +297,7 @@ def cmd_lineparser():
         if key in args.__dict__:
             config[key] = args.__dict__[key]
 
-    if args.atom_type_smarts_json is not None:
-        with open(args.atom_type_smarts_json) as f:
-            config["atom_type_smarts"] = json.load(f)
+    config["load_atom_params"] = args.load_atom_params
 
     if args.add_atom_types_json is not None:
         additional_ats = []

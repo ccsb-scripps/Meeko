@@ -1,7 +1,7 @@
 {"example_offsite_charges": [
-        {"smarts": "[#7X2;v3;!+](=,:[*])[*]", "IDX": [1],
+        {"smarts": "[#7X2;v3;!+](=,:[*])[*]", "IDX": [0],
          "OFFATOMS": [
-            {"z": [2, 3], "phi": 0, "distance": 0.2,
+            {"z": [1, 2], "phi": 0, "distance": 0.2,
             "atype": "OFFCHRG", "pull_charge_fraction": 1.08}
             ]
         }

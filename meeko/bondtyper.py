@@ -24,12 +24,12 @@ class BondTyperLegacy:
         """
 
         amide_bonds = [
-            (x[0], x[1]) for x in setup.find_pattern("[NX3]-[CX3]=[O,N]")
+            (x[0], x[1]) for x in setup.find_pattern("[NX3]-[CX3]=[O,N,S]")
         ]  # includes amidines
 
         # tertiary amides with non-identical substituents will be allowed to rotate
         tertiary_amides = [
-            x for x in setup.find_pattern("[NX3]([!#1])([!#1])-[CX3]=[O,N]")
+            x for x in setup.find_pattern("[NX3]([!#1])([!#1])-[CX3]=[O,N,S]")
         ]
         equivalent_atoms = setup.get_equivalent_atoms()
         num_amides_removed = 0

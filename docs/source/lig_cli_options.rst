@@ -83,7 +83,7 @@ Molecule Preparation Options
 
    (Flag) Allow amide bonds to rotate, making them non-planar (not recommended).
 
-.. option:: -p, --atom_type_smarts <JSON_FILENAME>
+.. option:: -p, --load_atom_params <JSON_FILENAME>
 
    Specify SMARTS-based atom typing in JSON format.
 

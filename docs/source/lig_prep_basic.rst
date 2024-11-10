@@ -24,12 +24,18 @@ Writing a single PDBQT file:
 
     mk_prepare_ligand.py -i molecule.sdf -o molecule.pdbqt
 
+If the ``-o`` option is omitted, the output filename will be the same as the
+input but with ``.pdbqt`` extension. Option ``-`` prints the PDBQT
+string to standard output instead of writting to a file.
+
 Writing multiple PDBQT files from an SD file with multiple molecules:
 
 .. code-block:: bash
 
     mk_prepare_ligand.py -i multi_mol.sdf --multimol_outdir folder_for_pdbqt_files
 
+Optionally, passing ``-z`` or ``--multimol_targz`` will compress the output as
+``.tar.gz`` files with 10000 PDBQT files each.
 
 Python API
 ----------
