@@ -69,6 +69,7 @@ to run molecular docking and virtual screening.
    :caption: Receptor preparation
 
    Overview <rec_overview>
+   Info on templates  <py_build_temp>
    Command line usage <cli_rec_prep>
    mk_prepare_receptor.py options <rec_cli_options>
 
@@ -79,10 +80,3 @@ to run molecular docking and virtual screening.
 
    Usage <export_usage>
    mk_export.py options <export_cli_options>
-
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   :caption: Building residue templates
-
-   In Python <py_build_temp>
