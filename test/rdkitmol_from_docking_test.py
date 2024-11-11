@@ -140,8 +140,8 @@ def test_offsite_charges():
         "input_offatom_params": {
             "offsite": [
                 {"smarts": "[#7X3;v3;!+]([*])([*])[*]",
-                 "IDX": [1],
-                 "OFFATOMS": [{"z": [2, 3, 4], "phi": 0, "distance": 0.2, "atype": "LP", "pull_charge_fraction": 1.08}]
+                 "IDX": [0],
+                 "OFFATOMS": [{"z": [1, 2, 3], "phi": 0, "distance": 0.2, "atype": "LP", "pull_charge_fraction": 1.08}]
                  }
             ]
         }
