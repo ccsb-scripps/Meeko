@@ -61,22 +61,24 @@ to run molecular docking and virtual screening.
    Overview <lig_overview>
    Basic usage <lig_prep_basic>
    Advanced usage <lig_prep_advanced>
-   Command line options <lig_cli_options>
+   mk_prepare_ligand.py options <lig_cli_options>
 
 .. toctree::
    :maxdepth: 2
    :hidden:
    :caption: Receptor preparation
 
-   cli_rec_prep
+   Overview <rec_overview>
+   Command line usage <cli_rec_prep>
+   mk_prepare_receptor.py options <rec_cli_options>
 
 .. toctree::
    :maxdepth: 2
    :hidden:
    :caption: Exporting results
 
-   cli_export_result
-   In Python <py_export_result>
+   Usage <export_usage>
+   mk_export.py options <export_cli_options>
 
 .. toctree::
    :maxdepth: 2
@@ -84,6 +86,3 @@ to run molecular docking and virtual screening.
    :caption: Building residue templates
 
    In Python <py_build_temp>
-
-
-
