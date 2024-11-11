@@ -1,7 +1,7 @@
 .. _py_build_temp:
 
-Building residue templates in Python
-===================================
+Advanced information about templates
+====================================
 
 The interpretation of the valence (bonds) and formal charge of atoms is an essential step when parsing a PDB/CIF file, and the accuracy of residue mapping is crucial to the creation of a macrobiomolecule system. In Meeko, the input residue names are used as keys and the chemical templates are retrieved accordingly based on :ref:`templates <templates>`. 
 

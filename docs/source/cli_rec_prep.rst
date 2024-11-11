@@ -1,54 +1,26 @@
-The input structure is matched against templates to
-guarantee chemical correctness and identify problems with the input structures.
-This allows the user to identify and fix problems, resulting in a molecular
-model that is correct with respect to heavy atoms, protonation state,
-connectivity, bond orders, and formal charges.
+mk_prepare_receptor.py
+======================
 
-The matching algorithm uses the connectivity and elements, but not bond orders
-or atom names. Hydrogens are optional. This makes it compatible with input
-files from various sources.
-
-Templates are matched on a per residue basis. Each residue is represented
-as an instance of a PolymerResidue object, which contains:
- - an RDKit molecule that represents the actual state
- - a padded RDKit molecule containing a few atoms from the adjacent residues
- - parameters such as partial charges
-
-The positions are set by the input, and the connectivity and formal charges
-are defined by the templates. Heavy atoms must match exactly. If heavy atoms
-are missing or in excess, the templates will fail to match.
-
-Missing hydrogens are added by RDKit, but are not subjected to minimization
-with a force field. Thus, their bond lengths are not super accurate.
-
-Different states of the same residue are stored as different templates,
-for example different protonation states of HIS, N-term, LYN/LYS, etc.
-Residue name is primary key unless user overrides.
-
-Currently not supported: capped residues from charmm-gui.
-
-mk_prepare_receptor
-===================
+A command-line script for receptor preparation from a PDB/CIF file, setting up various properties (flexible/reactive residues, box specifications, etc.), and writing useful input files (PDBQT, GPF, box configuration file for Vina) for docking. 
 
 Basic usage
 -----------
 
 .. code-block:: bash
 
-    mk_prepare_receptor -i examples/system.pdb --write_pdbqt prepared.pdbqt
+    mk_prepare_receptor.py -i examples/system.pdb --write_pdbqt prepared.pdbqt
 
+This is equivalent to: 
 
+.. code-block:: bash
 
+    mk_prepare_receptor.py -i examples/system.pdb -o prepared -p
 
-Protonation states
-------------------
+Read more about the syntax in :ref:`Write flags` and :ref:`Options`. 
 
-
-Adding templates
-----------------
 
 Write flags
------------
+~~~~~~~~~~~
 
 The option flags starting with ``--write`` in  ``mk_prepare_receptor`` can
 be used both with an argument to specify the outpuf filename: 
@@ -67,38 +39,42 @@ It is also possible to combine the two types of usage:
 
 .. code-block:: bash
 
-    --output_basename myenzyme
-    --write_pdbqt
-    --write_json
-    --write_vina_box box_for_myenzyme.txt
+    --output_basename myenzyme --write_pdbqt --write_json --write_vina_box box_for_myenzyme.txt
 
-in which case the specified filenames have priority over the default basename.
+in which case the specified filenames have priority over the default basename. 
 
-.. _templates:
+Residue selection and assignment language
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Templates
----------
+Meeko uses the **chain ID** and **residue number** to identify a residue. The arguments involving selection of residues: 
 
-The templates contain SMILES strings that are used to create the RDKit
-molecules that constitute every residue in the processed model. In this way,
-the chemistry of the processed model is fully defined by the templates,
-and the only thing that is preserved from the input are the atom positions
-and the connectivity between residues.
+.. code-block:: bash
 
-The SMILES strings contain all atoms that exist in the final model,
-and none that do not exist. This also applies to hydrogens,
-meaning that the SMILES are expected to have real hydrogens. Note that
-real hydrogens are different from explicit hydrogens. Real hydrogens will be
-represented as an actual atom in an RDKit molecule, while explicit hydrogens
-are a just property of heavy atoms. In the SMILES, real hydrogens are defined
-with square brackets "[H]" and explicit hydrogens without, e.g. "[nH]" to set
-the number of explicit hydrogens on an aromatic nitrogen to one.
+    -d, --delete_residues <residues>
 
-Residues that are part of a polymer, which is often all of them, will have
-bonds to adjacent residues. The heavy atoms involved in the bonds will miss
-a real hydrogen and have an implicit (or explicit) one instead. As an
-example, consider modeling an alkyl chain as a polymer, in which the monomer
-is a single carbon atom. Our template SMILES would be "[H]C[H]". The RDKit
-molecule will have three atoms and the carbon will have two implicit hydrogens.
-The implicit hydrogens correspond to bonds to adjacent residues in the
-processed polymer.
+    -f, --flexres <residues>
+
+    -r, --reactive_flexres <residues>
+
+use the compact selection language that specify residues efficiently. The chain ID and the residue number(s) are separated by a colon (``:``) delimiter. Each residue number is combined with the most recent chain ID that precedes it, resulting in an expanded list of chain-residue pairs. 
+
+For an input like ``A:5,7,BB:12C``, this selection language represents: ``residues (number) 5 and 7 in Chain A`` and ``residue (number) 12C in Chain BB``. 
+
+The arguments involving assignment of residues to properties: 
+
+.. code-block:: bash
+
+    -n, --set_template <template>
+
+    -b, --blunt_ends <positions>
+
+    --wanted_altloc <location>
+
+    -s, --reactive_name_specific <residue:atom>
+
+use the residue selection lanaguge described above, followed by an equal sign (``=``) as the delimiter and the assigned value, which could be the name of a residue template, the atom index for the blunt end, the wanted altloc ID, or the atom name of the reactive atom. Each residue selection is comibned with the most recent assignment that precedes it, resulting in a further expanded list of residue-assignment pairs. 
+
+For an input like ``"A:5,7=CYX,A:19A,B:17=HID``, this assignment language represents: ``residues (number) 5 in Chain A are set to (template name) CYX`` and ``residue (number) 19 A in Chain A, and residue (number) 17 in Chain B are set to (template name) HID``. 
+
+At present, Meeko always requires **chain ID** and **residue number** to identify a residue (cofactor, ligand, or ion). The only exception occurs when the chain ID in the input file is empty; in this case, the chain ID should be omitted from the selection language, i.e. ``"A:19,:17"`` represents: ``residue (number) 19 in Chain A`` and ``residue (number) 17 with an empty chain ID``. 
+

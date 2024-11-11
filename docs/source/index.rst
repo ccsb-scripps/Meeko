@@ -21,16 +21,26 @@ Python API
 
 Meeko is written in Python and exposes functions and classes that operate on
 RDKit molecules for the ligands, leveraging RDKit's popularity to facilitate
-integration with external software. Command line scripts are also available.
+integration with external software that also interfaces with RDKit.
 
-AutoDock ecosystem
-------------------
+Command line scripts
+--------------------
+
+There are two scripts to write the input files for docking,
+``mk_prepare_ligand.py`` and ``mk_prepare_receptor.py``, and one script to
+convert docking output files  ``mk_export.py``.
+
+Running a docking
+-----------------
 
 To run a docking, more packages are required besides Meeko:
 
  * AutoDock-Vina
  * AutoDock-GPU
  * Ringtail
+
+Check the tutorials page to learn about using meeko with these other packages
+to run molecular docking and virtual screening.
 
 
 
@@ -49,30 +59,24 @@ To run a docking, more packages are required besides Meeko:
    :caption: Ligand preparation
 
    Overview <lig_overview>
-   cli_lig_prep
-   In Python <py_lig_prep>
+   Basic usage <lig_prep_basic>
+   Advanced usage <lig_prep_advanced>
+   mk_prepare_ligand.py options <lig_cli_options>
 
 .. toctree::
    :maxdepth: 2
    :hidden:
    :caption: Receptor preparation
 
-   cli_rec_prep
+   Overview <rec_overview>
+   Info on templates  <py_build_temp>
+   Command line usage <cli_rec_prep>
+   mk_prepare_receptor.py options <rec_cli_options>
 
 .. toctree::
    :maxdepth: 2
    :hidden:
    :caption: Exporting results
 
-   cli_export_result
-   In Python <py_export_result>
-
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   :caption: Building residue templates
-
-   In Python <py_build_temp>
-
-
-
+   Usage <export_usage>
+   mk_export.py options <export_cli_options>

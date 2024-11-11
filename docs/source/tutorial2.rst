@@ -8,10 +8,6 @@ This is a reactive docking example that uses the AutoDock-GPU executable to gene
 
 Follow the instructions to set up the environment and run this command-line example on your own device (Linux, MacOS or WSL). To run this example in a Colab notebook, see :ref:`colab_examples`. 
 
-.. contents::
-   :local:
-   :depth: 2
-
 Introduction
 ============
 
@@ -43,13 +39,6 @@ Install the required Python packages through ``conda-forge``
 
 Install the additional packages and data from GitHub repositories
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-- (Python package) Meeko 
-
-.. code-block:: bash
-
-   git clone --single-branch --branch develop https://github.com/forlilab/Meeko.git
-   cd Meeko; pip install --use-pep517 -e .; cd ..
 
 - (Python package) scrubber 
 
@@ -293,9 +282,9 @@ And to run the docking calculation, the ligand PDBQT file (``AMP.pdbqt``), the f
 
 If you're running these calculations on Google T4 backends, here are the pre-compiled executables of autogrid4 and adgpu specifically for T4: 
 
-- autodock-gpu v1.5.3
-`autodock_gpu_128wi <https://github.com/rwxayheee/Colabs/blob/acd2972f4afbf8c5299ebf0686534f466bf6f81b/Compiled_for_Colab/AutoDock-GPU_v1.5.3/autodock_gpu_128wi>`_
-`adgpu_analysis <https://github.com/rwxayheee/Colabs/blob/acd2972f4afbf8c5299ebf0686534f466bf6f81b/Compiled_for_Colab/AutoDock-GPU_v1.5.3/adgpu_analysis>`_
+- autodock-gpu v1.5.3-2e658c3
+`autodock_gpu_128wi <https://github.com/rwxayheee/Colabs/blob/b18a4c61f68647838ac987aacec8b66b0ab3426c/Compiled_for_Colab/AutoDock-GPU_v1.5.3_develop/autodock_gpu_128wi>`_
+`adgpu_analysis <https://github.com/rwxayheee/Colabs/blob/b18a4c61f68647838ac987aacec8b66b0ab3426c/Compiled_for_Colab/AutoDock-GPU_v1.5.3_develop/adgpu_analysis>`_
 
 - autogrid v4.2.6
 `autogrid4 <https://github.com/rwxayheee/Colabs/blob/acd2972f4afbf8c5299ebf0686534f466bf6f81b/Compiled_for_Colab/AutoGird_v4.2.6/autogrid4>`_

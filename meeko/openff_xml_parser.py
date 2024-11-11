@@ -137,7 +137,7 @@ def make_dihedral_entry(attrib_dict_from_xml):
     assert 1 in labels and 2 in labels and 3 in labels and 4 in labels
     dihedral_entry = {
         "smarts": smarts,
-        "IDX": [labels[index] + 1 for index in (1, 2, 3, 4)],
+        "IDX": [labels[index] for index in (1, 2, 3, 4)],
     }
     terms = {}  # keywords found for each term of the fourier series
     expected_keywords = set(["k", "phase", "periodicity", "idivf"])
@@ -185,7 +185,7 @@ def make_vdw_entry(attrib_dict_from_xml):
     assert 1 in labels
     vdw_entry = {
         "smarts": smarts,
-        "IDX": [labels[1] + 1],
+        "IDX": [labels[1]],
         "id": attrib_dict_from_xml["id"],
     }
     assert ("epsilon" in attrib_dict_from_xml) and (
@@ -220,7 +220,7 @@ def assign_atypes(vdw_list, use_openff_id=True, force_uppercase=True):
     for v in vdw_list:
         mol = Chem.MolFromSmarts(v["smarts"])
         atom = mol.GetAtomWithIdx(
-            v["IDX"][0] - 1
+            v["IDX"][0]
         )  # consider only the first if multiple IDX
         element = mini_periodic_table[atom.GetAtomicNum()]
         atomic_numbers.append(atom.GetAtomicNum())
