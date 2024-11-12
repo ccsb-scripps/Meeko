@@ -2,7 +2,7 @@
 
 [![API stability](https://img.shields.io/badge/stable%20API-no-orange)](https://shields.io/)
 [![PyPI version fury.io](https://img.shields.io/badge/version-0.6.0-green.svg)](https://pypi.python.org/pypi/meeko/)
-[![Documentation Status](https://readthedocs.org/projects/meeko/badge/?version=readthedocs)](https://meeko.readthedocs.io/en/readthedocs/?badge=readthedocs)
+[![Documentation Status](https://readthedocs.org/projects/meeko/badge/?version=release)](https://meeko.readthedocs.io/en/release/?badge=release)
 
 Meeko prepares the input for AutoDock and processes its output.
 It is developed alongside AutoDock-GPU and AutoDock-Vina.
@@ -16,7 +16,7 @@ at [Scripps Research](https://www.scripps.edu/).
 
 ## Documentation
 
-The docs are hosted on [meeko.readthedocs.io](meeko.readthedocs.io)
+The docs are hosted on [meeko.readthedocs.io](https://meeko.readthedocs.io/en/release)
 
 
 ## Reporting bugs
@@ -42,7 +42,7 @@ pip install meeko
 
 Meeko exposes a Python API to enable scripting. Here we share very minimal examples
 using the command line scripts just to give context.
-Please visit the [meeko.readthedocs.io](meeko.readthedocs.io) for more information.
+Please visit the [meeko.readthedocs.io](https://meeko.readthedocs.io/en/release) for more information.
 
 Parameterizing a ligand and writing a PDBQT file:
 ```bash
