@@ -11,6 +11,7 @@ from dataclasses import asdict, dataclass, field
 import json
 import sys
 import warnings
+from typing import Union
 
 import numpy as np
 import rdkit.Chem
@@ -191,9 +192,9 @@ class UniqAtomParams:
 @dataclass
 class Atom:
     index: int
-    pdbinfo: str or PDBAtomInfo = DEFAULT_PDBINFO
+    pdbinfo: Union[str, PDBAtomInfo] = DEFAULT_PDBINFO
     charge: float = DEFAULT_CHARGE
-    coord: np.ndarray = field(default_factory=np.ndarray)
+    coord: np.ndarray = field(default_factory=lambda: np.zeros(3))
     atomic_num: int = DEFAULT_ATOMIC_NUM
     atom_type: str = DEFAULT_ATOM_TYPE
     is_ignore: bool = DEFAULT_IS_IGNORE
@@ -271,7 +272,7 @@ class Atom:
 
 @dataclass
 class Bond:
-    canon_id: (int, int)
+    canon_id: tuple[int, int]
     index1: int
     index2: int
     rotatable: bool = DEFAULT_BOND_ROTATABLE
@@ -394,7 +395,7 @@ class RingClosureInfo:
 @dataclass
 class Restraint:
     atom_index: int
-    target_coords: (float, float, float)
+    target_coords: tuple[float, float, float]
     kcal_per_angstrom_square: float
     delay_angstroms: float
 
@@ -508,7 +509,7 @@ class MoleculeSetup:
         self,
         atom_index: int = None,
         overwrite: bool = False,
-        pdbinfo: str or PDBAtomInfo = DEFAULT_PDBINFO,
+        pdbinfo: Union[str, PDBAtomInfo] = DEFAULT_PDBINFO,
         charge: float = DEFAULT_CHARGE,
         coord: np.ndarray = None,
         atomic_num: int = DEFAULT_ATOMIC_NUM,
@@ -593,7 +594,7 @@ class MoleculeSetup:
 
     def add_pseudoatom(
         self,
-        pdbinfo: str or PDBAtomInfo = DEFAULT_PDBINFO,
+        pdbinfo: Union[str, PDBAtomInfo] = DEFAULT_PDBINFO,
         charge: float = DEFAULT_CHARGE,
         coord: np.ndarray = None,
         atom_type: str = DEFAULT_ATOM_TYPE,
