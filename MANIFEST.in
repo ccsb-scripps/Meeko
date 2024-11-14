@@ -3,5 +3,6 @@ include LICENSE
 include test/*
 include example/*
 include meeko/data/*
+include meeko/data/params/*
 include meeko/tmp/*
 include meeko/utils/*
