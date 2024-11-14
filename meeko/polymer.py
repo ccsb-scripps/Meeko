@@ -1128,57 +1128,7 @@ class Polymer:
         """
 
         for residue_id in self.get_valid_monomers():
-            monomer = self.monomers[residue_id]
-            molsetups = mk_prep(monomer.padded_mol)
-            if len(molsetups) != 1:
-                raise NotImplementedError(f"need 1 molsetup but got {len(molsetups)}")
-            molsetup = molsetups[0]
-            self.monomers[residue_id].molsetup = molsetup
-            self.monomers[residue_id].is_flexres_atom = [
-                False for _ in molsetup.atoms
-            ]
-
-            # set ignore to True for atoms that are padding
-            for atom in molsetup.atoms:
-                if atom.index not in monomer.molsetup_mapidx:
-                    atom.is_ignore = True
-
-            # recalculate flexibility tree after setting ignored atoms
-            mk_prep.calc_flex(molsetup)
-
-            # rectify charges to sum to integer (because of padding)
-            if mk_prep.charge_model == "zero":
-                net_charge = 0
-            else:
-                rdkit_mol = self.monomers[residue_id].rdkit_mol
-                net_charge = sum(
-                    [atom.GetFormalCharge() for atom in rdkit_mol.GetAtoms()]
-                )
-            not_ignored_idxs = []
-            charges = []
-            for atom in molsetup.atoms:
-                if atom.index in monomer.molsetup_mapidx: # TODO offsite not in mapidx
-                    charges.append(atom.charge)
-                    not_ignored_idxs.append(atom.index)
-            charges = rectify_charges(charges, net_charge, decimals=3)
-            chain, resnum = residue_id.split(":")
-            resname = self.monomers[residue_id].input_resname
-            if self.monomers[residue_id].atom_names is None:
-                atom_names = ["" for _ in not_ignored_idxs]
-            else:
-                atom_names = self.monomers[residue_id].atom_names
-            for i, j in enumerate(not_ignored_idxs):
-                molsetup.atoms[j].charge = charges[i]
-                atom_name = atom_names[monomer.molsetup_mapidx[j]]
-                if resnum[-1].isalpha():
-                    icode = resnum[-1]
-                    resnum = resnum[:-1]
-                else:
-                    icode = ""
-                molsetup.atoms[j].pdbinfo = PDBAtomInfo(
-                    atom_name, resname, int(resnum), icode, chain
-                )
-        return
+            self.monomers[residue_id].parameterize(mk_prep, residue_id)
 
     @staticmethod
     def _build_rdkit_mol(raw_mol, template, mapping, nr_missing_H):
@@ -2124,6 +2074,66 @@ class Monomer:
         """
         monomer = json.loads(json_string, object_hook=cls.monomer_json_decoder)
         return monomer
+
+    def parameterize(self, mk_prep, residue_id):
+
+        molsetups = mk_prep(self.padded_mol)
+        if len(molsetups) != 1:
+            raise NotImplementedError(f"need 1 molsetup but got {len(molsetups)}")
+        molsetup = molsetups[0]
+        self.molsetup = molsetup
+        self.is_flexres_atom = [False for _ in molsetup.atoms]
+
+        # set ignore to True for atoms that are padding
+        for atom in molsetup.atoms:
+            if atom.index not in self.molsetup_mapidx:
+                atom.is_ignore = True
+
+        # recalculate flexibility tree after setting ignored atoms
+        mk_prep.calc_flex(molsetup)
+
+        # rectify charges to sum to integer (because of padding)
+        if mk_prep.charge_model == "zero":
+            net_charge = 0
+        else:
+            rdkit_mol = self.rdkit_mol
+            net_charge = sum(
+                [atom.GetFormalCharge() for atom in rdkit_mol.GetAtoms()]
+            )
+        not_ignored_idxs = []
+        charges = []
+        for atom in molsetup.atoms:
+            if atom.index in self.molsetup_mapidx: # TODO offsite not in mapidx
+                charges.append(atom.charge)
+                not_ignored_idxs.append(atom.index)
+        charges = rectify_charges(charges, net_charge, decimals=3)
+        for i, j in enumerate(not_ignored_idxs):
+            molsetup.atoms[j].charge = charges[i]
+        self._set_pdbinfo(residue_id)
+        return
+
+    def _set_pdbinfo(self, residue_id):
+        not_ignored_idxs = []
+        for atom in self.molsetup.atoms:
+            if atom.index in self.molsetup_mapidx: # TODO offsite not in mapidx
+                not_ignored_idxs.append(atom.index)
+        chain, resnum = residue_id.split(":")
+        if resnum[-1].isalpha():
+            icode = resnum[-1]
+            resnum = resnum[:-1]
+        else:
+            icode = ""
+        if self.atom_names is None:
+            atom_names = ["" for _ in not_ignored_idxs]
+        else:
+            atom_names = self.atom_names
+        for i, j in enumerate(not_ignored_idxs):
+            atom_name = atom_names[self.molsetup_mapidx[j]]
+            self.molsetup.atoms[j].pdbinfo = PDBAtomInfo(
+                atom_name, self.input_resname, int(resnum), icode, chain
+            )
+        return
+
 
 class NoAtomMapWarning(logging.Filter):
     def filter(self, record):
