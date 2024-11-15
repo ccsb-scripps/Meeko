@@ -1,0 +1,29 @@
+parameter_file boron-silicon-atom_par.dat
+npts 48 70 62
+gridfld rec_2hzn_rigid.maps.fld
+spacing 0.375
+receptor_types HD C A N NA OA F P SA S Cl Br I Mg Ca Mn Fe Zn
+ligand_types HD C A N NA OA F P SA S Cl CL Br BR I Si B
+receptor rec_2hzn_rigid.pdbqt
+gridcenter 15.190 53.903 16.917
+smooth 0.500
+map rec_2hzn_rigid.HD.map
+map rec_2hzn_rigid.C.map
+map rec_2hzn_rigid.A.map
+map rec_2hzn_rigid.N.map
+map rec_2hzn_rigid.NA.map
+map rec_2hzn_rigid.OA.map
+map rec_2hzn_rigid.F.map
+map rec_2hzn_rigid.P.map
+map rec_2hzn_rigid.SA.map
+map rec_2hzn_rigid.S.map
+map rec_2hzn_rigid.Cl.map
+map rec_2hzn_rigid.CL.map
+map rec_2hzn_rigid.Br.map
+map rec_2hzn_rigid.BR.map
+map rec_2hzn_rigid.I.map
+map rec_2hzn_rigid.Si.map
+map rec_2hzn_rigid.B.map
+elecmap rec_2hzn_rigid.e.map
+dsolvmap rec_2hzn_rigid.d.map
+dielectric -42.000
