@@ -181,6 +181,8 @@ def pdb_updated_flexres_from_rdkit(polymer:Polymer, flexres_rdkit_mols:dict):
 
     new_positions = {}
     for res_id, mol in flexres_rdkit_mols.items():
+        print(Chem.MolToSmiles(mol))
+        #mol = Chem.RemoveHs(mol)
         # get templates for matching indices of rdkit mol to monomer in polymer
         key = polymer.monomers[res_id].residue_template_key
         template = polymer.residue_chem_templates.residue_templates[key]
@@ -190,12 +192,17 @@ def pdb_updated_flexres_from_rdkit(polymer:Polymer, flexres_rdkit_mols:dict):
 
         sidechain_positions = {}
         molsetup_matched = set()
+        matched_but_ignored = 0
         for i, j in template_to_pdbqt.items():
-            molsetup_matched.add(template_to_molsetup[i])
-            sidechain_positions[i] = mol.GetConformer().GetAtomPosition(j)
-        if len(molsetup_matched) != len(template_to_pdbqt):
+            index_molsetup = template_to_molsetup[i]
+            if polymer.monomers[res_id].molsetup.atoms[index_molsetup].is_ignore:  # do not include ignored atoms (non-polar hydrogens)
+                matched_but_ignored += 1
+            else:
+                molsetup_matched.add(template_to_molsetup[i])
+                sidechain_positions[i] = mol.GetConformer().GetAtomPosition(j)
+        if len(molsetup_matched) != len(template_to_pdbqt) - matched_but_ignored:
             raise RuntimeError(f"{len(molsetup_matched)} {len(template_to_pdbqt)=}")
-        is_flexres_atom = polymer.monomers[res_id].is_flexres_atom 
+        is_flexres_atom = polymer.monomers[res_id].is_flexres_atom
         hit_count = sum([is_flexres_atom[i] for i in molsetup_matched])
         if hit_count != len(molsetup_matched):
             raise RuntimeError(f"{hit_count=} {len(molsetup_matched)=}")
@@ -214,6 +221,7 @@ def pdb_updated_flexres_from_rdkit(polymer:Polymer, flexres_rdkit_mols:dict):
             first_after_root.add(conn[(root_body_idx, other_body_idx)][1])
         to_pop = set()
         for index in sidechain_positions:
+            print(index)
             index_molsetup = template_to_molsetup[index]
             if (
                 rigid_index_by_atom[index_molsetup] == root_body_idx or 
