@@ -26,7 +26,7 @@ Writing a single PDBQT file:
 
 If the ``-o`` option is omitted, the output filename will be the same as the
 input but with ``.pdbqt`` extension. Option ``-`` prints the PDBQT
-string to standard output instead of writting to a file.
+string to standard output instead of writing to a file.
 
 Writing multiple PDBQT files from an SD file with multiple molecules:
 
@@ -67,6 +67,6 @@ AutoDock-Vina, or passed directly to Vina within Python using Vina's Python API,
 and avoiding writing PDBQT files to the filesystem.
 
 Note that calling ``mk_prep`` returns a list of molecule setups.
-As of v0.6.0, this list constains only one element  unless ``mk_prep`` is
+As of v0.6.0, this list contains only one element unless ``mk_prep`` is
 configured for reactive docking, which is not the case in this example. This is
 why we are considering the first (and only) molecule setup in the list.

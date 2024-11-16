@@ -23,7 +23,7 @@ Write flags
 ~~~~~~~~~~~
 
 The option flags starting with ``--write`` in  ``mk_prepare_receptor`` can
-be used both with an argument to specify the outpuf filename: 
+be used both with an argument to specify the output filename: 
 
 .. code-block:: bash
 
@@ -72,7 +72,7 @@ The arguments involving assignment of residues to properties:
 
     -s, --reactive_name_specific <residue:atom>
 
-use the residue selection lanaguge described above, followed by an equal sign (``=``) as the delimiter and the assigned value, which could be the name of a residue template, the atom index for the blunt end, the wanted altloc ID, or the atom name of the reactive atom. Each residue selection is comibned with the most recent assignment that precedes it, resulting in a further expanded list of residue-assignment pairs. 
+use the residue selection lanaguge described above, followed by an equal sign (``=``) as the delimiter and the assigned value, which could be the name of a residue template, the atom index for the blunt end, the wanted altloc ID, or the atom name of the reactive atom. Each residue selection is combined with the most recent assignment that precedes it, resulting in a further expanded list of residue-assignment pairs. 
 
 For an input like ``"A:5,7=CYX,A:19A,B:17=HID``, this assignment language represents: ``residues (number) 5 in Chain A are set to (template name) CYX`` and ``residue (number) 19 A in Chain A, and residue (number) 17 in Chain B are set to (template name) HID``. 
 

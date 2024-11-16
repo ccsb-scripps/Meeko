@@ -165,7 +165,7 @@ To make the N-terminal embedding variant of ``CRO``:
     cc_N.resname += "_N"
     export_chem_templates_to_json([cc_N])
 
-In the chained procedure above, we have removed ``OXT`` and protonated ``N1``, which is done by ``make_capped`` that adds hydrogen(s) to matching atom(s) with specified ``capping_names`` within the region of ``allowed_smarts``. The expected outout from ``export_chem_templates_to_json`` is: 
+In the chained procedure above, we have removed ``OXT`` and protonated ``N1``, which is done by ``make_capped`` that adds hydrogen(s) to matching atom(s) with specified ``capping_names`` within the region of ``allowed_smarts``. The expected output from ``export_chem_templates_to_json`` is: 
 
 .. code-block:: bash
 
