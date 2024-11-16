@@ -1,7 +1,15 @@
 include README.md
 include LICENSE
 include test/*
+include test/*
+include test/flexibility_data/*
+include test/macrocycle_data/*
+include test/polymer_data/*
+include test/rdkitmol_from_docking_data/*
+include test/small_cycle_data/*
 include example/*
+include example/tutorial1/*
 include meeko/data/*
+include meeko/data/params/*
 include meeko/tmp/*
 include meeko/utils/*

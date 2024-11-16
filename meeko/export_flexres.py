@@ -4,6 +4,7 @@ from rdkit.Geometry import Point3D
 from .utils.utils import parse_begin_res
 from .utils.utils import mini_periodic_table
 from .rdkit_mol_create import RDKitMolCreate
+from .polymer import Polymer
 
 
 mini_periodic_table = {v: k for k, v in mini_periodic_table.items()}
@@ -164,4 +165,72 @@ def export_pdb_updated_flexres(polymer, pdbqt_mol):
                 new_positions[res_id] = sidechain_positions
     
     pdbstr = polymer.to_pdb(new_positions)
+    return pdbstr
+
+def pdb_updated_flexres_from_rdkit(polymer:Polymer, flexres_rdkit_mols:dict):
+    """Take dict of flexible residue RDKit molecules and update the polymer PDB with their positions
+
+    Args:
+        polymer (Polymer): receptor Polymer to edit
+        flexres_rdkit (dict): Dict of RDKit molecule objects of updated flexible residue positions. Key is residue ID number
+
+    Returns:
+        str: PDB string for receptor with updated flexres positons
+    """
+    # TODO: make this a helper function callable by the function above?
+
+    new_positions = {}
+    for res_id, mol in flexres_rdkit_mols.items():
+        print(Chem.MolToSmiles(mol))
+        #mol = Chem.RemoveHs(mol)
+        # get templates for matching indices of rdkit mol to monomer in polymer
+        key = polymer.monomers[res_id].residue_template_key
+        template = polymer.residue_chem_templates.residue_templates[key]
+        _, template_to_pdbqt = template.match(mol)
+        molsetup_to_template = polymer.monomers[res_id].molsetup_mapidx
+        template_to_molsetup = {j: i for i, j in molsetup_to_template.items()}
+
+        sidechain_positions = {}
+        molsetup_matched = set()
+        matched_but_ignored = 0
+        for i, j in template_to_pdbqt.items():
+            index_molsetup = template_to_molsetup[i]
+            if polymer.monomers[res_id].molsetup.atoms[index_molsetup].is_ignore:  # do not include ignored atoms (non-polar hydrogens)
+                matched_but_ignored += 1
+            else:
+                molsetup_matched.add(template_to_molsetup[i])
+                sidechain_positions[i] = mol.GetConformer().GetAtomPosition(j)
+        if len(molsetup_matched) != len(template_to_pdbqt) - matched_but_ignored:
+            raise RuntimeError(f"{len(molsetup_matched)} {len(template_to_pdbqt)=}")
+        is_flexres_atom = polymer.monomers[res_id].is_flexres_atom
+        hit_count = sum([is_flexres_atom[i] for i in molsetup_matched])
+        if hit_count != len(molsetup_matched):
+            raise RuntimeError(f"{hit_count=} {len(molsetup_matched)=}")
+        if hit_count != sum(is_flexres_atom):
+            raise RuntimeError(f"{hit_count=} {sum(is_flexres_atom)=}")
+        # new_positions[res_id] = sidechain_positions
+
+        # remove root atom(s) (often C-alpha) and first atom after bond
+        flex_model = polymer.monomers[res_id].molsetup.flexibility_model
+        root_body_idx = flex_model["root"]
+        graph = flex_model["rigid_body_graph"]
+        conn = flex_model["rigid_body_connectivity"]
+        rigid_index_by_atom = flex_model["rigid_index_by_atom"]
+        first_after_root = set()
+        for other_body_idx in graph[root_body_idx]:
+            first_after_root.add(conn[(root_body_idx, other_body_idx)][1])
+        to_pop = set()
+        for index in sidechain_positions:
+            print(index)
+            index_molsetup = template_to_molsetup[index]
+            if (
+                rigid_index_by_atom[index_molsetup] == root_body_idx or 
+                index_molsetup in first_after_root
+            ): 
+                to_pop.add(index) 
+        for index in to_pop:
+            sidechain_positions.pop(index)
+        new_positions[res_id] = sidechain_positions
+
+    pdbstr = polymer.to_pdb(new_positions=new_positions)
     return pdbstr

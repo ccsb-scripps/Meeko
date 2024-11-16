@@ -184,7 +184,7 @@ def get_args():
         "--flexres",
         action="append",
         default=[],
-        help='specify the flexible residues by the chain ID and residue number, e.g. -f ":42,B:23" is equivalent to -f ":42" -f "B:23" (skip chain ID if it is unspecified)',
+        help='specify the flexible residues by the chain ID and residue number, e.g. -f ":42,B:23" is equivalent to -f ":42" -f "B:23" (leave chain ID empty if omitted in input PDB or mmCIF)',
     )
 
     box_group = parser.add_argument_group("Size and center of grid box")
