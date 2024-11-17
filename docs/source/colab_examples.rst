@@ -69,7 +69,7 @@ The basic docking example is developed to showcase the usage of **import additio
 
 `Run on Colab! <https://colab.research.google.com/drive/1tzQoguVQDCguOaLSsGvQuL57ry_PY3UG?usp=sharing>`_
 
-The reactive docking example is based on reactive docking method that has been developed for high-throughput virtual screenings of reactive species. In this example, a small molecule substrate (Adenosine monophosphate, PDB token AMP) is targeting at the catalytic histidine residue of a hollow protein structure of bacteria RNA 3' cyclase (PDB token 3KGD) to generate the near-attack conformation for the formation of the phosphoamide bond. A docked pose that closely resembles the original position of the ligand is expected among the top-ranked poses. 
+The reactive docking example is based on reactive docking method that has been developed for high-throughput virtual screenings of reactive species. In this example, a small molecule substrate (Adenosine monophosphate, PDB token AMP) is targeting the catalytic histidine residue of a hollow protein structure of bacteria RNA 3' cyclase (PDB token 3KGD) to generate the near-attack conformation for the formation of the phosphoamide bond. A docked pose that closely resembles the original position of the ligand is expected among the top-ranked poses. 
 
 
 [AutoDock-GPU] Tethered Docking
@@ -77,6 +77,6 @@ The reactive docking example is based on reactive docking method that has been d
 
 `Run on Colab! <https://colab.research.google.com/drive/1tf9xOgn6u8eDTeFJtc8GCEGRX-8aR9Bo?usp=sharing>`_
 
-The covalent docking example is based on the two-point attractor and flexible side chain method. In this example, a small molecule substrate (Adenosine monophosphate, PDB token AMP) is attached onto the catalytic histidine residue of a hollow protein structure of bacteria RNA 3' cyclase (PDB token 3KGD) to reproduce the covalent intermediate complex structure. A docked pose that closely resembles the original position of the ligand is expected among the top-ranked poses. 
+The covalent docking example is based on the two-point attractor and flexible side chain method. In this example, a small molecule substrate (Adenosine monophosphate, PDB token AMP) is attached to the catalytic histidine residue of a hollow protein structure of bacteria RNA 3' cyclase (PDB token 3KGD) to reproduce the covalent intermediate complex structure. A docked pose that closely resembles the original position of the ligand is expected among the top-ranked poses. 
 
 

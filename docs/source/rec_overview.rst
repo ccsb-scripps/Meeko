@@ -5,9 +5,9 @@ Polymers and monomers
 ---------------------
 
 Receptors are represented as a collection of subunits where each subunit is
-treated as an individual molecule. THe same code path for ligand parameterization
-is also used herein. The Python class for receptors is called
+treated as an individual molecule. The Python class for receptors is called
 ``Polymer`` and the class for subunits is ``Monomer``.
+The code for ligand parameterization is also used for the receptor.
 
 During most of the v0.6.0 development, the name of the ``Polymer`` class was
 ``LinkedRDKitChorizo``. Many of the commit messages, as well as GitHub issues and pull

@@ -33,15 +33,33 @@ convert docking output files  ``mk_export.py``.
 Running a docking
 -----------------
 
-To run a docking, more packages are required besides Meeko:
+To run a docking, more packages are required besides Meeko. At a minimum,
+either Vina or AutoDock-GPU are needed to run the actual docking.
 
- * AutoDock-Vina
- * AutoDock-GPU
- * Ringtail
+.. grid:: 3
+
+    .. grid-item-card:: AutoDock-GPU
+        :link: https://github.com/ccsb-scripps/AutoDock-GPU
+
+        Docking for GPUs. Implements the AutoDock4.2 scoring function.
+        Command line executable only.
+
+    .. grid-item-card:: AutoDock-Vina
+        :link: https://autodock-vina.readthedocs.io/
+
+        Docking on CPUs.
+        Implements Vina and AutoDock4.2 scoring functions.
+        Has a Python API and command line executable.
+
+    .. grid-item-card:: Ringtail
+        :link: https://github.com/forlilab/ringtail
+
+        Store and analyze virtual screening with SQLite.
+        Has a Python API and command line scripts.
+
 
 Check the tutorials page to learn about using meeko with these other packages
 to run molecular docking and virtual screening.
-
 
 
 .. toctree::
