@@ -5,7 +5,6 @@
 #
 
 from math import sqrt
-from os import linesep as os_linesep
 
 class ReactiveAtomTyper:
 

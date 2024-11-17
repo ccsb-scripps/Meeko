@@ -3,7 +3,7 @@ import json
 import logging
 import traceback
 from importlib.resources import files
-from os import linesep as os_linesep
+from os import linesep as eol
 from sys import exc_info
 from typing import Union
 from typing import Optional
@@ -494,19 +494,19 @@ class PolymerCreationError(RuntimeError):
             self.traceback = None
 
     def __str__(self):
-        msg = "" + os_linesep
-        msg += "Error: Creation of data structure for receptor failed." + os_linesep
-        msg += "" + os_linesep
-        msg += "Details:" + os_linesep
-        msg += self.error + os_linesep
+        msg = "" + eol
+        msg += "Error: Creation of data structure for receptor failed." + eol
+        msg += "" + eol
+        msg += "Details:" + eol
+        msg += self.error + eol
 
         if self.traceback:
-            msg += self.traceback + os_linesep
+            msg += self.traceback + eol
 
         if self.recommendations: 
-            msg += "Recommendations:" + os_linesep
-            msg += self.recommendations + os_linesep
-            msg += "" + os_linesep
+            msg += "Recommendations:" + eol
+            msg += self.recommendations + eol
+            msg += "" + eol
         
         return msg
 
@@ -523,7 +523,7 @@ def handle_parsing_situations(
     if unparsed_res:
         msg = f"- Parsing failed for: {unparsed_res}."
         if not allow_bad_res:
-            err += msg + os_linesep
+            err += msg + eol
         else: 
             msg += " Ignored due to allow_bad_res."
             logger.warning(msg)
@@ -531,30 +531,30 @@ def handle_parsing_situations(
     if unmatched_res:
         msg = f"- Template matching failed for: {list(unmatched_res)}"
         if not allow_bad_res:
-            err += msg + os_linesep
+            err += msg + eol
         else:
             msg += " Ignored due to allow_bad_res."
             logger.warning(msg)
 
     if err:
-        err += "These residues can be ignored with option allow_bad_res." + os_linesep
+        err += "These residues can be ignored with option allow_bad_res." + eol
 
     if res_needed_altloc: 
-        msg = f"- Residues with alternate location: {res_needed_altloc}" + os_linesep
-        msg += "Either specify an altloc for each with option wanted_altloc" + os_linesep
+        msg = f"- Residues with alternate location: {res_needed_altloc}" + eol
+        msg += "Either specify an altloc for each with option wanted_altloc" + eol
         msg += "or a general default altloc with option default_altloc."
         err += msg
 
     if res_missed_altloc:
-        msg = f"- Requested altlocs not found for: {res_missed_altloc}." + os_linesep
+        msg = f"- Requested altlocs not found for: {res_missed_altloc}." + eol
         err += msg
 
     if err:
-        recs = "1. (for batch processing) Use -a/--allow_bad_res to automatically remove residues" + os_linesep
-        recs += "that do not match templates, and --default_altloc to set" + os_linesep
-        recs += "a default altloc variant. Use these at your own risk." + os_linesep
-        recs += "" + os_linesep
-        recs += "2. (processing individual structure) Inspecting and fixing the input structure is recommended." + os_linesep
+        recs = "1. (for batch processing) Use -a/--allow_bad_res to automatically remove residues" + eol
+        recs += "that do not match templates, and --default_altloc to set" + eol
+        recs += "a default altloc variant. Use these at your own risk." + eol
+        recs += "" + eol
+        recs += "2. (processing individual structure) Inspecting and fixing the input structure is recommended." + eol
         recs += "Use --wanted_altloc to set variants for specific residues."
         raise PolymerCreationError(err, recs)
     return
@@ -776,9 +776,9 @@ class Polymer:
         if type(raw_input_mols) != dict:
             msg = f"expected raw_input_mols to be dict, got {type(raw_input_mols)}"
             if type(raw_input_mols) == str:
-                msg += os_linesep
+                msg += eol
                 msg += (
-                    "consider Polymer.from_pdb_string(pdbstr)" + os_linesep
+                    "consider Polymer.from_pdb_string(pdbstr)" + eol
                 )
             raise ValueError(msg)
         self.residue_chem_templates = residue_chem_templates
@@ -812,25 +812,25 @@ class Polymer:
         if unknown_res_from_input:
             unknown_valid_res_from_input = {k: v for k, v in unknown_res_from_input.items() if v != "UNL"}
             if unknown_valid_res_from_input: 
-                err += f"Input residues {unknown_valid_res_from_input} not in residue_templates" + os_linesep
+                err += f"Input residues {unknown_valid_res_from_input} not in residue_templates" + eol
             UNL_from_input = {k: v for k, v in unknown_res_from_input.items() if v == "UNL"}
             if UNL_from_input: 
-                err += f"Input residues {UNL_from_input} do not have a concrete definition" + os_linesep
+                err += f"Input residues {UNL_from_input} do not have a concrete definition" + eol
         
         unknown_res_from_assign = {}
         if set_template:
             unknown_res_from_assign = {res_id: resn for res_id, resn in set_template.items() if resn not in supported_resnames}
             unknown_valid_res_from_assign = {k: v for k, v in unknown_res_from_assign.items() if v != "UNL"}
             if unknown_valid_res_from_assign: 
-                err += f"Input residues {unknown_valid_res_from_assign} not in residue_templates" + os_linesep
+                err += f"Input residues {unknown_valid_res_from_assign} not in residue_templates" + eol
             UNL_from_assign = {k: v for k, v in unknown_res_from_assign.items() if v == "UNL"}
             if UNL_from_assign: 
-                err += f"Input residues {UNL_from_assign} do not have a concrete definition" + os_linesep
+                err += f"Input residues {UNL_from_assign} do not have a concrete definition" + eol
         
         if err:
             if "UNL" in err: 
-                err += "Resdiues that are named UNL can't be parameterized. " + os_linesep
-                rec = "1. (to parameterize the residues) Use --set_template to specify valid residue names, " + os_linesep
+                err += "Resdiues that are named UNL can't be parameterized. " + eol
+                rec = "1. (to parameterize the residues) Use --set_template to specify valid residue names, " + eol
                 rec += "2. (to skip the residues) Use --delete_residues to ignore them. Residues will be deleted from the prepared receptor. "
                 raise PolymerCreationError(err, rec)
 
@@ -883,9 +883,9 @@ class Polymer:
                     raise PolymerCreationError(str(e))
                             
                 if failed_build: 
-                    raise PolymerCreationError(f"Template generation failed for unknown residues: {failed_build}, which appear to be linking fragments. " + os_linesep
+                    raise PolymerCreationError(f"Template generation failed for unknown residues: {failed_build}, which appear to be linking fragments. " + eol
                                             + "Generation of chemical templates with modified backbones, which involves guessing of linker positions and types, are not currently supported. ", 
-                                            "1. (to parameterize the residues) Use --add_templates to pass the additional templates with valid linker_labels, " + os_linesep
+                                            "1. (to parameterize the residues) Use --add_templates to pass the additional templates with valid linker_labels, " + eol
                                             + "2. (to skip the residues) Use --delete_residues to ignore them. Residues will be deleted from the prepared receptor. ")
 
         self.monomers, self.log = self._get_monomers(
@@ -1373,10 +1373,10 @@ class Polymer:
                 template_key = None
                 template = None
                 mapping = None
-                m = f"No template matched for {residue_key=}" + os_linesep
+                m = f"No template matched for {residue_key=}" + eol
                 m += f"tried {len(candidate_templates)} templates for {residue_key=}"
                 m += f"{excess_H_ok=}"
-                m += os_linesep
+                m += eol
                 for i in range(len(all_stats["H_excess"])):
                     heavy_miss = all_stats["heavy_missing"][i]
                     heavy_excess = all_stats["heavy_excess"][i]
@@ -1386,7 +1386,7 @@ class Polymer:
                     tkey = candidate_template_keys[i]
                     m += (
                         f"{tkey:10} {heavy_miss=} {heavy_excess=} {H_excess=} {bond_miss=} {bond_excess=}"
-                        + os_linesep
+                        + eol
                     )
                 logger.warning(m)
             elif len(passed) == 1 or not raw_mol_has_H:
@@ -1546,7 +1546,7 @@ class Polymer:
             if count != 2:
                 err_msg += (
                     f"expected two paddings for {key} {bonds[key]}, padded {count}"
-                    + os_linesep
+                    + eol
                 )
         if len(err_msg):
             raise RuntimeError(err_msg)
@@ -1684,7 +1684,7 @@ class Polymer:
         # verify that each identifier (e.g. "A:17" has a single resname
         violations = {k: v for k, v in reskey_to_resname.items() if len(v) != 1}
         if len(violations):
-            msg = "each residue key must have exactly 1 resname" + os_linesep
+            msg = "each residue key must have exactly 1 resname" + eol
             msg += f"but got {violations=}"
             raise ValueError(msg)
 
@@ -1785,7 +1785,7 @@ class Polymer:
         pdbout = ""
         atom_count = 0
         pdb_line = "{:6s}{:5d} {:^4s} {:3s} {:1s}{:4d}{:1s}   {:8.3f}{:8.3f}{:8.3f}                       {:2s} "
-        pdb_line += pathlib.os.linesep
+        pdb_line += eol
         for res_id in self.get_valid_monomers():
             rdkit_mol = self.monomers[res_id].rdkit_mol
             if res_id in new_positions:
