@@ -7,6 +7,7 @@ import argparse
 import gzip
 import pathlib
 import sys
+from os import linesep as eol
 import warnings
 import copy
 import numpy as np
@@ -143,10 +144,10 @@ def main():
                 iter_pose._positions = np.array([pdbqt_mol._positions[pose_id]])
                 iter_pose._pose_data['n_poses'] = 1  # Update the number of poses to reflect the reduction
                 iter_pose._current_pose = 0  # Reset to the first (and only) pose
-                pdb_string += "MODEL " + f"{model_nr:8}" + pathlib.os.linesep
+                pdb_string += "MODEL " + f"{model_nr:8}" + eol
                 pol_copy = copy.deepcopy(polymer)
                 pdb_string += export_pdb_updated_flexres(pol_copy, iter_pose)
-                pdb_string += "ENDMDL" + pathlib.os.linesep
+                pdb_string += "ENDMDL" + eol
             if write_pdb is None:
                 fn = pathlib.Path(filename).with_suffix("").name + f"{suffix}.pdb"
             else:

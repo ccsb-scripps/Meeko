@@ -4,11 +4,6 @@
 # Meeko bond typer
 #
 
-import os
-import sys
-from collections import defaultdict
-from operator import itemgetter
-
 
 class BondTyperLegacy:
 
