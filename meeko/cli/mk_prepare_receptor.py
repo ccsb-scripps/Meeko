@@ -3,7 +3,7 @@
 import argparse
 import json
 import math
-from os import linesep as os_linesep
+from os import linesep as eol
 import pathlib
 import sys
 
@@ -184,7 +184,7 @@ def get_args():
         "--flexres",
         action="append",
         default=[],
-        help='specify the flexible residues by the chain ID and residue number, e.g. -f ":42,B:23" is equivalent to -f ":42" -f "B:23" (skip chain ID if it is unspecified)',
+        help='specify the flexible residues by the chain ID and residue number, e.g. -f ":42,B:23" is equivalent to -f ":42" -f "B:23" (leave chain ID empty if omitted in input PDB or mmCIF)',
     )
 
     box_group = parser.add_argument_group("Size and center of grid box")
@@ -265,19 +265,19 @@ def get_args():
     if args.read_pdb is None and args.read_with_prody is None:
         parser.print_help()
         msg = "Need input filename: use either -i/--read_with_prody or --read_pdb"
-        print(os_linesep + msg)
+        print(eol + msg)
         sys.exit(2)
 
     if args.read_pdb is not None and args.read_with_prody is not None:
         msg = "Can't use both -i/--read_with_prody and --read_pdb"
-        print(os_linesep + msg, file=sys.stderr)
+        print(eol + msg, file=sys.stderr)
         sys.exit(2)
 
     if args.write_gpf is not None and args.write_pdbqt is None:
         # there's a few of places that assume this condition has been checked
         msg = "--write_gpf requires --write_pdbqt because autogrid expects"
         msg += " the GPF file to point to the PDBQT file." 
-        print(os_linesep + msg)
+        print(eol + msg)
         sys.exit(2)
 
     skip_gpf = args.write_gpf is None and args.write_vina_box is None
@@ -397,7 +397,7 @@ def main():
             print(
                 "Command line error: repeated resname %s passed to --reactive_resname"
                 % resname
-                + os_linesep,
+                + eol,
                 file=sys.stderr,
             )
             sys.exit(2)
@@ -414,7 +414,7 @@ def main():
                 print(
                     "Command line error: repeated resid %s passed to --reactive_name_specific"
                     % res_id
-                    + os_linesep,
+                    + eol,
                     file=sys.stderr,
                 )
                 sys.exit(2)
@@ -439,7 +439,7 @@ def main():
     # Evaluate compatibility with other options
     if len(reactive_flexres) != 1 and args.box_center_off_reactive_res:
         msg = (
-            "--box_center_off_reactive_res can be used only with one reactive" + os_linesep
+            "--box_center_off_reactive_res can be used only with one reactive" + eol
         )
         msg += "residue, but %d reactive residues are set" % len(reactive_flexres_name)
         print("Command line error:" + msg, file=sys.stderr)
@@ -539,7 +539,7 @@ def main():
                 reactive_flexres_name[res_id] = reactive_atom[input_resname]
             else:
                 print("no default reactive name for %s, " % input_resname)
-                print("use --reactive_name or --reactive_name_specific" + os_linesep)
+                print("use --reactive_name or --reactive_name_specific" + eol)
                 sys.exit(2)
     
     # Print nonreactive and reactive flexible residues specs
@@ -680,12 +680,12 @@ def main():
                     continue
                 if gridbox.is_point_outside_box(atom.coord, box_center, box_size, spacing=1.0):
                     print(
-                        "WARNING: Flexible residue outside box." + os_linesep,
+                        "WARNING: Flexible residue outside box." + eol,
                         file=sys.stderr,
                     )
                     print(
                         "WARNING: Strongly recommended to use a box that encompasses flexible residues."
-                        + os_linesep,
+                        + eol,
                         file=sys.stderr,
                     )
                     break  # only need to warn once
@@ -850,7 +850,7 @@ def main():
                 any_lig_reac_types.append(reactive_typer.get_reactive_atype(t, order))
     
         rec_reac_types = []
-        for line in all_flex_pdbqt.split(os_linesep):
+        for line in all_flex_pdbqt.split(eol):
             if line.startswith("ATOM") or line.startswith("HETATM"):
                 atype = line[77:].strip()
                 basetype, _ = reactive_typer.get_basetype_and_order(atype)
@@ -869,7 +869,7 @@ def main():
         if len(collisions) > 0:
             collision_str = ""
             for t1, t2 in collisions:
-                collision_str += "%3s %3s" % (t1, t2) + os_linesep
+                collision_str += "%3s %3s" % (t1, t2) + eol
             collision_fn = str(outpath.with_suffix(".atype_collisions"))
             written_files_log["filename"].append(collision_fn)
             written_files_log["description"].append(
@@ -887,19 +887,19 @@ def main():
         all_types = []
         for basetype, reactypes in derivtypes.items():
             all_types.append(basetype)
-            map_block += "map %s.%s.map" % (map_prefix, basetype) + os_linesep
+            map_block += "map %s.%s.map" % (map_prefix, basetype) + eol
             for reactype in reactypes:
                 all_types.append(reactype)
-                map_block += "map %s.%s.map" % (map_prefix, basetype) + os_linesep
-        config = "ligand_types " + " ".join(all_types) + os_linesep
-        config += "fld %s.maps.fld" % map_prefix + os_linesep
+                map_block += "map %s.%s.map" % (map_prefix, basetype) + eol
+        config = "ligand_types " + " ".join(all_types) + eol
+        config += "fld %s.maps.fld" % map_prefix + eol
         config += map_block
     
         # in modpairs (dict): types are keys, parameters are values
         # now we will write a configuration file with nbp keywords
         # that AD-GPU reads using the --import_dpf flag
         # nbp stands for "non-bonded potential" or "non-bonded pairwise"
-        line = "intnbp_r_eps %8.6f %8.6f %3d %3d %4s %4s" + os_linesep
+        line = "intnbp_r_eps %8.6f %8.6f %3d %3d %4s %4s" + eol
         nbp_count = 0
         for (t1, t2), param in modpairs.items():
             config += line % (param["r_eq"], param["eps"], param["n"], param["m"], t1, t2)

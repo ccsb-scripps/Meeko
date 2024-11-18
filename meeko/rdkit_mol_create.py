@@ -10,7 +10,6 @@ from rdkit.Geometry import Point3D
 from rdkit.Chem import AllChem
 from io import StringIO
 import json
-import os
 
 
 def clean_extend(existing_dict, new_row):

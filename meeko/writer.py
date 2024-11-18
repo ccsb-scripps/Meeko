@@ -7,7 +7,7 @@
 import sys
 import json
 import math
-import pathlib
+from os import linesep as eol
 
 import numpy as np
 from rdkit import Chem
@@ -15,8 +15,6 @@ from .utils import pdbutils
 from .utils.rdkitutils import mini_periodic_table
 
 from .molsetup import Bond
-
-linesep = pathlib.os.linesep
 
 
 def oids_json_from_setup(molsetup, name="LigandFromMeeko"):
@@ -573,7 +571,7 @@ class PDBQTWriterLegacy:
                         atom_type,
                         icode,
                     )
-                    + linesep
+                    + eol
                 )
         return rigid_pdbqt_string, flex_pdbqt_dict
 
@@ -684,7 +682,7 @@ class PDBQTWriterLegacy:
         # torsdof is always going to be the one of the rigid, non-macrocyclic one
         data["pdbqt_buffer"].append("TORSDOF %d" % active_tors)
 
-        pdbqt_string = linesep.join(data["pdbqt_buffer"]) + linesep
+        pdbqt_string = eol.join(data["pdbqt_buffer"]) + eol
         return pdbqt_string, success, error_msg
 
     @classmethod
@@ -738,10 +736,10 @@ class PDBQTWriterLegacy:
          - remove TORSDOF
         this is for covalent docking (tethered)
         """
-        new_string = "BEGIN_RES %s %s %s" % (res, chain, num) + linesep
+        new_string = "BEGIN_RES %s %s %s" % (res, chain, num) + eol
         atom_number = 0
         offset = atom_count
-        for line in pdbqt_string.split(linesep):
+        for line in pdbqt_string.split(eol):
             if line == "":
                 continue
             if line.startswith("TORSDOF"):
@@ -758,18 +756,18 @@ class PDBQTWriterLegacy:
                     n = "%5d" % atom_count
                     n = n[:5]
                     line = line[:6] + n + line[11:]
-                new_string += line + linesep
+                new_string += line + eol
                 continue
             elif offset is not None and (
                 line.startswith("BRANCH") or line.startswith("ENDBRANCH")
             ):
                 keyword, i, j = line.split()
                 new_string += (
-                    f"{keyword} {int(i)+offset:3d} {int(j)+offset:3d}" + linesep
+                    f"{keyword} {int(i)+offset:3d} {int(j)+offset:3d}" + eol
                 )
                 continue
-            new_string += line + linesep
-        new_string += "END_RES %s %s %s" % (res, chain, num) + linesep
+            new_string += line + eol
+        new_string += "END_RES %s %s %s" % (res, chain, num) + eol
         if atom_count is None:
             return new_string  # just keeping backwards compatibility
         else:

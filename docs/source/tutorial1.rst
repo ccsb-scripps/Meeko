@@ -60,7 +60,7 @@ Prepare a Single Ligand from a Smiles String
     smiles_string="CC1=C(C=C(C=C1)NC(=O)C2=CC=C(C=C2)CN3CCN(CC3)C)NC4=NC=CC(=N4)C5=CN=CC=C5"
     scrub.py $smiles_string -o imatinib.sdf --skip_tautomers --ph_low 5 --ph_high 9
 
-The output file ``imatinib.sdf`` will contain two protomers of Imatinib, one with a neutral pyridine group and the other with a (+1) pyridinium group. All of the aliphatic amininium nitrogens will be protonated. 
+The output file ``imatinib.sdf`` will contain two protomers of Imatinib, one with a neutral pyridine group and the other with a (+1) pyridinium group. All of the aliphatic ammonium nitrogens will be protonated. 
 
 .. code-block:: bash
 
@@ -78,10 +78,10 @@ In case there are multiple molecules in the SDF file, ``mk_prepare_ligand.py`` n
     mk_prepare_ligand.py -i imatinib.sdf --multimol_prefix imatinib_protomer
 
 
-Prepare Ligands in Batch from a ``.smi`` File
+Batched Ligand Preparation from a ``.smi`` File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In preparation for virtual screening, it is possible to prepare ligands in batch from a ``.smi`` File. There is one such example file at ``Meeko/example/tutorial1/input_files/mols.smi``. Follow the example commands to process ``mols.smi``: 
+For virtual screening, it is possible to prepare ligands in batch mode from a ``.smi`` File. There is one such example file at ``Meeko/example/tutorial1/input_files/mols.smi``. Follow the example commands to process ``mols.smi``: 
 
 .. code-block:: bash
 
@@ -116,7 +116,7 @@ For AutoDock-Vina
 Docking with AutoDock-Vina requires the following receptor input files: 
 
 - Receptor PDBQT file
-- (Optional) a TXT file that contains the box specifications, which can be re-used as the config file for Vina
+- (Optional) a TXT file that contains the box specifications, which can be reused as the config file for Vina
 
 Starting from a provided PDB file at ``Meeko/example/tutorial1/input_files/1iep_protein.pdb``, the generation of a Receptor PDBQT file is very straightforward: 
 
@@ -138,7 +138,7 @@ To generate the TXT file that has the box dimension, we must find a way to defin
     mk_prepare_receptor.py --read_pdb $pdb_file -o rec_1iep -p -v \
     --box_enveloping $lig_file --padding 5
 
-Here, we add the ``-v`` to request the Vina-style box files to be generated along with the receptor PDBQT files. To define the box, we are using the combination of ``--box_enveloping`` and ``--padding``, which is to sete the center of the box by the given object, and the size of the box by a constant padding in each dimension around the given object. Note that this is not the only way to define the box. Read the help message printed from ``mk_prepare_receptor.py -h`` to learn about other combinations. 
+Here, we add the ``-v`` to request the Vina-style box files to be generated along with the receptor PDBQT files. To define the box, we are using the combination of ``--box_enveloping`` and ``--padding``, which is to set the center of the box by the given object, and the size of the box by a constant padding in each dimension around the given object. Note that this is not the only way to define the box. Read the help message printed from ``mk_prepare_receptor.py -h`` to learn about other combinations. 
 
 At the end of the execution with ``-p -v``, the expected standard output will be: 
 
@@ -154,7 +154,7 @@ At the end of the execution with ``-p -v``, the expected standard output will be
 For AutoDock-Vina (and with AutoDock4 Scoring Function)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To use the AutoDock4 Scoring Function in AutoDock-Vina, an additional step needs to be taken to compute the grid maps prior to the docking calculation. At present, this is only possible with AutoGrid, and therefore needs a Grid Parameter File (GPF) for it. Using ``mk_prepare_receptor.py`` option ``-g``, such GPF file can be generated in the same step  as the receptor PDBQT file as well as the box dimension files. Here's an example: 
+To use the AutoDock4 Scoring Function in AutoDock-Vina, an additional step needs to be taken to compute the grid maps prior to the docking calculation. At present, this is only possible with AutoGrid; therefore, a Grid Parameter File (GPF) is required. Using ``mk_prepare_receptor.py`` option ``-g``, such GPF file can be generated in the same step along with the receptor PDBQT file and the box dimension files. Here's an example: 
 
 .. code-block:: bash
 
@@ -213,7 +213,7 @@ Docking with flexible and/or reactive residues may require more files than basic
     --box_enveloping $lig_file --padding 5 \
     -f A:286,359 --allow_bad_res
 
-Note that several additional arguments are introduced for this particular receptor structure and for flexible docking. First and for most, ``-f A:286,359`` specifies that we are making two residues flexible, which are Glu286 and Phe359 in chain A of the receptor PDB file ``2hzn_protein.pdb``. Moreover, we add the ``--allow_bad_res`` so that partially resolved residues in the input PDB file can be ignored. Finally, we make the request ``-j`` to not only write the typical input files for docking calculations, but also a receptor JSON file. This receptor JSON file may be used in future steps in order to export the full receptor structure with updated sidechain conformations from the docking output. 
+Note that several additional arguments are introduced for this particular receptor structure and for flexible docking. First off, ``-f A:286,359`` specifies that we are making two residues flexible, which are Glu286 and Phe359 in chain A of the receptor PDB file ``2hzn_protein.pdb``. Moreover, we add the ``--allow_bad_res`` so that partially resolved residues in the input PDB file can be ignored. Finally, we make the request ``-j`` to not only write the typical input files for docking calculations, but also a receptor JSON file. This receptor JSON file may be used in future steps in order to export the full receptor structure with updated sidechain conformations from the docking output. 
 
 With that, the standard output and the list of generated files from ``mk_prepare_receptor.py`` will be: 
 

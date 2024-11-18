@@ -1,7 +1,6 @@
 import json
 import pathlib
 import pytest
-import os
 
 from meeko import Polymer
 from meeko import PDBQTWriterLegacy
@@ -429,9 +428,6 @@ def test_weird_zero_coord():
     with open(has_lys) as f:
         pdbstr = f.read()
     polymer = Polymer.from_pdb_string(pdbstr, chem_templates, mk_prep)
-    #pdbqt_strings = PDBQTWriterLegacy.write_string_from_polymer(polymer)
-    with open("BANANACUUBER.json", "w") as f:
-        f.write(polymer.to_json())
     for _, res in polymer.monomers.items():
         positions = res.rdkit_mol.GetConformer().GetPositions()
         for atom in res.molsetup.atoms:

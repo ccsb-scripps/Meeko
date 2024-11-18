@@ -4,8 +4,6 @@
 # Meeko
 #
 
-import os
-
 import numpy as np
 try:
     import pandas as pd
