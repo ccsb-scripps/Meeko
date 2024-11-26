@@ -6,7 +6,7 @@
 
 from inspect import signature
 import json
-import os
+from os import linesep as eol
 import pathlib
 import warnings
 
@@ -219,10 +219,10 @@ class MoleculePreparation:
         bad_keys = [k for k in config if k not in expected_keys]
         if len(bad_keys) > 0:
             err_msg = (
-                "unexpected keys in MoleculePreparation.from_config():" + os.linesep
+                "unexpected keys in MoleculePreparation.from_config():" + eol
             )
             for key in bad_keys:
-                err_msg += "  - %s" % key + os.linesep
+                err_msg += "  - %s" % key + eol
             raise ValueError(err_msg)
         p = cls(**config)
         return p
@@ -345,12 +345,12 @@ class MoleculePreparation:
             else:
                 msg = (
                     "names passed to 'load_atom_params' need to suffixed with .json"
-                    + os.linesep
+                    + eol
                 )
                 msg += (
                     "or be the unsuffixed basename of a JSON file in %s."
                     % str(params_dir)
-                    + os.linesep
+                    + eol
                 )
                 msg += "name was %s" % name
                 raise ValueError(msg)
@@ -626,7 +626,7 @@ class MoleculePreparation:
         warnings.warn(msg, DeprecationWarning)
         pdbqt_string, is_ok, err_msg = PDBQTWriterLegacy.write_string(self.setup)
         if not is_ok:
-            msg = "Cannot generate PDBQT, error from PDBQTWriterLegacy:" + os.linesep
+            msg = "Cannot generate PDBQT, error from PDBQTWriterLegacy:" + eol
             msg += err_msg
             raise RuntimeError(msg)
         return pdbqt_string

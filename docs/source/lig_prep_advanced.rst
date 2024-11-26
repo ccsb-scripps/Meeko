@@ -150,7 +150,7 @@ rotatable, which often leads to unreasonable geometries, but is necessary to
 visit both amide rotamers during docking.
 
 Here, we configure Meeko to make single bonds in some conjugated systems rigid,
-as defined byt the SMARTS ``"C=CC=C"``, and rigidify all amide bonds matched
+as defined by the SMARTS ``"C=CC=C"``, and rigidify all amide bonds matched
 by ``"[CX3](=O)[NX3]"``, which includes tertiary amides but not thioamides or
 amidines:
 

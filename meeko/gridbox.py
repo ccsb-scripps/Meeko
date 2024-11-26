@@ -1,4 +1,4 @@
-from os import linesep as os_linesep
+from os import linesep as eol
 import pathlib
 import numpy as np
 
@@ -82,7 +82,7 @@ def box_to_pdb_string(box_center, npts, spacing=0.375):
     res = "BOX"
     chain = "X"
     pdb_out = ""
-    line = "ATOM  %5d %4s %3s %1s%4d    %8.3f%8.3f%8.3f  1.00 10.00          %1s" + os_linesep
+    line = "ATOM  %5d %4s %3s %1s%4d    %8.3f%8.3f%8.3f  1.00 10.00          %1s" + eol
     for idx in range(len(corners)):
         x = corners[idx][0]
         y = corners[idx][1]
@@ -93,18 +93,18 @@ def box_to_pdb_string(box_center, npts, spacing=0.375):
     # center
     pdb_out += line % (count+1, "Xe", res, chain, idx+1, center_x, center_y, center_z, "Xe")
 
-    pdb_out += "CONECT    1    2" + os_linesep
-    pdb_out += "CONECT    1    4" + os_linesep
-    pdb_out += "CONECT    1    5" + os_linesep
-    pdb_out += "CONECT    2    3" + os_linesep
-    pdb_out += "CONECT    2    6" + os_linesep
-    pdb_out += "CONECT    3    4" + os_linesep
-    pdb_out += "CONECT    3    7" + os_linesep
-    pdb_out += "CONECT    4    8" + os_linesep
-    pdb_out += "CONECT    5    6" + os_linesep
-    pdb_out += "CONECT    5    8" + os_linesep
-    pdb_out += "CONECT    6    7" + os_linesep
-    pdb_out += "CONECT    7    8" + os_linesep
+    pdb_out += "CONECT    1    2" + eol
+    pdb_out += "CONECT    1    4" + eol
+    pdb_out += "CONECT    1    5" + eol
+    pdb_out += "CONECT    2    3" + eol
+    pdb_out += "CONECT    2    6" + eol
+    pdb_out += "CONECT    3    4" + eol
+    pdb_out += "CONECT    3    7" + eol
+    pdb_out += "CONECT    4    8" + eol
+    pdb_out += "CONECT    5    6" + eol
+    pdb_out += "CONECT    5    8" + eol
+    pdb_out += "CONECT    6    7" + eol
+    pdb_out += "CONECT    7    8" + eol
     return pdb_out
 
 def is_point_outside_box(point, center, npts, spacing=0.375):
@@ -156,5 +156,5 @@ def box_to_vina_string(gridcenter, gridsizes):
     sizes_str = "\n".join([f"size_{d} = {gridsizes[i]:.3f}" for i, d in enumerate(dims)])
     return centers_str + "\n" + sizes_str
 
-boron_silicon_atompar  = "atom_par Si     4.10  0.200  35.8235  -0.00143  0.0  0.0  0  -1  -1  6" + os_linesep
-boron_silicon_atompar += "atom_par B      3.84  0.155  29.6478  -0.00152  0.0  0.0  0  -1  -1  0" + os_linesep
+boron_silicon_atompar  = "atom_par Si     4.10  0.200  35.8235  -0.00143  0.0  0.0  0  -1  -1  6" + eol
+boron_silicon_atompar += "atom_par B      3.84  0.155  29.6478  -0.00152  0.0  0.0  0  -1  -1  0" + eol

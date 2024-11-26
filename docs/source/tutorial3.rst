@@ -11,7 +11,7 @@ Follow the instructions to set up the environment and run this command-line exam
 Introduction
 ============
 
-The covalent docking example is based on the two-point attractor and flexible sidechain method. In this example, a small molecule substrate (Adenosine monophosphate, PDB token AMP) is attached onto the catalytic histidine residue of a hollow protein structure of bacteria RNA 3' cyclase (PDB token 3KGD) to reproduce the covalent intermediate complex structure. A docked pose that closely resembles the original position of the ligand is expected among the top-ranked poses. 
+The covalent docking example is based on the two-point attractor and flexible sidechain method. In this example, a small molecule substrate (Adenosine monophosphate, PDB token AMP) is attached to the catalytic histidine residue of a hollow protein structure of bacteria RNA 3' cyclase (PDB token 3KGD) to reproduce the covalent intermediate complex structure. A docked pose that closely resembles the original position of the ligand is expected among the top-ranked poses. 
 
 This tutorial is intended to showcase the Meeko usage in the preparation of receptor and ligand for tethered docking. 
 
@@ -46,7 +46,7 @@ The ligand of this example will be the covalent conjugate ``HIE_AMP``, where AMP
 To prepare HIE-AMP (1-) as an covalent flexible residue, we will hold this SDF file for further mapping with the specific catalytic residue in receptor structure. In fact, the SDF file can be re-used for different Histidine residues in different receptor structures. 
 
 Receptor Preparation
-====================
+===================
 
 The preparation of a rigid receptor consists of two steps. The receptor structure is first sourced from a PDB file and sent to ``reduce2.py`` for hydrogen addition and optimization, and then, the conversion to a tangible receptor PDBQT file is done by ``mk_prepare_receptor.py``.
 
@@ -78,7 +78,7 @@ Then, we will combine CRYST1 card in the original PDB file (``3kgd.pdb``) and ``
 
    cat <(grep "CRYST1" "${pdb_token}.pdb") "${pdb_token}_receptor_atoms.pdb" > "${pdb_token}_receptor.pdb"
 
-In this example, we use ``reduce2.py`` to add hydrogen atoms to the receptor structure and optimize the positions. There are various other tools (``H++``, ``APBS``, etc.) of choices for this task. It should also be noted that ``mk_prepare_receptor.py`` does not neccessarily need the presence of all hydrogens in the input receptor structure – The missing hydrogens will be added through RDKit functions during the receptor preparation with ProDy selection ``chain A and not water and not hetero and not resname AMP`` to a PDB file ``3kgd_receptor_atoms.pdb``.  
+In this example, we use ``reduce2.py`` to add hydrogen atoms to the receptor structure and optimize the positions. There are various other tools (``H++``, ``APBS``, etc.) of choices for this task. It should also be noted that ``mk_prepare_receptor.py`` does not necessarily need the presence of all hydrogens in the input receptor structure – The missing hydrogens will be added through RDKit functions during the receptor preparation with ProDy selection ``chain A and not water and not hetero and not resname AMP`` to a PDB file ``3kgd_receptor_atoms.pdb``.  
 
 .. code-block:: bash
 
@@ -139,9 +139,9 @@ For output control: We are expecting at least two types of files, the receptor P
         3kgd_receptorH.box.pdb <-- PDB file to visualize the grid box
 
 Covalent Ligand Preparation
-===========================
+========================
 
-In this step, we will use mk_prepare_ligand.py to generate the PDBQT file for the covalent ligand. Along with the previously generated 3D conformer of the covalent ligand (``HIE_AMP.sdf``), which may be at an arbitrary position, here a reference protein PDB file (``3kgd_receptor.pdb``) will be used to source the positions of the attractor atoms, Cα and Cβ, to keep them unchanged in docking. The reference PDB file does not have to be the full receptor, but it must contain the target residue that matches exactly with ``rec_residue``. Additionally, a SMARTS pattern ``tether_smarts`` is required. Together with the 1-based ``tether_smarts_indices``, they are used to locate the attractor atoms that correspond to Cα and Cβ of a hisitidine (His) residue:
+In this step, we will use mk_prepare_ligand.py to generate the PDBQT file for the covalent ligand. Along with the previously generated 3D conformer of the covalent ligand (``HIE_AMP.sdf``), which may be at an arbitrary position, here a reference protein PDB file (``3kgd_receptor.pdb``) will be used to source the positions of the attractor atoms, Cα and Cβ, to keep them unchanged in docking. The reference PDB file does not have to be the full receptor, but it must contain the target residue that matches exactly with ``rec_residue``. Additionally, a SMARTS pattern ``tether_smarts`` is required. Together with the 1-based ``tether_smarts_indices``, they are used to locate the attractor atoms that correspond to Cα and Cβ of a histidine (His) residue:
 
 .. code-block:: bash
 
@@ -183,7 +183,7 @@ Export the Docking Poses
 
     mk_export.py HIE_AMP.dlg -s 3kgd_HIE_AMP_adgpu_out.sdf -k
 
-It is also possible to export the docking poses to a multi-model PDB file with updated conformatons of His309 and the covalently bonded AMP. To do this, we need a receptor JSON file that could be generated with ``mk_prepare_receptor.py`` option ``-j`` during the receptor preparation. 
+It is also possible to export the docking poses to a multi-model PDB file with updated conformations of His309 and the covalently bonded AMP. To do this, we need a receptor JSON file that could be generated with ``mk_prepare_receptor.py`` option ``-j`` during the receptor preparation. 
 
 .. code-block:: bash
 

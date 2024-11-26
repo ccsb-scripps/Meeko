@@ -7,6 +7,7 @@ import argparse
 from datetime import datetime
 import io
 import os
+from os import linesep as eol
 import sys
 import json
 import tarfile
@@ -333,7 +334,7 @@ def cmd_lineparser():
         sys.exit(2)
     is_covalent = num_required_covalent_args == 3
     if is_covalent and not _has_prody:
-        msg = "Covalent docking requires Prody which is not installed." + os.linesep
+        msg = "Covalent docking requires Prody which is not installed." + eol
         msg += "Installable from PyPI (pip install prody) or conda-forge (micromamba install prody)"
         print(_prody_import_error, file=sys.stderr)
         print(msg)

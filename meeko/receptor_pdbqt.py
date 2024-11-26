@@ -6,7 +6,7 @@
 
 from collections import defaultdict
 import json
-from os import linesep as os_linesep
+from os import linesep as eol
 
 import numpy as np
 from scipy import spatial
@@ -42,7 +42,7 @@ def _read_receptor_pdbqt_string(pdbqt_string, skip_typing=False):
     pseudo_atom_types = ['TZ']
 
     idx = 0
-    for line in pdbqt_string.split(os_linesep):
+    for line in pdbqt_string.split(eol):
         if line.startswith('ATOM') or line.startswith("HETATM"):
             serial = int(line[6:11].strip())
             name = line[12:16].strip()
