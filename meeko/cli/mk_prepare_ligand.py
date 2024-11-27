@@ -235,6 +235,12 @@ def cmd_lineparser():
         action="store_true",
         help="do not write smiles as remark to pdbqt",
     )
+    config_group.add_argument(
+        "--rename_atoms",
+        dest="rename_atoms",
+        action="store_true",
+        help="rename atoms: the new name will be the original name and its (1-based) index in smiles",
+    )
     reactive_group = parser.add_argument_group("Reactive docking")
     reactive_group.add_argument(
         "--reactive_smarts", help="SMARTS pattern for reactive group"
@@ -587,6 +593,7 @@ def main():
                     cov_lig.mol,
                     root_atom_index=root_atom_index,
                     not_terminal_atoms=[root_atom_index],
+                    rename_atoms=args.rename_atoms,
                 )
                 chain, res, num = cov_lig.res_id
                 suffixes = output.get_suffixes(molsetups)
@@ -610,7 +617,7 @@ def main():
                         print(error_msg, file=sys.stderr)
 
         else:
-            molsetups = preparator.prepare(mol)
+            molsetups = preparator.prepare(mol, rename_atoms=args.rename_atoms)
             if len(molsetups) > 1:
                 output.is_multimol = True
             suffixes = output.get_suffixes(molsetups)

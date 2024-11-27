@@ -91,6 +91,7 @@ class MoleculePreparation:
         reactive_smarts_idx=None,
         add_index_map=False,
         remove_smiles=False,
+        rename_atoms=False,
     ):
         """
 
@@ -119,6 +120,7 @@ class MoleculePreparation:
         reactive_smarts_idx
         add_index_map
         remove_smiles
+        rename_atoms
         """
 
         self.deprecated_setup_access = None
@@ -177,6 +179,7 @@ class MoleculePreparation:
         self.reactive_smarts_idx = reactive_smarts_idx
         self.add_index_map = add_index_map
         self.remove_smiles = remove_smiles
+        self.rename_atoms = rename_atoms
 
         self._bond_typer = BondTyperLegacy()
         self._macrocycle_typer = FlexMacrocycle(
@@ -554,7 +557,7 @@ class MoleculePreparation:
             for idx, atom in enumerate(setup.atoms):
                 orig_pdbinfo = atom.pdbinfo
                 orig_name = orig_pdbinfo.name.strip()
-                new_name = f"{orig_name}{idx+1}"
+                new_name = f"{orig_name}{atom.index+1}"
                 if len(new_name) > 4: 
                     raise Warning(f"Attempted to rename atom with original name {orig_name} to {new_name}. " + eol +
                                   f"But the new name is too long (> 4 characters). The original name will be kept. ")
