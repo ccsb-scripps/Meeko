@@ -439,8 +439,8 @@ class MoleculePreparation:
             defaults[key] = sig.parameters[key].default
         return defaults
 
-    def __call__(self, *args):
-        return self.prepare(*args)
+    def __call__(self, *args, **kwargs):
+        return self.prepare(*args, **kwargs)
 
     def prepare(
         self,
@@ -450,6 +450,7 @@ class MoleculePreparation:
         delete_ring_bonds=None,
         glue_pseudo_atoms=None,
         conformer_id=-1,
+        rename_atoms=False,
     ):
         """
         Create an RDKitMoleculeSetup from an RDKit Mol object.
@@ -547,6 +548,19 @@ class MoleculePreparation:
             delete_ring_bonds,
             glue_pseudo_atoms,
         )
+
+        # 5 . rename atoms, new names will be original name + idx (1-based)
+        if rename_atoms is not False:
+            for idx, atom in enumerate(setup.atoms):
+                orig_pdbinfo = atom.pdbinfo
+                orig_name = orig_pdbinfo.name.strip()
+                new_name = f"{orig_name}{idx+1}"
+                if len(new_name) > 4: 
+                    raise Warning(f"Attempted to rename atom with original name {orig_name} to {new_name}. " + eol +
+                                  f"But the new name is too long (> 4 characters). The original name will be kept. ")
+                else:
+                    new_atom_info = orig_pdbinfo._replace(name=new_name)
+                    atom.pdbinfo = new_atom_info
 
         if self.reactive_smarts is None:
             setups = [setup]
