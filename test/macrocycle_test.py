@@ -76,3 +76,28 @@ def run(molname):
 def test_all():
     for molname in num_cycle_breaks:
         run(molname)
+
+def test_untyped_macrocycle():
+    fn = str(workdir / "macrocycle_data" / "lorlatinib.mol")
+    mol = Chem.MolFromMolFile(fn, removeHs=False)
+
+    # type based, can only break C-C bonds, but we have none
+    mk_prep_typed = MoleculePreparation()
+    molsetup_typed = mk_prep_typed(mol)[0]
+    count_rotatable = 0
+    count_broken = 0
+    for bond_id, bond_info in molsetup_typed.bond_info.items():
+        count_rotatable += bond_info.rotatable
+        count_broken += bond_info.cycle_break
+    assert count_rotatable == 2
+    assert count_broken == 0
+
+    mk_prep_untyped = MoleculePreparation(untyped_macrocycles=True)
+    molsetup_untyped = mk_prep_untyped(mol)[0]
+    count_rotatable = 0
+    count_broken = 0
+    for bond_id, bond_info in molsetup_untyped.bond_info.items():
+        count_rotatable += bond_info.rotatable
+        count_broken += bond_info.cycle_break
+    assert count_rotatable == 10
+    assert count_broken == 1

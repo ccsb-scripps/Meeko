@@ -45,6 +45,7 @@ DEFAULT_IS_IGNORE = False
 DEFAULT_GRAPH = []
 
 DEFAULT_BOND_ROTATABLE = False
+DEFAULT_BOND_CYCLE_BREAK = False
 
 DEFAULT_RING_CORNER_FLIP = False
 DEFAULT_RING_GRAPH = []
@@ -271,21 +272,19 @@ class Atom:
 
 @dataclass
 class Bond:
-    canon_id: (int, int)
-    index1: int
-    index2: int
-    rotatable: bool = DEFAULT_BOND_ROTATABLE
 
     def __init__(
         self,
         index1: int,
         index2: int,
         rotatable: bool = DEFAULT_BOND_ROTATABLE,
+        cycle_break: bool = DEFAULT_BOND_CYCLE_BREAK,
     ):
         self.canon_id = self.get_bond_id(index1, index2)
         self.index1 = index1
         self.index2 = index2
         self.rotatable = rotatable
+        self.cycle_break = cycle_break
         return
 
     @staticmethod
@@ -332,14 +331,22 @@ class Bond:
 
         # Check that all the keys we expect are in the object dictionary as a safety measure
         expected_json_keys = {"canon_id", "index1", "index2", "rotatable"}
-        if set(obj.keys()) != expected_json_keys:
+        # the cycle break attribute was added after v0.6.1, so we are
+        # defaulting to the default to allow reading .json written
+        # with v0.6.0 and v0.6.0, at the expense of possibly having
+        # a macrocycle broken bond that will be incorrectly set with
+        # cycle_break=False, but JSON is used mostly for the receptor
+        # and we don't really use macrocycle breaking for the receptor
+        optional_json_keys = {"cycle_break"}
+        if set(obj.keys()) - optional_json_keys != expected_json_keys:
             return obj
 
         # Constructs a bond object from the provided keys.
         index1 = obj["index1"]
         index2 = obj["index2"]
         rotatable = obj["rotatable"]
-        output_bond = Bond(index1, index2, rotatable)
+        cycle_break = obj.get("cycle_break", DEFAULT_BOND_CYCLE_BREAK)
+        output_bond = Bond(index1, index2, rotatable, cycle_break)
         return output_bond
 
 
@@ -2227,6 +2234,7 @@ class BondEncoder(json.JSONEncoder):
                 "index1": obj.index1,
                 "index2": obj.index2,
                 "rotatable": obj.rotatable,
+                "cycle_break": obj.cycle_break,
             }
         return json.JSONEncoder.default(self, obj)
 

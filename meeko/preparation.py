@@ -72,6 +72,7 @@ class MoleculePreparation:
         hydrate=False,
         flexible_amides=False,
         rigid_macrocycles=False,
+        untyped_macrocycles=False,
         min_ring_size=meeko.macrocycle.DEFAULT_MIN_RING_SIZE,
         max_ring_size=meeko.macrocycle.DEFAULT_MAX_RING_SIZE,
         keep_chorded_rings=False,
@@ -126,6 +127,7 @@ class MoleculePreparation:
         self.hydrate = hydrate
         self.flexible_amides = flexible_amides
         self.rigid_macrocycles = rigid_macrocycles
+        self.untyped_macrocycles = untyped_macrocycles
         self.min_ring_size = min_ring_size
         self.max_ring_size = max_ring_size
         self.keep_chorded_rings = keep_chorded_rings
@@ -184,6 +186,7 @@ class MoleculePreparation:
             self.max_ring_size,
             self.double_bond_penalty,
             allow_break_atype_A=self.macrocycle_allow_A,
+            untyped=self.untyped_macrocycles,
         )
         self._water_builder = HydrateMoleculeLegacy()
         self._classes_setup = {Chem.rdchem.Mol: RDKitMoleculeSetup}
@@ -305,7 +308,12 @@ class MoleculePreparation:
         setup.flexibility_model = flex_model
 
         # add G pseudo atoms and set CG types
-        update_closure_atoms(setup, bonds_to_break, glue_pseudo_atoms)
+        if not self.untyped_macrocycles:
+            update_closure_atoms(setup, bonds_to_break, glue_pseudo_atoms)
+
+        for atom1, atom2 in bonds_to_break:
+            bond_id = Bond.get_bond_id(atom1, atom2)
+            setup.bond_info[bond_id].cycle_break = True
 
         return
 
