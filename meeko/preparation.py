@@ -91,7 +91,6 @@ class MoleculePreparation:
         reactive_smarts_idx=None,
         add_index_map=False,
         remove_smiles=False,
-        rename_atoms=False,
     ):
         """
 
@@ -120,7 +119,6 @@ class MoleculePreparation:
         reactive_smarts_idx
         add_index_map
         remove_smiles
-        rename_atoms
         """
 
         self.deprecated_setup_access = None
@@ -179,7 +177,6 @@ class MoleculePreparation:
         self.reactive_smarts_idx = reactive_smarts_idx
         self.add_index_map = add_index_map
         self.remove_smiles = remove_smiles
-        self.rename_atoms = rename_atoms
 
         self._bond_typer = BondTyperLegacy()
         self._macrocycle_typer = FlexMacrocycle(
