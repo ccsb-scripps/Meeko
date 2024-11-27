@@ -554,7 +554,7 @@ class MoleculePreparation:
 
         # 5 . rename atoms, new names will be original name + idx (1-based)
         if rename_atoms is not False:
-            for idx, atom in enumerate(setup.atoms):
+            for atom in setup.atoms:
                 orig_pdbinfo = atom.pdbinfo
                 orig_name = orig_pdbinfo.name.strip()
                 new_name = f"{orig_name}{atom.index+1}"

@@ -239,7 +239,7 @@ def cmd_lineparser():
         "--rename_atoms",
         dest="rename_atoms",
         action="store_true",
-        help="rename atoms: the new name will be the original name and its (1-based) index in RDKit mol",
+        help="rename atoms: the new name will be the original name and its (1-based) index in MoleculeSetup",
     )
     reactive_group = parser.add_argument_group("Reactive docking")
     reactive_group.add_argument(
