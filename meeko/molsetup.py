@@ -1660,7 +1660,7 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         return mol, idx_to_rm, rm_to_neigh
          
 
-    def init_atom(self, compute_gasteiger_charges: bool, read_charges_from_prop: str, coords: list[np.ndarray])
+    def init_atom(self, compute_gasteiger_charges: bool, read_charges_from_prop: str, coords: list[np.ndarray]):
         """
         Generates information about the atoms in an RDKit Mol and adds them to an RDKitMoleculeSetup.
 
@@ -1676,7 +1676,11 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         None
         """
         # extract/generate charges
-        if compute_gasteiger_charges:
+        if compute_gasteiger_charges: 
+            if read_charges_from_prop is not None: 
+                raise ValueError(
+                    "Conflicting options: compute_gasteiger_charges and read_charges_from_prop cannot both be set. "
+                )
             things = self.remove_elements(self.mol)
             copy_mol, idx_rm_to_formal_charge, rm_to_neigh = things
             for atom in copy_mol.GetAtoms():
@@ -1717,8 +1721,18 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
                         # print(f"{idx=} {newidx=}")
                         ok_charges[i] += chrg_by_heavy_atom[newidx]
                 charges = ok_charges
-        elif read_charges_from_prop: 
-            pass
+        elif read_charges_from_prop is not None: 
+            if not isinstance(read_charges_from_prop, str): 
+                raise ValueError(
+                    f"Invalid value for read_charges_from_prop: expected a string (str), but got {type(read_charges_from_prop).__name__} instead. "
+                )
+            if not read_charges_from_prop: 
+                read_charges_from_prop = "partial_charge"
+                raise Warning(
+                    "The charge_model of MoleculePreparation is set to be 'read', but a valid charge_propname is not given. " + eol + 
+                    "The default property name ('partial_charge') will be used. " 
+                )
+            charges = [atom.GetProp(read_charges_from_prop) for atom in self.mol.GetAtoms()]
         else:
             charges = [0.0] * self.mol.GetNumAtoms()
         # register atom

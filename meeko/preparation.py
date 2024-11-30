@@ -161,10 +161,21 @@ class MoleculePreparation:
         if self.charge_model!="read" and self.charge_propname: 
             raise ValueError(
                 "A charge_propname (%s) is given to MoleculePreparation but its current charge_model is %s. " + eol + 
-                "To read charges from atom properties in the input mol, set charge_model to 'read' and name the property in 'charge_propname'. " + eol
+                "To read charges from atom properties in the input mol, set charge_model to 'read' and name the property in 'charge_propname'. " 
                 % (charge_propname, charge_model)
             )
-
+        if self.charge_model=="read":
+            if not self.charge_propname: 
+                self.charge_propname = "partial_charge"
+                raise Warning(
+                    "The charge_model of MoleculePreparation is set to be 'read', but a valid charge_propname is not given. " + eol + 
+                    "The default property name ('partial_charge') will be used. " 
+                )
+            elif not isinstance(self.charge_propname, str): 
+                raise ValueError(
+                    f"Invalid value for charge_propname: expected a string (str), but got {type(self.charge_propname).__name__} instead. "
+                )
+        
         allowed_dihedral_models = [None, "openff", "espaloma"]
         if dihedral_model in (None, "espaloma"):
             dihedral_list = []
@@ -500,7 +511,7 @@ class MoleculePreparation:
             keep_chorded_rings=self.keep_chorded_rings,
             keep_equivalent_rings=self.keep_equivalent_rings,
             compute_gasteiger_charges=self.charge_model == "gasteiger",
-            read_charges_from_prop=self.charges_propname,
+            read_charges_from_prop=self.charge_propname,
             conformer_id=conformer_id,
         )
 
@@ -510,7 +521,7 @@ class MoleculePreparation:
         AtomTyper.type_everything(
             setup,
             self.atom_params,
-            self.charge_model,
+            self.charge_model, # charge_model is not accessed in type_everything
             self.offatom_params,
             self.dihedral_params,
         )
