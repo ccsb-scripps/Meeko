@@ -1480,7 +1480,7 @@ class MoleculeSetupExternalToolkit(ABC):
         return index
 
     @abstractmethod
-    def init_atom(self, assign_charges, coords):
+    def init_atom(self, compute_gasteiger_charges, coords, read_charges_from_prop):
         pass
 
     @abstractmethod
@@ -1561,7 +1561,8 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         mol: Chem.Mol,
         keep_chorded_rings: bool = False,
         keep_equivalent_rings: bool = False,
-        assign_charges: bool = True,
+        compute_gasteiger_charges: bool = True,
+        read_charges_from_prop: str = None,
         conformer_id: int = -1,
     ):
         """
@@ -1572,7 +1573,7 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
             RDKit Mol object to build the RDKitMoleculeSetup from.
         keep_chorded_rings: bool
         keep_equivalent_rings: bool
-        assign_charges: bool
+        compute_gasteiger_charges: bool
         conformer_id: int
 
         Returns
@@ -1615,7 +1616,7 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         molsetup.atom_true_count = molsetup.get_num_mol_atoms()
         molsetup.name = molsetup.get_mol_name()
         coords = rdkit_conformer.GetPositions()
-        molsetup.init_atom(assign_charges, coords)
+        molsetup.init_atom(compute_gasteiger_charges, read_charges_from_prop, coords)
         molsetup.init_bond()
         molsetup.perceive_rings(keep_chorded_rings, keep_equivalent_rings)
         molsetup.rmsd_symmetry_indices = cls.get_symmetries_for_rmsd(mol)
@@ -1659,14 +1660,14 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         return mol, idx_to_rm, rm_to_neigh
          
 
-    def init_atom(self, assign_charges: bool, coords: list[np.ndarray]):
+    def init_atom(self, compute_gasteiger_charges: bool, read_charges_from_prop: str, coords: list[np.ndarray])
         """
         Generates information about the atoms in an RDKit Mol and adds them to an RDKitMoleculeSetup.
 
         Parameters
         ----------
-        assign_charges: bool
-            Indicates whether we should extract/generate charges.
+        compute_gasteiger_charges: bool
+            Indicates whether we should compute gasteiger charges.
         coords: list[np.ndarray]
             Atom coordinates for the RDKit Mol.
 
@@ -1675,7 +1676,7 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         None
         """
         # extract/generate charges
-        if assign_charges:
+        if compute_gasteiger_charges:
             things = self.remove_elements(self.mol)
             copy_mol, idx_rm_to_formal_charge, rm_to_neigh = things
             for atom in copy_mol.GetAtoms():
@@ -1716,6 +1717,8 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
                         # print(f"{idx=} {newidx=}")
                         ok_charges[i] += chrg_by_heavy_atom[newidx]
                 charges = ok_charges
+        elif read_charges_from_prop: 
+            pass
         else:
             charges = [0.0] * self.mol.GetNumAtoms()
         # register atom

@@ -86,6 +86,7 @@ class MoleculePreparation:
         input_offatom_params=None,
         load_offatom_params=None,
         charge_model="gasteiger",
+        charge_propname=None,
         dihedral_model=None,
         reactive_smarts=None,
         reactive_smarts_idx=None,
@@ -147,7 +148,7 @@ class MoleculePreparation:
             raise NotImplementedError("load_offatom_params not implemented")
         self.load_offatom_params = load_offatom_params
 
-        allowed_charge_models = ["espaloma", "gasteiger", "zero"]
+        allowed_charge_models = ["espaloma", "gasteiger", "zero", "read"]
         if charge_model not in allowed_charge_models:
             raise ValueError(
                 "unrecognized charge_model: %s, allowed options are: %s"
@@ -155,6 +156,14 @@ class MoleculePreparation:
             )
 
         self.charge_model = charge_model
+        self.charge_propname = charge_propname
+
+        if self.charge_model!="read" and self.charge_propname: 
+            raise ValueError(
+                "A charge_propname (%s) is given to MoleculePreparation but its current charge_model is %s. " + eol + 
+                "To read charges from atom properties in the input mol, set charge_model to 'read' and name the property in 'charge_propname'. " + eol
+                % (charge_propname, charge_model)
+            )
 
         allowed_dihedral_models = [None, "openff", "espaloma"]
         if dihedral_model in (None, "espaloma"):
@@ -490,7 +499,8 @@ class MoleculePreparation:
             mol,
             keep_chorded_rings=self.keep_chorded_rings,
             keep_equivalent_rings=self.keep_equivalent_rings,
-            assign_charges=self.charge_model == "gasteiger",
+            compute_gasteiger_charges=self.charge_model == "gasteiger",
+            read_charges_from_prop=self.charges_propname,
             conformer_id=conformer_id,
         )
 
