@@ -401,7 +401,6 @@ def check_molsetup_equality(decoded_obj: MoleculeSetup, starting_obj: MoleculeSe
     for idx, component_dict in enumerate(starting_obj.rotamers):
         decoded_dict = decoded_obj.rotamers[idx]
         for key in component_dict:
-            print(key, decoded_dict)
             assert key in decoded_dict
             assert decoded_dict[key] == component_dict[key]
     for key in starting_obj.atom_params:
