@@ -1732,7 +1732,7 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
                     "The charge_model of MoleculePreparation is set to be 'read', but a valid charge_propname is not given. " + eol + 
                     "The default property name ('partial_charge') will be used. " 
                 )
-            charges = [atom.GetProp(read_charges_from_prop) for atom in self.mol.GetAtoms()]
+            charges = [float(atom.GetProp(read_charges_from_prop)) for atom in self.mol.GetAtoms()]
         else:
             charges = [0.0] * self.mol.GetNumAtoms()
         # register atom
