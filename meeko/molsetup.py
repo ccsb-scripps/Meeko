@@ -9,6 +9,7 @@ from copy import deepcopy
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 import json
+from os import linesep as eol
 import sys
 import warnings
 
@@ -1574,6 +1575,7 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         keep_chorded_rings: bool
         keep_equivalent_rings: bool
         compute_gasteiger_charges: bool
+        read_charges_from_prop: str
         conformer_id: int
 
         Returns
@@ -1727,10 +1729,10 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
                     f"Invalid value for read_charges_from_prop: expected a string (str), but got {type(read_charges_from_prop).__name__} instead. "
                 )
             if not read_charges_from_prop: 
-                read_charges_from_prop = "partial_charge"
+                read_charges_from_prop = "_TriposPartialCharge"
                 raise Warning(
                     "The charge_model of MoleculePreparation is set to be 'read', but a valid charge_propname is not given. " + eol + 
-                    "The default property name ('partial_charge') will be used. " 
+                    "The default property name ('_TriposPartialCharge') will be used. " 
                 )
             charges = [float(atom.GetProp(read_charges_from_prop)) for atom in self.mol.GetAtoms()]
         else:
