@@ -507,7 +507,8 @@ def main():
                 print(e)
                 sys.exit(1)
         else:
-            raise ValueError(f"Unsupported input file format '{ext}'. Supported formats: {SUPPORTED_PRODY_FORMATS.keys()}.")
+            print(f"Unsupported input file format '{ext}'. Supported formats: {SUPPORTED_PRODY_FORMATS.keys()}.")
+            sys.exit(1)
 
     else:
         with open(args.read_pdb) as f:
