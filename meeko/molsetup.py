@@ -1481,7 +1481,7 @@ class MoleculeSetupExternalToolkit(ABC):
         return index
 
     @abstractmethod
-    def init_atom(self, compute_gasteiger_charges, coords, read_charges_from_prop):
+    def init_atom(self, compute_gasteiger_charges, read_charges_from_prop, coords):
         pass
 
     @abstractmethod
