@@ -9,6 +9,32 @@ import os
 from operator import itemgetter
 
 
+def is_metal(atomic_number):
+    """
+    Determine if an element is a metal based on its atomic number.
+    """
+    # Alkali metals
+    if atomic_number in [3, 11, 19, 37, 55, 87]:
+        return True
+    # Alkaline earth metals
+    if atomic_number in [4, 12, 20, 38, 56, 88]:
+        return True
+    # Transition metals (Groups 3-12)
+    if (21 <= atomic_number <= 30) or (39 <= atomic_number <= 48) or (57 <= atomic_number <= 80) or (89 <= atomic_number <= 112):
+        return True
+    # Post-transition metals
+    if atomic_number in [13, 31, 49, 50, 81, 82, 83, 113, 114, 115, 116]:
+        return True
+
+    return False
+
+def is_noble(atomic_number): 
+    """
+    Determine if an element is noble gas based on its atomic number.
+    """
+    return atomic_number in [2, 10, 18, 36, 54, 86, 118]
+
+
 def getNameExt(fname):
     """extract name and extension from the input file, removing the dot
     filename.ext -> [filename, ext]

@@ -9,19 +9,21 @@ import re
 import atexit
 import os
 
-from meeko.utils.rdkitutils import covalent_radius
+from meeko.utils.autodock4_atom_types_elements import autodock4_atom_types_elements
+from meeko.utils.utils import is_metal
+autodock4_elements = {v for k,v in autodock4_atom_types_elements.items()}
 
 from rdkit import Chem
 from rdkit.Chem import rdmolops
+periodic_table = Chem.GetPeriodicTable()
 
 from rdkit import RDLogger
 import sys, logging
 
 logger = logging.getLogger(__name__)
 
-
-list_of_AD_elements_as_AtomicNum = list(covalent_radius.keys())
-metal_AtomicNums = {12, 20, 25, 26, 30}  # Mg: 12, Ca: 20, Mn: 25, Fe: 26, Zn: 30
+list_of_AD_elements_as_AtomicNum = list(periodic_table.GetAtomicNumber(element) for element in autodock4_elements)
+metal_AtomicNums = {atomic_num for atomic_num in list_of_AD_elements_as_AtomicNum if is_metal(atomic_num)} 
 
 # Utility Functions
 def mol_contains_unexpected_element(mol: Chem.Mol, allowed_elements: list[str] = list_of_AD_elements_as_AtomicNum) -> bool:

@@ -24,6 +24,7 @@ from .utils.rdkitutils import build_one_rdkit_mol_per_altloc
 from .utils.rdkitutils import _aux_altloc_mol_build
 from .utils.covalent_radius_table import covalent_radius
 from .utils.autodock4_atom_types_elements import autodock4_atom_types_elements
+from .utils.utils import is_metal, is_noble
 autodock4_elements = {v for k,v in autodock4_atom_types_elements.items()}
 from .utils.pdbutils import PDBAtomInfo
 from .chemtempgen import export_chem_templates_to_json
@@ -93,7 +94,6 @@ residues_rotamers = {
         ("CG", "CD", "CE", "NZ"),
     ],
 }
-
 
 def find_graph_paths(graph, start_node, end_nodes, current_path=(), paths_found=()):
     """
@@ -169,11 +169,13 @@ def find_inter_mols_bonds(mols_dict):
 
                 # check if atom has implemented covalent radius
                 for atom in [a1, a2]:
-                    element = periodic_table.GetElementSymbol(atom.GetAtomicNum())
+                    atomic_num = atom.GetAtomicNum()
+                    element = periodic_table.GetElementSymbol(atomic_num)
                     if element not in autodock4_elements:
-                        logger.warning(f"Element {element} doesn't have an AutoDock4 atom type. No intermol bond perception will be made. ")
+                        logger.warning(f"Element {element} doesn't have an AutoDock4 atom type. ")
+                    if is_metal(atomic_num) or is_noble(atomic_num): 
+                        logger.warning(f"Element {element} is metal or noble gas. No intermol bond perception will be made. ")
                         continue
-                    elif element 
                     
                 cov_dist = (
                     covalent_radius[a1.GetAtomicNum()]
