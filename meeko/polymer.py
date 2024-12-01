@@ -147,6 +147,16 @@ def find_inter_mols_bonds(mols_dict):
     pairs_to_consider = []
     keys = list(mols_dict)
     for i in range(len(mols_dict)):
+        atomic_nums = [atom.GetAtomicNum() for atom in mols_dict[keys[i]][0].GetAtoms()]
+        elements = [periodic_table.GetElementSymbol(atomic_num) for atomic_num in atomic_nums]
+        unsupported_element_idx = [i for i, element in enumerate(elements) if element not in autodock4_elements]
+        unbound_element_idx = [i for i, element in enumerate(elements) if element not in autodock4_elements]
+        if unsupported_element_idx: 
+            logger.warning(f"Input residue {keys[i]}:{mols_dict[keys[i]][1]} atoms #{unsupported_element_idx} do not have an AutoDock4 atom type. ")
+        if unbound_element_idx: 
+            logger.warning(f"Input residue {keys[i]}:{mols_dict[keys[i]][1]} atoms #{unbound_element_idx} is metal or noble gas. " + eol +
+                           "No intermol bond perception will be made involving a metal or noble gas. ")
+            continue
         for j in range(i + 1, len(mols_dict)):
             do_consider = True
             for d in range(3):
@@ -156,6 +166,8 @@ def find_inter_mols_bonds(mols_dict):
                 close_enough = abs(x[idx[1]] - x[idx[2]]) < max_possible_covalent_radius
                 do_consider &= close_enough or has_overlap
             if do_consider:
+                atomic_nums = [atom.GetAtomicNum() for atom in mols_dict[keys[i]][0].GetAtoms()]
+
                 pairs_to_consider.append((i, j))
 
     bonds = {}  # key is pair mol indices, valuei is list of pairs of atom indices
@@ -163,23 +175,18 @@ def find_inter_mols_bonds(mols_dict):
         p1 = mols_dict[keys[i]][0].GetConformer().GetPositions()
         p2 = mols_dict[keys[j]][0].GetConformer().GetPositions()
         for a1 in mols_dict[keys[i]][0].GetAtoms():
+            if is_metal(a1.GetAtomicNum()) or is_noble(a1.GetAtomicNum()): 
+                continue
             for a2 in mols_dict[keys[j]][0].GetAtoms():
+                if is_metal(a2.GetAtomicNum()) or is_noble(a2.GetAtomicNum()): 
+                    continue
+
                 vec = p1[a1.GetIdx()] - p2[a2.GetIdx()]
                 distsqr = np.dot(vec, vec)
-
-                # check if atom has implemented covalent radius
-                for atom in [a1, a2]:
-                    atomic_num = atom.GetAtomicNum()
-                    element = periodic_table.GetElementSymbol(atomic_num)
-                    if element not in autodock4_elements:
-                        logger.warning(f"Element {element} doesn't have an AutoDock4 atom type. ")
-                    if is_metal(atomic_num) or is_noble(atomic_num): 
-                        logger.warning(f"Element {element} is metal or noble gas. No intermol bond perception will be made. ")
-                        continue
                     
                 cov_dist = (
-                    covalent_radius[a1.GetAtomicNum()]
-                    + covalent_radius[a2.GetAtomicNum()]
+                    covalent_radius[periodic_table.GetElementSymbol(a1.GetAtomicNum())]
+                    + covalent_radius[periodic_table.GetElementSymbol(a2.GetAtomicNum())]
                 )
                 if distsqr < (allowance * cov_dist) ** 2:
                     key = (keys[i], keys[j])
@@ -846,6 +853,17 @@ class Polymer:
 
             bonded_unknown_res = {res_id: all_unknown_res[res_id] for res_id in all_unknown_res 
                                   if any(res_id in respair for respair in bonds)}
+            single_atom_res= set()
+            for res_id in bonded_unknown_res: 
+                raw_input_mol = raw_input_mols[res_id][0]
+                atoms_in_mol = [atom for atom in raw_input_mol.GetAtoms()]
+                if len(atoms_in_mol)==1: 
+                    atom = atoms_in_mol[0]
+                    atomic_num =  atom.GetAtomicNum()
+                    if is_metal(atomic_num) or is_noble(atomic_num): 
+                        single_atom_res.add(res_id)
+            for res_id in single_atom_res:
+                bonded_unknown_res.pop(res_id)
 
             unbound_unknown_res = all_unknown_res.copy()
             for key in bonded_unknown_res:

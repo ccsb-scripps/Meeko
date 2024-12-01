@@ -26,14 +26,6 @@ list_of_AD_elements_as_AtomicNum = list(periodic_table.GetAtomicNumber(element) 
 metal_AtomicNums = {atomic_num for atomic_num in list_of_AD_elements_as_AtomicNum if is_metal(atomic_num)} 
 
 # Utility Functions
-def mol_contains_unexpected_element(mol: Chem.Mol, allowed_elements: list[str] = list_of_AD_elements_as_AtomicNum) -> bool:
-    """Check if mol contains unexpected elements"""
-    for atom in mol.GetAtoms():
-        if atom.GetAtomicNum() not in allowed_elements:
-            return True
-    return False
-
-
 def get_atom_idx_by_names(mol: Chem.Mol, wanted_names: set[str] = set()) -> set[int]:
     
     if not wanted_names:
@@ -381,11 +373,6 @@ class ChemicalComponent:
             if target_charge!='0':
                 rdkit_atom.SetFormalCharge(int(target_charge)) # this needs to be int for rdkit
             rwmol.AddAtom(rdkit_atom)
-
-        # Check if rwmol contains unexpected elements
-        if mol_contains_unexpected_element(rwmol):
-            logger.warning(f"Molecule contains unexpected elements -> template for {resname} will be None. ")
-            return None
 
         # Map atom_id (atom names) with rdkit idx
         name_to_idx_mapping = {atom.GetProp('atom_id'): idx for (idx, atom) in enumerate(rwmol.GetAtoms())}
