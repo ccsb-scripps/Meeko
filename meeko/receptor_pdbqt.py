@@ -96,9 +96,21 @@ def _identify_bonds(atom_idx, positions, atom_types):
 
     for atom_i, position, atom_type in zip(atom_idx, positions, atom_types):
         distances, indices = KDTree.query(position, k=k)
+        if atom_type not in autodock4_atom_types_elements: 
+            continue
+        if autodock4_atom_types_elements[atom_type] not in covalent_radius:
+            continue
         r_cov = covalent_radius[autodock4_atom_types_elements[atom_type]]
-
-        optimal_distances = [bond_allowance_factor * (r_cov + covalent_radius[autodock4_atom_types_elements[atom_types[i]]]) for i in indices[1:]]
+        
+        nei_cov_list = []
+        for i in indices[1:]: 
+            nei_atom_type = atom_types[i]
+            nei_cov = 0.
+            if nei_atom_type in autodock4_atom_types_elements: 
+                if autodock4_atom_types_elements[nei_atom_type] in covalent_radius: 
+                    nei_cov = covalent_radius[autodock4_atom_types_elements[nei_atom_type]]
+            nei_cov_list.append(nei_cov)
+        optimal_distances = [bond_allowance_factor * (r_cov + nei_cov) for nei_cov in nei_cov_list]
         bonds[atom_i] = atom_idx[indices[1:][np.where(distances[1:] < optimal_distances)]].tolist()
 
     return bonds

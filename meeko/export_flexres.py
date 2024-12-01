@@ -2,12 +2,11 @@ from rdkit import Chem
 from rdkit.Chem import rdDetermineBonds
 from rdkit.Geometry import Point3D
 from .utils.utils import parse_begin_res
-from .utils.utils import mini_periodic_table
 from .rdkit_mol_create import RDKitMolCreate
 from .polymer import Polymer
 
+periodic_table = Chem.GetPeriodicTable()
 
-mini_periodic_table = {v: k for k, v in mini_periodic_table.items()}
 
 def sidechain_to_mol(pdbqt_atoms):
     positions = []
@@ -21,7 +20,7 @@ def sidechain_to_mol(pdbqt_atoms):
             element = row["name"][1]
         elif len(row["name"]) > 0:
             element = row["name"][0] 
-        atomic_nr = mini_periodic_table[element]
+        atomic_nr = periodic_table.GetAtomicNumber(element)
         atom = Chem.Atom(atomic_nr)
         mol.AddAtom(atom)
         x, y, z = row["xyz"]

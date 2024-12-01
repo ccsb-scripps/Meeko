@@ -18,12 +18,13 @@ from rdkit.Geometry import Point3D
 from .molsetup import RDKitMoleculeSetup
 from .molsetup import MoleculeSetupEncoder
 from .utils.jsonutils import rdkit_mol_from_json
-from .utils.rdkitutils import mini_periodic_table
 from .utils.rdkitutils import react_and_map
 from .utils.rdkitutils import AtomField
 from .utils.rdkitutils import build_one_rdkit_mol_per_altloc
 from .utils.rdkitutils import _aux_altloc_mol_build
-from .utils.rdkitutils import covalent_radius
+from .utils.covalent_radius_table import covalent_radius
+from .utils.autodock4_atom_types_elements import autodock4_atom_types_elements
+autodock4_elements = {v for k,v in autodock4_atom_types_elements.items()}
 from .utils.pdbutils import PDBAtomInfo
 from .chemtempgen import export_chem_templates_to_json
 from .chemtempgen import build_noncovalent_CC
@@ -135,9 +136,7 @@ def find_inter_mols_bonds(mols_dict):
     """
 
     allowance = 1.2  # vina uses 1.1 but covalent radii are shorter here
-    max_possible_covalent_radius = (
-        2 * allowance * max([r for k, r in covalent_radius.items()])
-    )
+    max_possible_covalent_radius = (2 * allowance * covalent_radius["I"])
     cubes_min = []
     cubes_max = []
     for key, (mol, _) in mols_dict.items():
@@ -170,8 +169,11 @@ def find_inter_mols_bonds(mols_dict):
 
                 # check if atom has implemented covalent radius
                 for atom in [a1, a2]:
-                    if atom.GetAtomicNum() not in covalent_radius:
-                        raise RuntimeError(f"Element {periodic_table.GetElementSymbol(atom.GetAtomicNum())} doesn't have an implemented covalent radius, which was required for the perception of intermolecular bonds. ")
+                    element = periodic_table.GetElementSymbol(atom.GetAtomicNum())
+                    if element not in autodock4_elements:
+                        logger.warning(f"Element {element} doesn't have an AutoDock4 atom type. No intermol bond perception will be made. ")
+                        continue
+                    elif element 
                     
                 cov_dist = (
                     covalent_radius[a1.GetAtomicNum()]
@@ -1809,7 +1811,7 @@ class Polymer:
                 props = atom.GetPropsAsDict()
                 atom_name = self.monomers[res_id].atom_names[i]
                 x, y, z = positions[i]
-                element = mini_periodic_table[atom.GetAtomicNum()]
+                element = periodic_table.GetElementSymbol(atom.GetAtomicNum())
                 pdbout += pdb_line.format(
                     "ATOM",
                     atom_count,

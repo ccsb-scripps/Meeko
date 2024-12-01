@@ -32,8 +32,8 @@ except ImportError as _import_misctools_error:
 else:
     _has_misctools = True
 
-
 from .utils import rdkitutils
+periodic_table = Chem.GetPeriodicTable()
 
 # region DEFAULT VALUES
 DEFAULT_PDBINFO = None
@@ -1254,7 +1254,7 @@ class MoleculeSetup:
             if self.atoms[index].is_dummy:
                 continue
             if not self.atoms[index].is_pseudo_atom:
-                element = utils.mini_periodic_table[self.atoms[index].atomic_num]
+                element = periodic_table.GetElementSymbol(self.atoms[index].atomic_num)
             x, y, z = self.atoms[index].coord
             output_string += "%3s %12.6f %12.6f %12.6f\n" % (element, x, y, z)
         return output_string

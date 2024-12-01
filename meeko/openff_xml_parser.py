@@ -1,10 +1,9 @@
+from rdkit import Chem
 import math
 import pathlib
 import xml.etree.ElementTree as ET
 
-from rdkit import Chem
-
-from .utils.utils import mini_periodic_table
+periodic_table = Chem.GetPeriodicTable()
 
 
 def load_openff():
@@ -222,7 +221,7 @@ def assign_atypes(vdw_list, use_openff_id=True, force_uppercase=True):
         atom = mol.GetAtomWithIdx(
             v["IDX"][0]
         )  # consider only the first if multiple IDX
-        element = mini_periodic_table[atom.GetAtomicNum()]
+        element = periodic_table.GetElementSymbol(atom.GetAtomicNum())
         atomic_numbers.append(atom.GetAtomicNum())
         used_numbers.setdefault(element, set())
         off_id = v["id"]

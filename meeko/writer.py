@@ -12,7 +12,6 @@ from os import linesep as eol
 import numpy as np
 from rdkit import Chem
 from .utils import pdbutils
-from .utils.rdkitutils import mini_periodic_table
 
 from .molsetup import Bond
 
