@@ -272,5 +272,4 @@ covalent_radius = {  # from wikipedia
     # 34: 1.20,
     35: 1.20,
     53: 1.39,
-    27: 0.00,
 }
