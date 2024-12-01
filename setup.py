@@ -54,9 +54,9 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'mk_export.py=meeko.cli.mk_export:main',
-            'mk_prepare_ligand.py=meeko.cli.mk_prepare_ligand:main',
-            'mk_prepare_receptor.py=meeko.cli.mk_prepare_receptor:main'
-        ]
+            'mk_prepare_receptor.py = meeko.cli.dynamic_entry:prepare_receptor',
+            'mk_prepare_ligand.py = meeko.cli.dynamic_entry:prepare_ligand',
+            'mk_export.py = meeko.cli.dynamic_entry:export',
+        ],
     }
 )
