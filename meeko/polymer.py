@@ -150,7 +150,7 @@ def find_inter_mols_bonds(mols_dict):
         atomic_nums = [atom.GetAtomicNum() for atom in mols_dict[keys[i]][0].GetAtoms()]
         elements = [periodic_table.GetElementSymbol(atomic_num) for atomic_num in atomic_nums]
         unsupported_element_idx = [i for i, element in enumerate(elements) if element not in autodock4_elements]
-        unbound_element_idx = [i for i, element in enumerate(elements) if element not in autodock4_elements]
+        unbound_element_idx = [i for i, atomic_num in enumerate(atomic_nums) if is_metal(atomic_num) or is_noble(atomic_num)]
         if unsupported_element_idx: 
             logger.warning(f"Input residue {keys[i]}:{mols_dict[keys[i]][1]} atoms #{unsupported_element_idx} do not have an AutoDock4 atom type. ")
         if unbound_element_idx: 
@@ -166,8 +166,6 @@ def find_inter_mols_bonds(mols_dict):
                 close_enough = abs(x[idx[1]] - x[idx[2]]) < max_possible_covalent_radius
                 do_consider &= close_enough or has_overlap
             if do_consider:
-                atomic_nums = [atom.GetAtomicNum() for atom in mols_dict[keys[i]][0].GetAtoms()]
-
                 pairs_to_consider.append((i, j))
 
     bonds = {}  # key is pair mol indices, valuei is list of pairs of atom indices
