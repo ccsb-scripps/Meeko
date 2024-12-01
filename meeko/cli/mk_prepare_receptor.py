@@ -506,6 +506,9 @@ def main():
             except PolymerCreationError as e:
                 print(e)
                 sys.exit(1)
+        else:
+            raise ValueError(f"Unsupported input file format '{ext}'. Supported formats: {SUPPORTED_PRODY_FORMATS}.")
+
     else:
         with open(args.read_pdb) as f:
             pdb_string = f.read()
