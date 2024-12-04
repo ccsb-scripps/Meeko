@@ -2147,7 +2147,7 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         ]
         # TODO: Dihedral decoding may need another look
         rdkit_molsetup.dihedral_interactions = obj["dihedral_interactions"]
-        rdkit_molsetup.dihedral_partaking_atoms = {string_to_tuple(k, element_type=int): string_to_tuple(v, element_type=int) for k,v in obj["dihedral_partaking_atoms"].items()}
+        rdkit_molsetup.dihedral_partaking_atoms = {string_to_tuple(k, element_type=int): v for k,v in obj["dihedral_partaking_atoms"].items()}
         rdkit_molsetup.dihedral_labels = {string_to_tuple(k, element_type=int): v for k,v in obj["dihedral_labels"].items()}
         rdkit_molsetup.atom_to_ring_id = {
             int(k): [string_to_tuple(t) for t in v]
@@ -2358,7 +2358,7 @@ class MoleculeSetupEncoder(json.JSONEncoder):
             output_dict["mol"] = rdMolInterchange.MolToJSON(obj.mol)
             output_dict["modified_atom_positions"] = obj.modified_atom_positions
             output_dict["dihedral_interactions"] = obj.dihedral_interactions
-            output_dict["dihedral_partaking_atoms"] = {tuple_to_string(k): tuple_to_string(v) for k,v in obj.dihedral_partaking_atoms.items()}
+            output_dict["dihedral_partaking_atoms"] = {tuple_to_string(k): v for k,v in obj.dihedral_partaking_atoms.items()}
             output_dict["dihedral_labels"] = {tuple_to_string(k): v for k,v in obj.dihedral_labels.items()}
             output_dict["atom_to_ring_id"] = obj.atom_to_ring_id
             output_dict["ring_corners"] = obj.ring_corners
