@@ -550,14 +550,14 @@ class MoleculePreparation:
         )
 
         # 5 . rename atoms, new names will be original name + idx (1-based)
-        if rename_atoms is not False:
+        if rename_atoms:
             for atom in setup.atoms:
                 orig_pdbinfo = atom.pdbinfo
                 orig_name = orig_pdbinfo.name.strip()
                 new_name = f"{orig_name}{atom.index+1}"
                 if len(new_name) > 4: 
-                    raise Warning(f"Attempted to rename atom with original name {orig_name} to {new_name}. " + eol +
-                                  f"But the new name is too long (> 4 characters). The original name will be kept. ")
+                    warnings.warn(f"Attempted to rename atom with original name {orig_name} to {new_name}." + eol +
+                                  f"But the new name is too long (> 4 characters). The original name will be kept.")
                 else:
                     new_atom_info = orig_pdbinfo._replace(name=new_name)
                     atom.pdbinfo = new_atom_info
