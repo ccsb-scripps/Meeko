@@ -1377,7 +1377,7 @@ class MoleculeSetup:
             obj["ring_closure_info"]["bonds_removed"],
             obj["ring_closure_info"]["pseudos_by_atom"],
         )
-        molsetup.rotamers = obj["rotamers"]
+        molsetup.rotamers = [{string_to_tuple(k, element_type=int): v for k,v in rotamer.items()} for rotamer in obj["rotamers"]]
         molsetup.atom_params = obj["atom_params"]
         molsetup.restraints = [Restraint.from_json(x) for x in obj["restraints"]]
         molsetup.flexibility_model = obj["flexibility_model"]
@@ -2147,8 +2147,8 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         ]
         # TODO: Dihedral decoding may need another look
         rdkit_molsetup.dihedral_interactions = obj["dihedral_interactions"]
-        rdkit_molsetup.dihedral_partaking_atoms = obj["dihedral_partaking_atoms"]
-        rdkit_molsetup.dihedral_labels = obj["dihedral_labels"]
+        rdkit_molsetup.dihedral_partaking_atoms = {string_to_tuple(k, element_type=int): v for k,v in obj["dihedral_partaking_atoms"].items()}
+        rdkit_molsetup.dihedral_labels = {string_to_tuple(k, element_type=int): v for k,v in obj["dihedral_labels"].items()}
         rdkit_molsetup.atom_to_ring_id = {
             int(k): [string_to_tuple(t) for t in v]
             for k, v in obj["atom_to_ring_id"].items()
@@ -2332,7 +2332,7 @@ class MoleculeSetupEncoder(json.JSONEncoder):
                     for k, v in obj.rings.items()
                 },
                 "ring_closure_info": obj.ring_closure_info.__dict__,
-                "rotamers": obj.rotamers,
+                "rotamers": [{tuple_to_string(k): v for k, v in rotamer.items()} for rotamer in obj.rotamers],
                 "atom_params": obj.atom_params,
                 "restraints": [
                     self.restraint_encoder.default(x) for x in obj.restraints
@@ -2358,8 +2358,8 @@ class MoleculeSetupEncoder(json.JSONEncoder):
             output_dict["mol"] = rdMolInterchange.MolToJSON(obj.mol)
             output_dict["modified_atom_positions"] = obj.modified_atom_positions
             output_dict["dihedral_interactions"] = obj.dihedral_interactions
-            output_dict["dihedral_partaking_atoms"] = obj.dihedral_partaking_atoms
-            output_dict["dihedral_labels"] = obj.dihedral_labels
+            output_dict["dihedral_partaking_atoms"] = {tuple_to_string(k): v for k,v in obj.dihedral_partaking_atoms.items()}
+            output_dict["dihedral_labels"] = {tuple_to_string(k): v for k,v in obj.dihedral_labels.items()}
             output_dict["atom_to_ring_id"] = obj.atom_to_ring_id
             output_dict["ring_corners"] = obj.ring_corners
             output_dict["rmsd_symmetry_indices"] = obj.rmsd_symmetry_indices
