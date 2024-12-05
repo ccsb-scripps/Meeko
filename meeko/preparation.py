@@ -86,7 +86,7 @@ class MoleculePreparation:
         input_offatom_params=None,
         load_offatom_params=None,
         charge_model="gasteiger",
-        charge_propname=None,
+        charge_atom_prop=None,
         dihedral_model=None,
         reactive_smarts=None,
         reactive_smarts_idx=None,
@@ -156,24 +156,24 @@ class MoleculePreparation:
             )
 
         self.charge_model = charge_model
-        self.charge_propname = charge_propname
+        self.charge_atom_prop = charge_atom_prop
 
-        if self.charge_model!="read" and self.charge_propname: 
+        if self.charge_model!="read" and self.charge_atom_prop: 
             raise ValueError(
-                "A charge_propname (%s) is given to MoleculePreparation but its current charge_model is %s. " + eol + 
-                "To read charges from atom properties in the input mol, set charge_model to 'read' and name the property in 'charge_propname'. " 
-                % (charge_propname, charge_model)
+                "A charge_atom_prop (%s) is given to MoleculePreparation but its current charge_model is %s. " + eol + 
+                "To read charges from atom properties in the input mol, set charge_model to 'read' and name the property as 'charge_atom_prop'. " 
+                % (charge_atom_prop, charge_model)
             )
         if self.charge_model=="read":
-            if not self.charge_propname: 
-                self.charge_propname = "PartialCharge"
+            if not self.charge_atom_prop: 
+                self.charge_atom_prop = "PartialCharge"
                 warnings.warn(
-                    "The charge_model of MoleculePreparation is set to be 'read', but a valid charge_propname is not given. " + eol + 
+                    "The charge_model of MoleculePreparation is set to be 'read', but a valid charge_atom_prop is not given. " + eol + 
                     "The default atom property ('PartialCharge') will be used. " 
                 )
-            elif not isinstance(self.charge_propname, str): 
+            elif not isinstance(self.charge_atom_prop, str): 
                 raise ValueError(
-                    f"Invalid value for charge_propname: expected a string (str), but got {type(self.charge_propname).__name__} instead. "
+                    f"Invalid value for charge_atom_prop: expected a string (str), but got {type(self.charge_atom_prop).__name__} instead. "
                 )
         
         allowed_dihedral_models = [None, "openff", "espaloma"]
@@ -511,7 +511,7 @@ class MoleculePreparation:
             keep_chorded_rings=self.keep_chorded_rings,
             keep_equivalent_rings=self.keep_equivalent_rings,
             compute_gasteiger_charges=self.charge_model == "gasteiger",
-            read_charges_from_prop=self.charge_propname,
+            read_charges_from_prop=self.charge_atom_prop,
             conformer_id=conformer_id,
         )
 
