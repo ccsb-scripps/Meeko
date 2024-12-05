@@ -79,6 +79,11 @@ def cmd_lineparser():
         help="set molecule name from RDKit/SDF property",
     )
     io_group.add_argument(
+        "--charge_from_prop",
+        nargs="*",
+        help="set atom partial charges from the input file. The default is PartialCharge for SDF and _TriposPartialCharge for MOL2 unless overriden by a user defined property name. ",
+    )
+    io_group.add_argument(
         "-o",
         "--out",
         dest="output_pdbqt_filename",
@@ -214,7 +219,7 @@ def cmd_lineparser():
     )
     config_group.add_argument(
         "--charge_model",
-        choices=("gasteiger", "espaloma", "zero"),
+        choices=("gasteiger", "espaloma", "zero", "read"),
         help="default is 'gasteiger', 'zero' sets all zeros",
         default="gasteiger",
     )
@@ -551,6 +556,19 @@ def main():
     nr_failures = 0
     is_after_first = False
     preparator = MoleculePreparation.from_config(config)
+
+    if args.charge_from_prop is not None: 
+        if args.charge_model != "read": 
+            print('--charge_from_prop must be used with --charge_model "read"')
+            sys.exit(1)
+
+        preparator.charge_model = "read"
+        if args.charge_from_prop: 
+            preparator.charge_atom_prop = args.charge_from_prop[0]
+        else:
+            if ext=="mol2": 
+                preparator.charge_atom_prop = "_TriposPartialCharge"
+
     for mol in mol_supplier:
         if is_after_first and output.is_multimol == False:
             print("Processed only the first molecule of multiple molecule input.")

@@ -169,7 +169,7 @@ class MoleculePreparation:
                 self.charge_atom_prop = "PartialCharge"
                 warnings.warn(
                     "The charge_model of MoleculePreparation is set to be 'read', but a valid charge_atom_prop is not given. " + eol + 
-                    "The default atom property ('PartialCharge') will be used. " 
+                    "The default atom property ('PartialCharge') will be used. "
                 )
             elif not isinstance(self.charge_atom_prop, str): 
                 raise ValueError(
