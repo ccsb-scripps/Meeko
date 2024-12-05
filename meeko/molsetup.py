@@ -1724,17 +1724,22 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
                         ok_charges[i] += chrg_by_heavy_atom[newidx]
                 charges = ok_charges
         elif read_charges_from_prop is not None: 
-            if not isinstance(read_charges_from_prop, str): 
+            if not isinstance(read_charges_from_prop, str) or not read_charges_from_prop: 
                 raise ValueError(
-                    f"Invalid value for read_charges_from_prop: expected a string (str), but got {type(read_charges_from_prop).__name__} instead. "
+                    f"Invalid atom property name for read_charges_from_prop: expected a nonempty string (str), but got {type(read_charges_from_prop).__name__} instead. "
                 )
-            if not read_charges_from_prop: 
-                read_charges_from_prop = "_TriposPartialCharge"
-                raise Warning(
-                    "The charge_model of MoleculePreparation is set to be 'read', but a valid charge_propname is not given. " + eol + 
-                    "The default property name ('_TriposPartialCharge') will be used. " 
-                )
-            charges = [float(atom.GetProp(read_charges_from_prop)) for atom in self.mol.GetAtoms()]
+            charges = [
+                        float(atom.GetProp(read_charges_from_prop)) 
+                        if atom.HasProp(read_charges_from_prop) else None
+                        for atom in self.mol.GetAtoms()
+                    ]
+            if None in charges: 
+                for idx, charge in enumerate(charges):
+                    if charge is None:
+                        print(f"Charge at index {idx} is None.")
+                raise ValueError(
+                    f"The list of charges based on atom property name {read_charges_from_prop} contains None. "
+                )  
         else:
             charges = [0.0] * self.mol.GetNumAtoms()
         # register atom

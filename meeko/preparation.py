@@ -166,10 +166,10 @@ class MoleculePreparation:
             )
         if self.charge_model=="read":
             if not self.charge_propname: 
-                self.charge_propname = "_TriposPartialCharge"
-                raise Warning(
+                self.charge_propname = "PartialCharge"
+                warnings.warn(
                     "The charge_model of MoleculePreparation is set to be 'read', but a valid charge_propname is not given. " + eol + 
-                    "The default property name ('_TriposPartialCharge') will be used. " 
+                    "The default atom property ('PartialCharge') will be used. " 
                 )
             elif not isinstance(self.charge_propname, str): 
                 raise ValueError(
