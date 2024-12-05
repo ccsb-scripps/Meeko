@@ -79,8 +79,7 @@ def cmd_lineparser():
         help="set molecule name from RDKit/SDF property",
     )
     io_group.add_argument(
-        "--charge_from_prop",
-        nargs="*",
+        "--charge_atom_prop",
         help="set atom partial charges from an RDKit atom property based on the input file. The default is 'PartialCharge' for SDF and '_TriposPartialCharge' for MOL2 unless overriden by a user defined property name. ",
     )
     io_group.add_argument(
@@ -556,16 +555,15 @@ def main():
     nr_failures = 0
     is_after_first = False
 
-    if args.charge_from_prop is not None: 
-        if args.charge_model != "read": 
-            print(f'--charge_from_prop must be used with --charge_model "read", but the current charge_model is "{args.charge_model}". ')
+    if  config["charge_atom_prop"] is not None: 
+        if config["charge_model"] != "read": 
+            print(f'--charge_atom_prop must be used with --charge_model "read", but the current charge_model is "{config["charge_model"]}". ')
             sys.exit(1)
-
-        config["charge_model"] = "read"
-        config["charge_atom_prop"] = args.charge_from_prop[0] if args.charge_from_prop else "_TriposPartialCharge" if ext == "mol2" else None
-    else:
-        if ext=="mol2": 
-                config["charge_atom_prop"] = "_TriposPartialCharge"
+    elif config["charge_model"] == "read":  
+        if ext=="sdf":
+            config["charge_atom_prop"] = "PartialCharge"
+        elif ext=="mol2": 
+            config["charge_atom_prop"] = "_TriposPartialCharge"
 
     preparator = MoleculePreparation.from_config(config)
 

@@ -160,9 +160,8 @@ class MoleculePreparation:
 
         if self.charge_model!="read" and self.charge_atom_prop: 
             raise ValueError(
-                "A charge_atom_prop (%s) is given to MoleculePreparation but its current charge_model is %s. " + eol + 
+                f"A charge_atom_prop ({charge_atom_prop}) is given to MoleculePreparation but its current charge_model is {charge_model}. " + eol + 
                 "To read charges from atom properties in the input mol, set charge_model to 'read' and name the property as 'charge_atom_prop'. " 
-                % (charge_atom_prop, charge_model)
             )
         if self.charge_model=="read":
             if not self.charge_atom_prop: 
