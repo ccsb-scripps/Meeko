@@ -558,14 +558,13 @@ def main():
 
     if args.charge_from_prop is not None: 
         if args.charge_model != "read": 
-            print('--charge_from_prop must be used with --charge_model "read"')
+            print(f'--charge_from_prop must be used with --charge_model "read", but the current charge_model is "{args.charge_model}". ')
             sys.exit(1)
 
         config["charge_model"] = "read"
-        if args.charge_from_prop: 
-            config["charge_atom_prop"] = args.charge_from_prop[0]
-        else:
-            if ext=="mol2": 
+        config["charge_atom_prop"] = args.charge_from_prop[0] if args.charge_from_prop else "_TriposPartialCharge" if ext == "mol2" else None
+    else:
+        if ext=="mol2": 
                 config["charge_atom_prop"] = "_TriposPartialCharge"
 
     preparator = MoleculePreparation.from_config(config)
