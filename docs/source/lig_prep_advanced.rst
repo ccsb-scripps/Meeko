@@ -73,6 +73,8 @@ Alternatively, each parameter can be passed directly:
 
    mk_prepare_ligand.py -i mol.sdf --charge_model gasteiger --merge_these_atom_types H
 
+Parameters passed directly as command line arguments override those in the
+configuration file.
 
 
 Merging hydrogens (or not)
