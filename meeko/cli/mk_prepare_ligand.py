@@ -46,13 +46,6 @@ def cmd_lineparser():
     )
     confargs, remaining_argv = conf_parser.parse_known_args()
 
-    config = MoleculePreparation.get_defaults_dict()
-
-    if confargs.config_file is not None:
-        with open(confargs.config_file) as f:
-            c = json.load(f)
-            config.update(c)
-
     parser = (
         argparse.ArgumentParser()
     )  # parents=[conf_parser]) # parents shows --config_file in help msg
@@ -276,6 +269,18 @@ def cmd_lineparser():
         help="indices (1-based) of the SMARTS atoms that will be attached (default: 1 2)",
     )
 
+    config = MoleculePreparation.get_defaults_dict()
+
+    if confargs.config_file is not None:
+        with open(confargs.config_file) as f:
+            c = json.load(f)
+            config.update(c)
+
+    # Command line arguments should override the config file only for options
+    # set explicitly by the user. The config file still has priority over the
+    # defaults set in argparse. To achieve this, we reset the argparse
+    # defaults to the values from the config file. Then, we can just update
+    # variable `config` with the values parsed with argparse
     parser.set_defaults(**config)
     args = parser.parse_args(remaining_argv)
 
@@ -296,7 +301,10 @@ def cmd_lineparser():
             sys.exit(2)
         args.reactive_smarts_idx -= 1  # convert from 1- to 0-index
 
-    # command line arguments override config
+    # This is where command line arguments override config file.
+    # Relies on key/parameter names being equal.
+    # Deliberate mismatch for add_atom_types/add_atom_types_json, as these
+    # are extended below instead of being replaced
     for key in config:
         if key in args.__dict__:
             config[key] = args.__dict__[key]
