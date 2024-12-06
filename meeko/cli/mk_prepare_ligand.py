@@ -11,7 +11,6 @@ from os import linesep as eol
 import sys
 import json
 import tarfile
-import warnings
 
 from rdkit import Chem
 
@@ -33,7 +32,6 @@ else:
 
 
 def cmd_lineparser():
-    backend = "rdkit"
 
     conf_parser = argparse.ArgumentParser(
         description=__doc__,
@@ -48,7 +46,6 @@ def cmd_lineparser():
     confargs, remaining_argv = conf_parser.parse_known_args()
 
     config = MoleculePreparation.get_defaults_dict()
-    print("init config:", config)
 
     if confargs.config_file is not None:
         with open(confargs.config_file) as f:
@@ -56,11 +53,10 @@ def cmd_lineparser():
         
         for key in c: 
             if key not in config: 
-                print(f"Got unsupported keyword ({key}) for MoleculePreparation from the config file ({confargs.config_file}). ")
+                print(f"Got unsupported keyword ({key}) for MoleculePreparation from the config file ({confargs.config_file}). ",
+                      file=sys.stderr,)
                 sys.exit(2)
         config.update(c)
-    
-    print("conf from file:", config)
 
 # region CLIArgParser
     parser = (
@@ -340,7 +336,8 @@ def cmd_lineparser():
     num_required_covalent_args += int(args.tether_smarts is not None)
     if num_required_covalent_args not in [0, 3]:
         print(
-            "Error: --receptor, --rec_residue, and --tether_smarts are all required for covalent docking."
+            "Error: --receptor, --rec_residue, and --tether_smarts are all required for covalent docking.",
+            file=sys.stderr,
         )
         sys.exit(2)
     is_covalent = num_required_covalent_args == 3
@@ -375,7 +372,7 @@ def cmd_lineparser():
         indices[0] = indices[0] - 1  # convert from 1- to 0-index
         indices[1] = indices[1] - 1
 
-    return args, config, backend, is_covalent
+    return args, config, is_covalent
 
 
 class Output:
@@ -506,27 +503,27 @@ class Output:
             return tuple("mk%d" % (i + 1) for i in range(len(molsetups)))
 
 def main():
-    args, config, backend, is_covalent = cmd_lineparser()
+    args, config, is_covalent = cmd_lineparser()
     input_molecule_filename = args.input_molecule_filename
 
     # read input
     input_fname, ext = os.path.splitext(input_molecule_filename)
     ext = ext[1:].lower()
-    if backend == "rdkit":
-        parsers = {
-            "sdf": Chem.SDMolSupplier,
-            "mol2": rdkitutils.Mol2MolSupplier,
-            "mol": Chem.SDMolSupplier,
-        }
-        if not ext in parsers:
-            print(
-                "*ERROR* Format [%s] not in supported formats [%s]"
-                % (ext, "/".join(list(parsers.keys())))
-            )
-            sys.exit(1)
-        mol_supplier = parsers[ext](
-            input_molecule_filename, removeHs=False
-        )  # input must have explicit H
+
+    parsers = {
+        "sdf": Chem.SDMolSupplier,
+        "mol2": rdkitutils.Mol2MolSupplier,
+        "mol": Chem.SDMolSupplier,
+    }
+    if not ext in parsers:
+        print(
+            "*ERROR* Format [%s] not in supported formats [%s]"
+            % (ext, "/".join(list(parsers.keys())))
+        )
+        sys.exit(1)
+    mol_supplier = parsers[ext](
+        input_molecule_filename, removeHs=False
+    )  # input must have explicit H
     
     # configure output writer
     if args.output_pdbqt_filename is None:
@@ -554,7 +551,6 @@ def main():
         rec_prody_mol = prody_parser(rec_filename)
         covalent_builder = CovalentBuilder(rec_prody_mol, args.rec_residue)
 
-    input_mol_counter = 0
     input_mol_skipped = 0
     input_mol_with_failure = (
         0  # if reactive or covalent, each mol can yield multiple PDBQT
@@ -564,7 +560,8 @@ def main():
 
     if  config["charge_atom_prop"] is not None: 
         if config["charge_model"] != "read": 
-            print(f'--charge_atom_prop must be used with --charge_model "read", but the current charge_model is "{config["charge_model"]}". ')
+            print(f'--charge_atom_prop must be used with --charge_model "read", but the current charge_model is "{config["charge_model"]}". ',
+                  file=sys.stderr,)
             sys.exit(1)
     elif config["charge_model"] == "read":  
         if ext=="sdf":
@@ -584,8 +581,7 @@ def main():
             break
 
         # check that molecule was successfully loaded
-        if backend == "rdkit":
-            is_valid = mol is not None
+        is_valid = mol is not None
         input_mol_skipped += int(is_valid == False)
         if not is_valid:
             continue
