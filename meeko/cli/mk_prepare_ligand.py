@@ -11,6 +11,7 @@ from os import linesep as eol
 import sys
 import json
 import tarfile
+import warnings
 
 from rdkit import Chem
 
@@ -50,12 +51,10 @@ def cmd_lineparser():
     if confargs.config_file is not None:
         with open(confargs.config_file) as f:
             c = json.load(f)
-        
-        for key in c: 
-            if key not in config: 
-                print(f"Error: Got unsupported keyword ({key}) for MoleculePreparation from the config file ({confargs.config_file}). ",
-                      file=sys.stderr,)
-                sys.exit(2)
+        if any(key not in config for key in c): 
+            print(f"Error: Got unsupported keyword ({key}) for MoleculePreparation from the config file ({confargs.config_file}). ",
+                  file=sys.stderr,)
+            sys.exit(2)
         config.update(c)
 
     parser = (
@@ -287,14 +286,14 @@ def cmd_lineparser():
     # check reactive arguments
     if (args.reactive_smarts is None) != (args.reactive_smarts_idx is None):
         print(
-            "Error: Arguments --reactive_smarts and --reactive_smarts_idx require each other",
+            "Arguments --reactive_smarts and --reactive_smarts_idx require each other",
             file=sys.stderr,
         )
         sys.exit(2)
     elif args.reactive_smarts_idx is not None:
         if args.reactive_smarts_idx < 1:
             print(
-                "Error: --reactive_smarts_idx is 1-indexed, but got %d"
+                "--reactive_smarts_idx is 1-indexed, but got %d"
                 % args.reactive_smarts_idx,
                 file=sys.stderr,
             )
@@ -340,14 +339,14 @@ def cmd_lineparser():
         sys.exit(2)
     is_covalent = num_required_covalent_args == 3
     if is_covalent and not _has_prody:
-        msg = "Error: Covalent docking requires Prody which is not installed." + eol
+        msg = "Covalent docking requires Prody which is not installed." + eol
         msg += "Installable from PyPI (pip install prody) or conda-forge (micromamba install prody)"
         print(_prody_import_error, file=sys.stderr)
         print(msg)
         sys.exit(2)
     if min(args.tether_smarts_indices) < 1:
         print(
-            "Error: --tether_smarts_indices is 1-indexed, all values must be greater than zero",
+            "--tether_smarts_indices is 1-indexed, all values must be greater than zero",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -568,7 +567,6 @@ def main():
             config["charge_atom_prop"] = "_TriposPartialCharge"
 
     preparator = MoleculePreparation.from_config(config)
-
     for mol in mol_supplier:
         if is_after_first and output.is_multimol == False:
             print("Processed only the first molecule of multiple molecule input.")
