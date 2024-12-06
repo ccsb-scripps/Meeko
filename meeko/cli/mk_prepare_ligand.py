@@ -297,9 +297,29 @@ def cmd_lineparser():
             sys.exit(2)
         args.reactive_smarts_idx -= 1  # convert from 1- to 0-index
 
-    # command line arguments override config
-    for key in config:
-        if key in args.__dict__:
+    # Only explicitly provided command line arguments override config
+    explicitly_provided_args = {
+        arg.lstrip('-') for arg in remaining_argv if arg.startswith('--')
+    }
+
+    # Mapping arguments short-form to long-form 
+    short_to_long = {}
+
+    for action in parser._actions:
+        option_strings = action.option_strings
+        
+        short_option = next((opt for opt in option_strings if opt.startswith('-') and not opt.startswith('--')), None)
+        long_option = next((opt for opt in option_strings if opt.startswith('--')), None)
+        
+        if short_option and long_option:
+            short_to_long[short_option.lstrip('-')] = long_option.lstrip('--')
+
+    explicitly_provided_args = explicitly_provided_args | {
+        short_to_long[arg.lstrip('-')] for arg in remaining_argv if arg.startswith('-') and not arg.startswith('--')
+    }
+
+    for key in explicitly_provided_args:
+        if key in config:
             config[key] = args.__dict__[key]
 
     config["load_atom_params"] = args.load_atom_params
