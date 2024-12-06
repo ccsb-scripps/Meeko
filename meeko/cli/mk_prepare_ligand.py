@@ -51,11 +51,7 @@ def cmd_lineparser():
     if confargs.config_file is not None:
         with open(confargs.config_file) as f:
             c = json.load(f)
-        if any(key not in config for key in c): 
-            print(f"Error: Got unsupported keyword ({key}) for MoleculePreparation from the config file ({confargs.config_file}). ",
-                  file=sys.stderr,)
-            sys.exit(2)
-        config.update(c)
+            config.update(c)
 
     parser = (
         argparse.ArgumentParser()
@@ -80,10 +76,6 @@ def cmd_lineparser():
     io_group.add_argument(
         "--name_from_prop",
         help="set molecule name from RDKit/SDF property",
-    )
-    io_group.add_argument(
-        "--charge_atom_prop",
-        help="set atom partial charges from an RDKit atom property based on the input file. The default is 'PartialCharge' for SDF and '_TriposPartialCharge' for MOL2 unless overriden by a user defined property name. ",
     )
     io_group.add_argument(
         "-o",
@@ -226,6 +218,10 @@ def cmd_lineparser():
         default="gasteiger",
     )
     config_group.add_argument(
+        "--charge_atom_prop",
+        help="set atom partial charges from an RDKit atom property based on the input file. The default is 'PartialCharge' for SDF and '_TriposPartialCharge' for MOL2 unless overriden by a user defined property name. ",
+    )
+    config_group.add_argument(
         "--bad_charge_ok",
         help="NaN and Inf charges allowed in PDBQT",
         action="store_true",
@@ -300,8 +296,9 @@ def cmd_lineparser():
             sys.exit(2)
         args.reactive_smarts_idx -= 1  # convert from 1- to 0-index
 
-    for key in args.__dict__:
-        if key in config:
+    # command line arguments override config
+    for key in config:
+        if key in args.__dict__:
             config[key] = args.__dict__[key]
 
     if args.add_atom_types_json is not None:
