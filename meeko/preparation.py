@@ -86,6 +86,7 @@ class MoleculePreparation:
         input_offatom_params=None,
         load_offatom_params=None,
         charge_model="gasteiger",
+        charge_atom_prop=None,
         dihedral_model=None,
         reactive_smarts=None,
         reactive_smarts_idx=None,
@@ -147,7 +148,7 @@ class MoleculePreparation:
             raise NotImplementedError("load_offatom_params not implemented")
         self.load_offatom_params = load_offatom_params
 
-        allowed_charge_models = ["espaloma", "gasteiger", "zero"]
+        allowed_charge_models = ["espaloma", "gasteiger", "zero", "read"]
         if charge_model not in allowed_charge_models:
             raise ValueError(
                 "unrecognized charge_model: %s, allowed options are: %s"
@@ -155,7 +156,25 @@ class MoleculePreparation:
             )
 
         self.charge_model = charge_model
+        self.charge_atom_prop = charge_atom_prop
 
+        if self.charge_model!="read" and self.charge_atom_prop: 
+            raise ValueError(
+                f"A charge_atom_prop ({charge_atom_prop}) is given to MoleculePreparation but its current charge_model is {charge_model}. " + eol + 
+                "To read charges from atom properties in the input mol, set charge_model to 'read' and name the property as 'charge_atom_prop'. " 
+            )
+        if self.charge_model=="read":
+            if not self.charge_atom_prop: 
+                self.charge_atom_prop = "PartialCharge"
+                warnings.warn(
+                    "The charge_model of MoleculePreparation is set to be 'read', but a valid charge_atom_prop is not given. " + eol + 
+                    "The default atom property ('PartialCharge') will be used. "
+                )
+            elif not isinstance(self.charge_atom_prop, str): 
+                raise ValueError(
+                    f"Invalid value for charge_atom_prop: expected a string (str), but got {type(self.charge_atom_prop).__name__} instead. "
+                )
+        
         allowed_dihedral_models = [None, "openff", "espaloma"]
         if dihedral_model in (None, "espaloma"):
             dihedral_list = []
@@ -491,7 +510,8 @@ class MoleculePreparation:
             mol,
             keep_chorded_rings=self.keep_chorded_rings,
             keep_equivalent_rings=self.keep_equivalent_rings,
-            assign_charges=self.charge_model == "gasteiger",
+            compute_gasteiger_charges=self.charge_model == "gasteiger",
+            read_charges_from_prop=self.charge_atom_prop,
             conformer_id=conformer_id,
         )
 
@@ -501,7 +521,7 @@ class MoleculePreparation:
         AtomTyper.type_everything(
             setup,
             self.atom_params,
-            self.charge_model,
+            self.charge_model, # charge_model is not accessed in type_everything
             self.offatom_params,
             self.dihedral_params,
         )
