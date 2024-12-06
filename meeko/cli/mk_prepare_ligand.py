@@ -58,7 +58,6 @@ def cmd_lineparser():
                 sys.exit(2)
         config.update(c)
 
-# region CLIArgParser
     parser = (
         argparse.ArgumentParser()
     )  # parents=[conf_parser]) # parents shows --config_file in help msg
@@ -282,7 +281,6 @@ def cmd_lineparser():
         help="indices (1-based) of the SMARTS atoms that will be attached (default: 1 2)",
     )
 
-# endregion
     parser.set_defaults(**config)
     args = parser.parse_args(remaining_argv)
 
