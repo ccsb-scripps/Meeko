@@ -48,12 +48,21 @@ def cmd_lineparser():
     confargs, remaining_argv = conf_parser.parse_known_args()
 
     config = MoleculePreparation.get_defaults_dict()
+    print("init config:", config)
 
     if confargs.config_file is not None:
         with open(confargs.config_file) as f:
             c = json.load(f)
-            config.update(c)
+        
+        for key in c: 
+            if key not in config: 
+                print(f"Got unsupported keyword ({key}) for MoleculePreparation from the config file ({confargs.config_file}). ")
+                sys.exit(2)
+        config.update(c)
+    
+    print("conf from file:", config)
 
+# region CLIArgParser
     parser = (
         argparse.ArgumentParser()
     )  # parents=[conf_parser]) # parents shows --config_file in help msg
@@ -277,6 +286,7 @@ def cmd_lineparser():
         help="indices (1-based) of the SMARTS atoms that will be attached (default: 1 2)",
     )
 
+# endregion
     parser.set_defaults(**config)
     args = parser.parse_args(remaining_argv)
 
@@ -297,32 +307,9 @@ def cmd_lineparser():
             sys.exit(2)
         args.reactive_smarts_idx -= 1  # convert from 1- to 0-index
 
-    # Only explicitly provided command line arguments override config
-    explicitly_provided_args = {
-        arg.lstrip('-') for arg in remaining_argv if arg.startswith('--')
-    }
-
-    # Mapping arguments short-form to long-form 
-    short_to_long = {}
-
-    for action in parser._actions:
-        option_strings = action.option_strings
-        
-        short_option = next((opt for opt in option_strings if opt.startswith('-') and not opt.startswith('--')), None)
-        long_option = next((opt for opt in option_strings if opt.startswith('--')), None)
-        
-        if short_option and long_option:
-            short_to_long[short_option.lstrip('-')] = long_option.lstrip('--')
-
-    explicitly_provided_args = explicitly_provided_args | {
-        short_to_long[arg.lstrip('-')] for arg in remaining_argv if arg.startswith('-') and not arg.startswith('--')
-    }
-
-    for key in explicitly_provided_args:
+    for key in args.__dict__:
         if key in config:
             config[key] = args.__dict__[key]
-
-    config["load_atom_params"] = args.load_atom_params
 
     if args.add_atom_types_json is not None:
         additional_ats = []
@@ -332,7 +319,7 @@ def cmd_lineparser():
                 additional_ats.append(at)
             elif type(at) == list:
                 additional_ats.extend(at)
-        config["add_atom_types"] = additional_ats
+        config["add_atom_types"] += additional_ats
 
     if args.multimol_output_dir is not None or args.multimol_prefix is not None:
         if args.output_pdbqt_filename is not None:
