@@ -53,7 +53,7 @@ def cmd_lineparser():
         
         for key in c: 
             if key not in config: 
-                print(f"Got unsupported keyword ({key}) for MoleculePreparation from the config file ({confargs.config_file}). ",
+                print(f"Error: Got unsupported keyword ({key}) for MoleculePreparation from the config file ({confargs.config_file}). ",
                       file=sys.stderr,)
                 sys.exit(2)
         config.update(c)
@@ -289,14 +289,14 @@ def cmd_lineparser():
     # check reactive arguments
     if (args.reactive_smarts is None) != (args.reactive_smarts_idx is None):
         print(
-            "Arguments --reactive_smarts and --reactive_smarts_idx require each other",
+            "Error: Arguments --reactive_smarts and --reactive_smarts_idx require each other",
             file=sys.stderr,
         )
         sys.exit(2)
     elif args.reactive_smarts_idx is not None:
         if args.reactive_smarts_idx < 1:
             print(
-                "--reactive_smarts_idx is 1-indexed, but got %d"
+                "Error: --reactive_smarts_idx is 1-indexed, but got %d"
                 % args.reactive_smarts_idx,
                 file=sys.stderr,
             )
@@ -342,14 +342,14 @@ def cmd_lineparser():
         sys.exit(2)
     is_covalent = num_required_covalent_args == 3
     if is_covalent and not _has_prody:
-        msg = "Covalent docking requires Prody which is not installed." + eol
+        msg = "Error: Covalent docking requires Prody which is not installed." + eol
         msg += "Installable from PyPI (pip install prody) or conda-forge (micromamba install prody)"
         print(_prody_import_error, file=sys.stderr)
         print(msg)
         sys.exit(2)
     if min(args.tether_smarts_indices) < 1:
         print(
-            "--tether_smarts_indices is 1-indexed, all values must be greater than zero",
+            "Error: --tether_smarts_indices is 1-indexed, all values must be greater than zero",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -517,7 +517,7 @@ def main():
     }
     if not ext in parsers:
         print(
-            "*ERROR* Format [%s] not in supported formats [%s]"
+            "Error: Format [%s] not in supported formats [%s]"
             % (ext, "/".join(list(parsers.keys())))
         )
         sys.exit(1)
@@ -560,7 +560,7 @@ def main():
 
     if  config["charge_atom_prop"] is not None: 
         if config["charge_model"] != "read": 
-            print(f'--charge_atom_prop must be used with --charge_model "read", but the current charge_model is "{config["charge_model"]}". ',
+            print(f'Error: --charge_atom_prop must be used with --charge_model "read", but the current charge_model is "{config["charge_model"]}". ',
                   file=sys.stderr,)
             sys.exit(1)
     elif config["charge_model"] == "read":  
