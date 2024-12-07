@@ -3,7 +3,7 @@ import json
 import logging
 import traceback
 from importlib.resources import files
-from os import linesep as eol
+eol="\n"
 from sys import exc_info
 from typing import Union
 from typing import Optional

@@ -9,7 +9,7 @@ from copy import deepcopy
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 import json
-from os import linesep as eol
+eol="\n"
 import sys
 import warnings
 from typing import Union
