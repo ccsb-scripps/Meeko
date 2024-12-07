@@ -7,7 +7,7 @@ import argparse
 from datetime import datetime
 import io
 import os
-from os import linesep as eol
+eol="\n"
 import sys
 import json
 import tarfile

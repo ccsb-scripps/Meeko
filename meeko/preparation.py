@@ -6,7 +6,7 @@
 
 from inspect import signature
 import json
-from os import linesep as eol
+eol="\n"
 import pathlib
 import warnings
 
