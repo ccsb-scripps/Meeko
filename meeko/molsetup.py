@@ -1783,7 +1783,8 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         The substruct matches in the RDKit Mol for the given SMARTS.
         """
         p = Chem.MolFromSmarts(smarts)
-        return self.mol.GetSubstructMatches(p)
+        nr_atoms = self.mol.GetNumAtoms()
+        return self.mol.GetSubstructMatches(p, maxMatches=nr_atoms)
 
     def get_mol_name(self):
         """
