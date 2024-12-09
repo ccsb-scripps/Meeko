@@ -637,7 +637,15 @@ def main():
                         print(error_msg, file=sys.stderr)
 
         else:
-            molsetups = preparator.prepare(mol, rename_atoms=args.rename_atoms)
+            try: 
+                molsetups = preparator.prepare(mol, rename_atoms=args.rename_atoms)
+            except Exception as error_msg: 
+                nr_failures += 1
+                this_mol_had_failure = True
+                print(error_msg, file=sys.stderr)
+                input_mol_with_failure += int(this_mol_had_failure)
+                continue
+
             if len(molsetups) > 1:
                 output.is_multimol = True
             suffixes = output.get_suffixes(molsetups)
