@@ -1639,27 +1639,76 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         idx_to_rm = {}
         neigh_idx_to_nr_h = {}
         rm_to_neigh = {}
-        for atom in mol.GetAtoms():
-            if atom.GetAtomicNum() in to_rm:
-                idx_to_rm[atom.GetIdx()] = atom.GetFormalCharge()
-                rm_to_neigh[atom.GetIdx()] = set()
-                for neigh in atom.GetNeighbors():
-                    n = neigh.GetNumExplicitHs()
-                    neigh_idx_to_nr_h[neigh.GetIdx()] = n
-                    rm_to_neigh[atom.GetIdx()].add(neigh.GetIdx())
+
+        bond_type_to_nr_h = {
+            Chem.rdchem.BondType.DATIVE: 0,
+            Chem.rdchem.BondType.SINGLE: 1,
+            Chem.rdchem.BondType.DOUBLE: 2,
+            Chem.rdchem.BondType.TRIPLE: 3,
+            Chem.rdchem.BondType.QUADRUPLE: 4,
+        }
+
+        def is_metal(atomic_number):
+            """
+            Determine if an element is a metal based on its atomic number.
+            """
+            # Alkali metals
+            if atomic_number in [3, 11, 19, 37, 55, 87]:
+                return True
+            # Alkaline earth metals
+            if atomic_number in [4, 12, 20, 38, 56, 88]:
+                return True
+            # Transition metals (Groups 3-12)
+            if (21 <= atomic_number <= 30) or (39 <= atomic_number <= 48) or (57 <= atomic_number <= 80) or (89 <= atomic_number <= 112):
+                return True
+            # Post-transition metals
+            if atomic_number in [13, 31, 49, 50, 81, 82, 83, 113, 114, 115, 116]:
+                return True
+
+            return False
+
+        atoms_in_mol = [atom for atom in mol.GetAtoms()]
+        for atom in atoms_in_mol:
+            # if atom.GetAtomicNum() in to_rm:
+            if is_metal(atom.GetAtomicNum()): 
+                atom_idx = atom.GetIdx()
+                idx_to_rm[atom_idx] = atom.GetFormalCharge()
+                for neigh in atom.GetNeighbors(): 
+                    neigh_idx_to_nr_h[neigh.GetIdx()] = neigh.GetNumExplicitHs()
+
         if not idx_to_rm:
             return Chem.Mol(mol), idx_to_rm, rm_to_neigh
+        
+        for atom_idx in idx_to_rm: 
+            rm_to_neigh[atom_idx] = {}
+            for neigh in atoms_in_mol[atom_idx].GetNeighbors():
+                nei_idx = neigh.GetIdx()
+                bond = mol.GetBondBetweenAtoms(atom_idx, nei_idx)
+                bond_type = bond.GetBondType() if bond else None
+                # print(bond_type)
+                if bond_type in bond_type_to_nr_h: 
+                    num_nr_h = bond_type_to_nr_h[bond_type] 
+                    rm_to_neigh[atom_idx].update({nei_idx: num_nr_h})
+                    nei_valence = atoms_in_mol[nei_idx].GetNumExplicitHs()
+                    atoms_in_mol[nei_idx].SetNumExplicitHs(nei_valence + num_nr_h)
+                    
         rwmol = Chem.EditableMol(mol)
         for idx in sorted(idx_to_rm, reverse=True):
             rwmol.RemoveAtom(idx)
         mol = rwmol.GetMol()
-        for idx in neigh_idx_to_nr_h:
-            n = neigh_idx_to_nr_h[idx]
-            newidx = idx - sum([i < idx for i in idx_to_rm]) 
-            mol.GetAtomWithIdx(newidx).SetNumExplicitHs(n + 1)
+
+        # print(idx_to_rm, rm_to_neigh)
         mol.UpdatePropertyCache()
         Chem.SanitizeMol(mol)
         mol = Chem.AddHs(mol)
+
+        for atom_idx in rm_to_neigh: 
+            # print(rm_to_neigh[atom_idx])
+            for nei_idx, num_nr_h in rm_to_neigh[atom_idx].items(): 
+                # print(nei_idx, num_nr_h)
+                nei_valence = atoms_in_mol[nei_idx].GetNumExplicitHs()
+                atoms_in_mol[nei_idx].SetNumExplicitHs(nei_valence - num_nr_h)
+
         return mol, idx_to_rm, rm_to_neigh
          
 
@@ -1712,17 +1761,21 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
                     neighs = copy_mol.GetAtomWithIdx(added_H_idx).GetNeighbors()
                     if len(neighs) != 1:
                         raise RuntimeError("H should have 1 neighbor")
+                    #if neighs[0].GetIdx() in chrg_by_heavy_atom:
+                    #    raise RuntimeError("expected only 1 added H per heavy atom, maybe deleted element had double bond to this heavy atom")
                     if neighs[0].GetIdx() in chrg_by_heavy_atom:
-                        raise RuntimeError("expected only 1 added H per heavy atom, maybe deleted element had double bond to this heavy atom")
-                    chrg_by_heavy_atom[neighs[0].GetIdx()] = charges[added_H_idx]
+                        chrg_by_heavy_atom[neighs[0].GetIdx()] += [charges[added_H_idx]]
+                    else:
+                        chrg_by_heavy_atom[neighs[0].GetIdx()] = [charges[added_H_idx]]
                 # print(f"{chrg_by_heavy_atom=}")
                 for i, neighs in rm_to_neigh.items():
                     # print(f"{i=}, {neighs=}")
                     ok_charges[i] += idx_rm_to_formal_charge[i]
-                    for idx in neighs:
-                        newidx = idx - sum([i <= idx for i in idx_rm_to_formal_charge]) 
-                        # print(f"{idx=} {newidx=}")
-                        ok_charges[i] += chrg_by_heavy_atom[newidx]
+                    for idx, num_nr_h in neighs.items():
+                        if num_nr_h > 0: 
+                            newidx = idx - sum([i <= idx for i in idx_rm_to_formal_charge]) 
+                            # print(f"{idx=} {newidx=}")
+                            ok_charges[i] += sum(chrg_by_heavy_atom[newidx]) * num_nr_h / len(chrg_by_heavy_atom[newidx])
                 charges = ok_charges
         elif read_charges_from_prop is not None: 
             if not isinstance(read_charges_from_prop, str) or not read_charges_from_prop: 
