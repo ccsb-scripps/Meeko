@@ -48,7 +48,6 @@ DEFAULT_GRAPH = []
 
 DEFAULT_BOND_ROTATABLE = False
 
-DEFAULT_RING_IS_AROMATIC = False
 DEFAULT_RING_CLOSURE_BONDS_REMOVED = []
 DEFAULT_RING_CLOSURE_PSEUDOS_BY_ATOM = defaultdict
 # endregion
@@ -346,7 +345,6 @@ class Bond:
 @dataclass
 class Ring:
     ring_id: tuple
-    is_aromatic: bool = DEFAULT_RING_IS_AROMATIC
 
     @staticmethod
     def from_json(obj: dict):
@@ -370,14 +368,13 @@ class Ring:
             return obj
 
         # Check that all the keys we expect are in the object dictionary as a safety measure
-        expected_json_keys = {"ring_id", "is_aromatic"}
+        expected_json_keys = {"ring_id"}
         if set(obj.keys()) != expected_json_keys:
             return obj
 
         # Constructs a Ring object from the provided keys.
         ring_id = string_to_tuple(obj["ring_id"], int)
-        is_aromatic = obj["is_aromatic"]
-        output_ring = Ring(ring_id, is_aromatic)
+        output_ring = Ring(ring_id)
         return output_ring
 
 
@@ -1965,8 +1962,6 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         rings = hjk_ring_detection.scan(keep_chorded_rings, keep_equivalent_rings)
         for ring_atom_indices in rings:
             ring_to_add = Ring(ring_atom_indices)
-            if self._is_ring_aromatic(ring_atom_indices):
-                ring_to_add.is_aromatic = True
             self.rings[ring_atom_indices] = ring_to_add
         return
 
@@ -2264,7 +2259,6 @@ class RingEncoder(json.JSONEncoder):
         if isinstance(obj, Ring):
             return {
                 "ring_id": tuple_to_string(obj.ring_id),
-                "is_aromatic": obj.is_aromatic,
             }
         return json.JSONEncoder.default(self, obj)
 

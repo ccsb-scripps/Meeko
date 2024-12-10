@@ -525,8 +525,6 @@ def check_ring_equality(decoded_obj: Ring, starting_obj: Ring):
     """
     assert isinstance(decoded_obj.ring_id, tuple)
     assert decoded_obj.ring_id == starting_obj.ring_id
-    assert isinstance(decoded_obj.is_aromatic, bool)
-    assert decoded_obj.is_aromatic == starting_obj.is_aromatic
     return
 
 
