@@ -1613,7 +1613,7 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         molsetup.init_atom(compute_gasteiger_charges, read_charges_from_prop, coords)
         molsetup.init_bond()
         molsetup.perceive_rings(keep_chorded_rings, keep_equivalent_rings)
-        molsetup.rmsd_symmetry_indices = cls.get_symmetries_for_rmsd(mol)
+        # molsetup.rmsd_symmetry_indices = cls.get_symmetries_for_rmsd(mol)
 
         # to store sets of coordinates, e.g. docked poses, as dictionaries indexed by
         # the atom index, because not all atoms need to have new coordinates specified
