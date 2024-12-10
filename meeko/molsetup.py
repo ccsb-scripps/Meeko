@@ -1733,12 +1733,16 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
                 raise ValueError(
                     "Conflicting options: compute_gasteiger_charges and read_charges_from_prop cannot both be set. "
                 )
+            
+            # remove metal elemeents and replace removed bonds by non-real hydrogens
             things = self.remove_elements(self.mol)
             copy_mol, idx_rm_to_formal_charge, rm_to_neigh = things
             for atom in copy_mol.GetAtoms():
                 if atom.GetAtomicNum() == 34:
                     atom.SetAtomicNum(16)
             rdPartialCharges.ComputeGasteigerCharges(copy_mol)
+
+            # populate list of Gasteiger charges of atoms in copy_mol
             charges = [a.GetDoubleProp("_GasteigerCharge") for a in copy_mol.GetAtoms()]
             if idx_rm_to_formal_charge:
                 ok_charges = charges.copy()
@@ -1747,34 +1751,32 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
                 nr_rm = len(idx_rm_to_formal_charge)
                 nr_added_h = copy_mol.GetNumAtoms() - self.mol.GetNumAtoms() + nr_rm
                 ok_charges = ok_charges[:len(ok_charges)-nr_added_h]
-                # print(f"{nr_added_h=}")
-                # print(f"{nr_rm=}")
-                # print(f"{idx_rm_to_formal_charge=}")
-                # print(f"{len(charges)=}")
-                # print(f"{len(ok_charges)=}")
-                # print(f"{copy_mol.GetNumAtoms()=}")
-                # print(f"{self.mol.GetNumAtoms()=}")
+
+                # mapping of coordinate atom index in copy_mol and 
+                # list of Gasteiger charges of added non-real Hs at this coordinate atom
                 chrg_by_heavy_atom = {}
                 for i in range(nr_added_h):
                     added_H_idx = self.mol.GetNumAtoms() + i - nr_rm
-                    # print(f"{added_H_idx=}")
                     neighs = copy_mol.GetAtomWithIdx(added_H_idx).GetNeighbors()
                     if len(neighs) != 1:
                         raise RuntimeError("H should have 1 neighbor")
-                    #if neighs[0].GetIdx() in chrg_by_heavy_atom:
-                    #    raise RuntimeError("expected only 1 added H per heavy atom, maybe deleted element had double bond to this heavy atom")
-                    if neighs[0].GetIdx() in chrg_by_heavy_atom:
-                        chrg_by_heavy_atom[neighs[0].GetIdx()] += [charges[added_H_idx]]
+                    neigh_idx = neighs[0].GetIdx()
+                    if neigh_idx in chrg_by_heavy_atom:
+                        chrg_by_heavy_atom[neigh_idx] += [charges[added_H_idx]]
                     else:
-                        chrg_by_heavy_atom[neighs[0].GetIdx()] = [charges[added_H_idx]]
-                # print(f"{chrg_by_heavy_atom=}")
+                        chrg_by_heavy_atom[neigh_idx] = [charges[added_H_idx]]
+                
+                # compute the partial charge of removed metals as a sum of
+                # (1) M's formal charge (from input)
+                # (2) Gasteiger charges of added non-real Hs account for the M-L bonds
                 for i, neighs in rm_to_neigh.items():
-                    # print(f"{i=}, {neighs=}")
                     ok_charges[i] += idx_rm_to_formal_charge[i]
                     for idx, num_nr_h in neighs.items():
                         if num_nr_h > 0: 
+                            # get the idex of coordinate atom in copy_mol
                             newidx = idx - sum([i <= idx for i in idx_rm_to_formal_charge]) 
-                            # print(f"{idx=} {newidx=}")
+                            # if there are multiple add Hs on the coordinate atom, distribute the total charge by bond order
+                            # of M-L (= num_nr_h, number of non-real Hs added for the M-L bond)
                             ok_charges[i] += sum(chrg_by_heavy_atom[newidx]) * num_nr_h / len(chrg_by_heavy_atom[newidx])
                 charges = ok_charges
         elif read_charges_from_prop is not None: 
