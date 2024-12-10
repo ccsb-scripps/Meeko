@@ -1635,11 +1635,10 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         return molsetup
 
     @staticmethod
-    def remove_elements(mol, to_rm=(12, 20, 25, 26, 30)):
-        idx_to_rm = {}
-        neigh_idx_to_nr_h = {}
-        rm_to_neigh = {}
+    def remove_elements(input_mol): 
 
+        # mapping between L-M bond type and number of non-real Hs
+        # that should be added to L upon removal of -M (the bond & metal)
         bond_type_to_nr_h = {
             Chem.rdchem.BondType.DATIVE: 0,
             Chem.rdchem.BondType.SINGLE: 1,
@@ -1666,48 +1665,49 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
                 return True
 
             return False
-
+        
+        # make a copy of mol to avoid changes of atom properties by SetNumExplicitHs
+        mol = Chem.Mol(input_mol) 
+        # pre-populate list of atoms in the input mol
         atoms_in_mol = [atom for atom in mol.GetAtoms()]
+
+        # mapping between index of M in the input mol and M's formal charge
+        idx_to_rm = {}
         for atom in atoms_in_mol:
-            # if atom.GetAtomicNum() in to_rm:
             if is_metal(atom.GetAtomicNum()): 
                 atom_idx = atom.GetIdx()
                 idx_to_rm[atom_idx] = atom.GetFormalCharge()
-                for neigh in atom.GetNeighbors(): 
-                    neigh_idx_to_nr_h[neigh.GetIdx()] = neigh.GetNumExplicitHs()
 
+        # mapping between index of M in the input mol and a dict which is 
+        # mapping between index of M's neighbor L in the input mol and number of non-real Hs
+        # that should be added upon removal of the M-L bond
+        rm_to_neigh = {}
         if not idx_to_rm:
-            return Chem.Mol(mol), idx_to_rm, rm_to_neigh
-        
-        for atom_idx in idx_to_rm: 
+            return input_mol, idx_to_rm, rm_to_neigh
+        for atom_idx in idx_to_rm:
             rm_to_neigh[atom_idx] = {}
             for neigh in atoms_in_mol[atom_idx].GetNeighbors():
                 nei_idx = neigh.GetIdx()
                 bond = mol.GetBondBetweenAtoms(atom_idx, nei_idx)
                 bond_type = bond.GetBondType() if bond else None
-                # print(bond_type)
                 if bond_type in bond_type_to_nr_h: 
                     num_nr_h = bond_type_to_nr_h[bond_type] 
                     rm_to_neigh[atom_idx].update({nei_idx: num_nr_h})
+                    # add the number of non-real Hs to current number of explicit Hs
                     nei_valence = atoms_in_mol[nei_idx].GetNumExplicitHs()
                     atoms_in_mol[nei_idx].SetNumExplicitHs(nei_valence + num_nr_h)
-                    
+        
+        # remove metals
         rwmol = Chem.EditableMol(mol)
         for idx in sorted(idx_to_rm, reverse=True):
             rwmol.RemoveAtom(idx)
         mol = rwmol.GetMol()
 
-        # print(idx_to_rm, rm_to_neigh)
+        # add non-real Hs
         mol.UpdatePropertyCache()
         Chem.SanitizeMol(mol)
+        # uses updated number of explicit Hs
         mol = Chem.AddHs(mol)
-
-        for atom_idx in rm_to_neigh: 
-            # print(rm_to_neigh[atom_idx])
-            for nei_idx, num_nr_h in rm_to_neigh[atom_idx].items(): 
-                # print(nei_idx, num_nr_h)
-                nei_valence = atoms_in_mol[nei_idx].GetNumExplicitHs()
-                atoms_in_mol[nei_idx].SetNumExplicitHs(nei_valence - num_nr_h)
 
         return mol, idx_to_rm, rm_to_neigh
          
