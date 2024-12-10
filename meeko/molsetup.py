@@ -48,8 +48,6 @@ DEFAULT_GRAPH = []
 
 DEFAULT_BOND_ROTATABLE = False
 
-DEFAULT_RING_CORNER_FLIP = False
-DEFAULT_RING_GRAPH = []
 DEFAULT_RING_IS_AROMATIC = False
 DEFAULT_RING_CLOSURE_BONDS_REMOVED = []
 DEFAULT_RING_CLOSURE_PSEUDOS_BY_ATOM = defaultdict
@@ -348,8 +346,6 @@ class Bond:
 @dataclass
 class Ring:
     ring_id: tuple
-    corner_flip: bool = DEFAULT_RING_CORNER_FLIP
-    graph: dict = field(default_factory=list)
     is_aromatic: bool = DEFAULT_RING_IS_AROMATIC
 
     @staticmethod
@@ -374,16 +370,14 @@ class Ring:
             return obj
 
         # Check that all the keys we expect are in the object dictionary as a safety measure
-        expected_json_keys = {"ring_id", "corner_flip", "graph", "is_aromatic"}
+        expected_json_keys = {"ring_id", "is_aromatic"}
         if set(obj.keys()) != expected_json_keys:
             return obj
 
         # Constructs a Ring object from the provided keys.
         ring_id = string_to_tuple(obj["ring_id"], int)
-        corner_flip = obj["corner_flip"]
-        graph = obj["graph"]
         is_aromatic = obj["is_aromatic"]
-        output_ring = Ring(ring_id, corner_flip, graph, is_aromatic)
+        output_ring = Ring(ring_id, is_aromatic)
         return output_ring
 
 
@@ -1524,8 +1518,6 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         a mapping from tuples of atom indices to dihedral labels
     atom_to_ring_id: dict()
         mapping of atom index to ring id of each atom belonging to the ring
-    ring_corners: dict()
-        unclear what this is a mapping of, but is used to store corner flexibility for the rings
     rmsd_symmetry_indices: tuple
         Tuples of the indices of the molecule's atoms that match a substructure query. needs info.
 
@@ -1543,7 +1535,6 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         self.dihedral_partaking_atoms: dict = {}
         self.dihedral_labels: dict = {}
         self.atom_to_ring_id = {}
-        self.ring_corners = {}
         self.rmsd_symmetry_indices = ()
 
     def copy(self):
@@ -1976,11 +1967,6 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
             ring_to_add = Ring(ring_atom_indices)
             if self._is_ring_aromatic(ring_atom_indices):
                 ring_to_add.is_aromatic = True
-            for atom_idx in ring_atom_indices:
-                # TODO: add it to some sort of atom to ring id tracking thing -> add to atom data structure
-                ring_to_add.graph = self._recursive_graph_walk(
-                    atom_idx, collected=[], exclude=list(ring_atom_indices)
-                )
             self.rings[ring_atom_indices] = ring_to_add
         return
 
@@ -2152,7 +2138,6 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
             "dihedral_partaking_atoms",
             "dihedral_labels",
             "atom_to_ring_id",
-            "ring_corners",
             "rmsd_symmetry_indices",
         }
         for key in expected_molsetup_keys:
@@ -2179,7 +2164,6 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
             int(k): [string_to_tuple(t) for t in v]
             for k, v in obj["atom_to_ring_id"].items()
         }
-        rdkit_molsetup.ring_corners = obj["ring_corners"]
         rdkit_molsetup.rmsd_symmetry_indices = [
             string_to_tuple(v) for v in obj["rmsd_symmetry_indices"]
         ]
@@ -2280,8 +2264,6 @@ class RingEncoder(json.JSONEncoder):
         if isinstance(obj, Ring):
             return {
                 "ring_id": tuple_to_string(obj.ring_id),
-                "corner_flip": obj.corner_flip,
-                "graph": obj.graph,
                 "is_aromatic": obj.is_aromatic,
             }
         return json.JSONEncoder.default(self, obj)
@@ -2387,7 +2369,6 @@ class MoleculeSetupEncoder(json.JSONEncoder):
             output_dict["dihedral_partaking_atoms"] = {tuple_to_string(k): v for k,v in obj.dihedral_partaking_atoms.items()}
             output_dict["dihedral_labels"] = {tuple_to_string(k): v for k,v in obj.dihedral_labels.items()}
             output_dict["atom_to_ring_id"] = obj.atom_to_ring_id
-            output_dict["ring_corners"] = obj.ring_corners
             output_dict["rmsd_symmetry_indices"] = obj.rmsd_symmetry_indices
         # If nothing is in the dict, then none of the possible object types for this encoder matched and we should
         # return the default JSON encoder.
