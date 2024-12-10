@@ -2526,14 +2526,23 @@ class ResidueTemplate:
         for atom in input_mol.GetAtoms():
             element = "H" if atom.GetAtomicNum() == 1 else "heavy"
             if atom.GetIdx() not in mapping_inv:
-                if element == "H": 
+                if atom.GetNeighbors(): 
                     nei_idx = atom.GetNeighbors()[0].GetIdx()
                     if nei_idx in mapping_inv: 
                         result[element]["excess"].append(mapping_inv[nei_idx])
                     else:
                         result[element]["excess"].append(-1)
-                else:
-                    result[element]["excess"] += 1
+                else: # lone hydrogen found in monomer
+                    monomer_info = atom.GetMonomerInfo()
+                    if monomer_info:
+                        logger.warnings(f"WARNING: Lone hydrogen is ignored: \n" 
+                                        f"  Chain ID: {monomer_info.GetChainId()} \n" 
+                                        f"  Residue Name: {monomer_info.GetResidueName()} \n" 
+                                        f"  Residue Number: {monomer_info.GetResidueNumber()} \n" 
+                                        f"  Atom Name: {monomer_info.GetName()} \n"
+                                        )
+            else:
+                result[element]["excess"] += 1
         return result, mapping
 
 def rdkit_or_none_to_json(rdkit_mol):
