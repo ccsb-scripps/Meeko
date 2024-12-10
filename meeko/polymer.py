@@ -2540,7 +2540,7 @@ class ResidueTemplate:
                             logger.warning(f"WARNING: Lone hydrogen is ignored: \n" 
                                             f"  {monomer_info} \n")
                         else:
-                            logger.warning(f"WARNING: A lone hydrogen is ignored during monomer matching. \n") 
+                            logger.warning(f"WARNING: A lone hydrogen is ignored during monomer-template matching. \n") 
 
             else:
                 result[element]["excess"] += 1

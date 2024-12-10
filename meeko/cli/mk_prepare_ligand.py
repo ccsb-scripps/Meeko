@@ -249,17 +249,36 @@ def cmd_lineparser():
 
     need_prody_msg = ""
     if not _has_prody:
-        need_prody_msg = ". Needs Prody which can be installed from PyPI or conda-forge"
+        need_prody_msg = ". Parsing of receptor mmCIF files needs Prody which can be installed from PyPI or conda-forge"
     covalent_group = parser.add_argument_group(
         "Covalent docking (tethered)%s" % (need_prody_msg)
     )
     covalent_group.add_argument(
         "--receptor",
         help="receptor filename. Supported formats: [%s]%s"
-        % ("/".join(list(_prody_parsers.keys())), need_prody_msg),
+        % ("/".join(set(["json", "pdb"]) | set(_prody_parsers.keys())), need_prody_msg),
     )
     covalent_group.add_argument(
-        "--rec_residue", help='examples: "A:LYS:204", "A:HIS:", ":LYS:"'
+        "--rec_attractor_names", 
+        help=("A string to define two \"attractor\" atoms within the receptor. " 
+              "Format: " 
+              "\"Chain_ID:Residue_Name:Residue_Number:Atom_Name1,Atom_Name2\". " 
+        "  The closer atom to the receptor core needs to be put first, "
+        "  followed by the other atom that is closer to the ligand. "
+        " examples: \"%s\", \"%s\"" % ("A:LYS:204:CA,CB", "B:RU:29:C1',N1")
+        )
+    )
+    covalent_group.add_argument(
+        "--rec_residue", help='examples: "A:LYS:204", "A:HIS:" (all HIS in chain A), ":LYS:" (all LYS)'
+    )
+    covalent_group.add_argument(
+        "--rec_attractor_smarts", help='SMARTS pattern to define receptor atoms for ligand attachment'
+    )
+    covalent_group.add_argument(
+        "--rec_smarts_indices",
+        type=int,
+        nargs=2,
+        help="indices (1-based) of the receptor SMARTS atoms that will be attached",
     )
     covalent_group.add_argument(
         "--tether_smarts",
@@ -272,7 +291,7 @@ def cmd_lineparser():
         required=False,
         metavar="IDX",
         default=[1, 2],
-        help="indices (1-based) of the SMARTS atoms that will be attached (default: 1 2)",
+        help="indices (1-based) of the ligand SMARTS atoms that will be attached (default: 1 2)",
     )
 
     config = MoleculePreparation.get_defaults_dict()
@@ -306,6 +325,12 @@ def cmd_lineparser():
             )
             sys.exit(2)
         args.reactive_smarts_idx -= 1  # convert from 1- to 0-index
+
+    # check covalent arguments
+    # if args.rec_residue is None and 
+
+
+
 
     # This is where command line arguments override config file.
     # Relies on key/parameter names being equal.
