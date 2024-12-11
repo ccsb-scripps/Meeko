@@ -729,7 +729,6 @@ def main():
                 chid, res_num = key.split(":")
                 res_type = monomer.input_resname
                 monomer_string = f"{chid}:{res_type}:{res_num}"
-                monomer_to_attractor[monomer_string] = []
                 mol = Chem.Mol(monomer.raw_rdkit_mol)
 
                 input_atom_names = [getPdbInfoNoNull(atom).name for atom in mol.GetAtoms()]
@@ -746,19 +745,19 @@ def main():
                     sys.exit(1)
 
                 conformer = mol.GetConformer()
+                monomer_to_attractor[monomer_string] = {}
                 for idx_1 in at1_index: 
                     for idx_2 in at2_index: 
                         if idx_1 != idx_2: 
                             at1_p3d, at2_p3d = (conformer.GetAtomPosition(idx_1), 
                                                 conformer.GetAtomPosition(idx_2))
-                            monomer_to_attractor[monomer_string].append((at1_p3d, at2_p3d))
+                            monomer_to_attractor[monomer_string].update({f"{idx_1}-{idx_2}": (at1_p3d, at2_p3d)})
 
         else: 
             for key, monomer in target_monomers.items(): 
                 chid, res_num = key.split(":")
                 res_type = monomer.input_resname
                 monomer_string = f"{chid}:{res_type}:{res_num}"
-                monomer_to_attractor[monomer_string] = []
                 mol = Chem.Mol(monomer.rdkit_mol)
 
                 # list of lists containing matched indicies of the two attractor atoms
@@ -772,11 +771,13 @@ def main():
                     sys.exit(1)
 
                 conformer = mol.GetConformer()
+                monomer_to_attractor[monomer_string] = {}
+                residue_connect_pattern = 1
                 for index_pair in rec_attractor_pairs: 
                     idx_1, idx_2 = index_pair
                     at1_p3d, at2_p3d = (conformer.GetAtomPosition(idx_1), 
                                         conformer.GetAtomPosition(idx_2))
-                    monomer_to_attractor[monomer_string].append((at1_p3d, at2_p3d))
+                    monomer_to_attractor[monomer_string].update({f"{idx_1}-{idx_2}": (at1_p3d, at2_p3d)})
         # endregion
 
     input_mol_skipped = 0
@@ -836,11 +837,11 @@ def main():
                 sys.exit(1)
             # endregion
             
+            # region transforms and outputs covalent PDBQT
             ligand_connect_pattern = 1
             for index_pair in lig_attractor_pairs: 
                 for monomer_string in monomer_to_attractor:
-                    residue_connect_pattern = 1
-                    for attractors_p3d in monomer_to_attractor[monomer_string]:
+                    for residue_connect_pattern, attractors_p3d in monomer_to_attractor[monomer_string].items():
                         root_atom_index = index_pair[0]
                         transformed_mol = transform(mol, index_pair, attractors_p3d)
                         
@@ -874,7 +875,7 @@ def main():
                                 print(error_msg, file=sys.stderr)
 
                         ligand_connect_pattern += 1
-                        residue_connect_pattern += 1
+            # endregion
 
         else:
             try: 
