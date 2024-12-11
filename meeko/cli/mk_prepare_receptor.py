@@ -223,6 +223,7 @@ def get_args():
     
     num_input_args = sum([args.read_pdb is not None, args.read_with_prody is not None, args.read_json is not None])
     if num_input_args != 1:
+        parser.print_help()
         msg = (
             f"Need exactly one input argument: -i/--read_with_prody or --read_pdb or -ij/--read_json \n"
             f"but {num_input_args} inputs were given. "
