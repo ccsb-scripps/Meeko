@@ -721,35 +721,62 @@ def main():
         # endregion
 
         # region gets attractor rdGeometry.Point3D objects for each target monomer
+        
+        # mapping of monomer_string ("{chid}:{res_type}:{res_num}") to 
+        # list of tuples containing the two attractor rdGeometry.Point3D objects
+        monomer_to_attractor = {}
         if provided_names: 
             atname1, atname2 = args.rec_attractor_names
             for key, monomer in target_monomers.items(): 
+                chid, res_num = key.split(":")
+                res_type = monomer.input_resname
+                monomer_string = f"{chid}:{res_type}:{res_num}"
+                monomer_to_attractor[monomer_string] = []
                 mol = Chem.Mol(monomer.raw_rdkit_mol)
                 input_atom_names = [getPdbInfoNoNull(atom).name for atom in mol.GetAtoms()]
                 at1_index = [idx for idx,item in enumerate(input_atom_names) if item==atname1]
                 at2_index = [idx for idx,item in enumerate(input_atom_names) if item==atname2]
 
-                if not len(at1_index)==1 or not len(at2_index)==1: 
-                    chid, res_num = key.split(":")
-                    res_type = monomer.input_resname
+                if not at1_index or not at2_index: 
                     print(
-                        f"Error: expected exactly 2 matched atoms for provided names, but found "
+                        f"Error: expected at least 1 matched atoms for each provided name, but found "
                         f"{len(at1_index)} matches for {atname1} and {len(at2_index)} matches for {atname2} "
-                        f"in monomer {chid}:{res_type}:{res_num}", 
+                        f"in monomer {monomer_string}", 
                         file=sys.stderr,
                     )
                     sys.exit(1)
 
                 conformer = mol.GetConformer()
-                at1_p3d, at2_p3d = (conformer.GetAtomPosition(at1_index[0]), 
-                                    conformer.GetAtomPosition(at2_index[0]))
-            else: 
-                
-            
+                for idx_1 in at1_index: 
+                    for idx_2 in at2_index: 
+                        if idx_1 != idx_2: 
+                            at1_p3d, at2_p3d = (conformer.GetAtomPosition(idx_1), 
+                                                conformer.GetAtomPosition(idx_2))
+                            monomer_to_attractor[monomer_string].append((at1_p3d, at2_p3d))
+
         else: 
-            pass
+            for key, monomer in target_monomers.items(): 
+                chid, res_num = key.split(":")
+                res_type = monomer.input_resname
+                monomer_string = f"{chid}:{res_type}:{res_num}"
+                mol = Chem.Mol(monomer.rdkit_mol)
 
+                # list of matched lists containing indicies of the two attractor atoms
+                attractor_pairs = find_smarts(mol, args.rec_attractor_smarts, args.rec_smarts_indices)
 
+                if not attractor_pairs: 
+                    print(
+                        f"Error: no match atoms for {args.rec_attractor_smarts}", 
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+
+                conformer = mol.GetConformer()
+                for index_pair in attractor_pairs: 
+                    idx_1, idx_2 = index_pair
+                    at1_p3d, at2_p3d = (conformer.GetAtomPosition(idx_1), 
+                                        conformer.GetAtomPosition(idx_2))
+                    monomer_to_attractor[monomer_string].append((at1_p3d, at2_p3d))
         # endregion
 
     input_mol_skipped = 0

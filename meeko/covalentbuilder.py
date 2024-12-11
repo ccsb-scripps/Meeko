@@ -1,7 +1,7 @@
 from collections import namedtuple
 from rdkit import Chem
 from rdkit.Chem import AllChem, rdGeometry
-import prody
+#import prody
 import warnings
 
 
@@ -69,7 +69,6 @@ def transform(ligand, index_pair, attractors_p3d):
     # perform alignment
     Chem.rdMolAlign.AlignMol(mol, target, -1, -1,[(index_pair[0],0), (index_pair[1], 1)] )
     return mol
-
 
 
 CovLigandPrepared = namedtuple("CovalentLigandPrepared", ["mol", "res_id", "at_names", "smarts", "smarts_indices", "indices", "label"])
