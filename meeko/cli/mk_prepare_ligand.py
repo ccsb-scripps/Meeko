@@ -616,7 +616,7 @@ def main():
     # initialize covalent object for receptor
     if is_covalent:
 
-        # region receptor file parsing
+        # region parsing receptor file and args into target_monomers
         rec_filename = args.receptor
         _, rec_extension = os.path.splitext(rec_filename)
         rec_extension = rec_extension[1:].lower()
@@ -627,17 +627,13 @@ def main():
             % (rec_extension, "/".join(supported_recfile_formats), need_prody_msg)
             )
             sys.exit(1)
-        
-        if provided_names: 
-            residue_string = f"{args.rec_residue}:{args.rec_attractor_names[0]},{args.rec_attractor_names[1]}"
-        else:
-            residue_string = f"{args.rec_residue}"
 
         if rec_extension=="json": 
             try: 
                 with open(rec_filename, "r") as file:
                     json_string = file.read()
                 polymer = Polymer.from_json(json_string)
+
             except Exception as e: 
                 print(e)
                 sys.exit(1)
@@ -697,6 +693,26 @@ def main():
                     print(e)
                     sys.exit(1)
                 pass
+
+        residue_string = f"{args.rec_residue}"
+        chid, res_type, res_num = residue_string.split(":")
+
+        def get_target_monomers(polymer, chid, res_type, res_num): 
+            keys = polymer.monomers.keys()
+            if chid: 
+                keys = [key for key in keys if key.split()[0]==chid]
+            if res_type: 
+                keys = [key for key in keys if polymer.monomers[key].input_resname==res_type]
+            if res_num: 
+                keys = [key for key in keys if key.split()[1]==res_num]
+            return keys
+
+        target_monomers = get_target_monomers(polymer, chid, res_type, res_num)
+                
+        if not target_monomers: 
+            print("ERROR: no residue found with the following specification: \n"
+                  "chain[%s] residue[%s] number[%s]\n" % (chid, res_type, res_num))
+            sys.exit(1)
         # endregion
 
     input_mol_skipped = 0
