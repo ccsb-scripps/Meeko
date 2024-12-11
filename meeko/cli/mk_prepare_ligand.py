@@ -671,6 +671,7 @@ def main():
                         rec_prody_mol,
                         templates,
                         mk_prep,
+                        allow_bad_res=True,
                         wanted_altloc=wanted_altloc,
                         default_altloc=args.default_altloc,
                     )
@@ -686,6 +687,7 @@ def main():
                         pdb_string,
                         templates,
                         mk_prep,
+                        allow_bad_res=True,
                         wanted_altloc=wanted_altloc,
                         default_altloc=args.default_altloc,
                     )
@@ -700,11 +702,11 @@ def main():
         def get_target_monomers(polymer, chid, res_type, res_num): 
             keys = polymer.monomers.keys()
             if chid: 
-                keys = [key for key in keys if key.split()[0]==chid]
+                keys = [key for key in keys if key.split(":")[0]==chid]
             if res_type: 
                 keys = [key for key in keys if polymer.monomers[key].input_resname==res_type]
             if res_num: 
-                keys = [key for key in keys if key.split()[1]==res_num]
+                keys = [key for key in keys if key.split(":")[1]==res_num]
             return keys
 
         target_monomers = get_target_monomers(polymer, chid, res_type, res_num)
