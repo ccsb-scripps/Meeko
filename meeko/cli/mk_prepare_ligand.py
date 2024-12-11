@@ -721,7 +721,7 @@ def main():
         # endregion
 
         # region gets attractor rdGeometry.Point3D objects for each target monomer
-        
+
         # mapping of monomer_string ("{chid}:{res_type}:{res_num}") to 
         # list of tuples containing the two attractor rdGeometry.Point3D objects
         monomer_to_attractor = {}
@@ -733,6 +733,7 @@ def main():
                 monomer_string = f"{chid}:{res_type}:{res_num}"
                 monomer_to_attractor[monomer_string] = []
                 mol = Chem.Mol(monomer.raw_rdkit_mol)
+
                 input_atom_names = [getPdbInfoNoNull(atom).name for atom in mol.GetAtoms()]
                 at1_index = [idx for idx,item in enumerate(input_atom_names) if item==atname1]
                 at2_index = [idx for idx,item in enumerate(input_atom_names) if item==atname2]
@@ -759,12 +760,13 @@ def main():
                 chid, res_num = key.split(":")
                 res_type = monomer.input_resname
                 monomer_string = f"{chid}:{res_type}:{res_num}"
+                monomer_to_attractor[monomer_string] = []
                 mol = Chem.Mol(monomer.rdkit_mol)
 
                 # list of matched lists containing indicies of the two attractor atoms
-                attractor_pairs = find_smarts(mol, args.rec_attractor_smarts, args.rec_smarts_indices)
+                rec_attractor_pairs = find_smarts(mol, args.rec_attractor_smarts, args.rec_smarts_indices)
 
-                if not attractor_pairs: 
+                if not rec_attractor_pairs: 
                     print(
                         f"Error: no match atoms for {args.rec_attractor_smarts}", 
                         file=sys.stderr,
@@ -772,7 +774,7 @@ def main():
                     sys.exit(1)
 
                 conformer = mol.GetConformer()
-                for index_pair in attractor_pairs: 
+                for index_pair in rec_attractor_pairs: 
                     idx_1, idx_2 = index_pair
                     at1_p3d, at2_p3d = (conformer.GetAtomPosition(idx_1), 
                                         conformer.GetAtomPosition(idx_2))
@@ -825,40 +827,51 @@ def main():
         is_after_first = True
 
         if is_covalent:
+
+            # region gets lig_attractor_pairs
+            lig_attractor_pairs = find_smarts(mol, args.tether_smarts, args.tether_smarts_indices)
+            if not lig_attractor_pairs: 
+                print(
+                    f"Error: no match atoms for {args.rec_attractor_smarts}", 
+                    file=sys.stderr,
+                    )
+                sys.exit(1)
+            # endregion
             
             connect_pattern = 1
-            for cov_lig in covalent_builder.process(
-                mol, args.tether_smarts, args.tether_smarts_indices
-            ):
-                root_atom_index = cov_lig.indices[0]
-                molsetups = preparator.prepare(
-                    cov_lig.mol,
-                    root_atom_index=root_atom_index,
-                    not_terminal_atoms=[root_atom_index],
-                    rename_atoms=args.rename_atoms,
-                )
-                chain, res, num = cov_lig.res_id
-                suffixes = output.get_suffixes(molsetups)
-                for molsetup, suffix in zip(molsetups, suffixes):
-                    pdbqt_string, success, error_msg = PDBQTWriterLegacy.write_string(
-                        molsetup,
-                        bad_charge_ok=args.bad_charge_ok,
-                        add_index_map=args.add_index_map,
-                    )
-                    if success:
-                        pdbqt_string = (
-                            PDBQTWriterLegacy.adapt_pdbqt_for_autodock4_flexres(
-                                pdbqt_string, res, chain, num
-                            )
+            for index_pair in lig_attractor_pairs: 
+                for monomer_string in monomer_to_attractor:
+                    for attractors_p3d in monomer_to_attractor[monomer_string]:
+                        root_atom_index = index_pair[0]
+                        transformed_mol = transform(mol, index_pair, attractors_p3d)
+                        
+                        molsetups = preparator.prepare(
+                            transformed_mol,
+                            root_atom_index=root_atom_index,
+                            not_terminal_atoms=[root_atom_index],
+                            rename_atoms=args.rename_atoms,
                         )
-                        name = molsetup.name
-                        output.output_filename = molsetup.name + f"_{connect_pattern}_{chain}_{res}_{num}.pdbqt"
-                        output(pdbqt_string, name, (cov_lig.label, suffix))
-                    else:
-                        nr_failures += 1
-                        this_mol_had_failure = True
-                        print(error_msg, file=sys.stderr)
-                    connect_pattern += 1
+                        chain, res, num = monomer_string.split(":")
+                        suffixes = output.get_suffixes(molsetups)
+                        for molsetup, suffix in zip(molsetups, suffixes):
+                            pdbqt_string, success, error_msg = PDBQTWriterLegacy.write_string(
+                                molsetup,
+                                bad_charge_ok=args.bad_charge_ok,
+                                add_index_map=args.add_index_map,
+                            )
+                            if success:
+                                pdbqt_string = (
+                                    PDBQTWriterLegacy.adapt_pdbqt_for_autodock4_flexres(
+                                        pdbqt_string, res, chain, num
+                                    )
+                                )
+                                name = molsetup.name
+                                output(pdbqt_string, name, (monomer_string, str(connect_pattern), suffix))
+                            else:
+                                nr_failures += 1
+                                this_mol_had_failure = True
+                                print(error_msg, file=sys.stderr)
+                            connect_pattern += 1
 
         else:
             try: 
