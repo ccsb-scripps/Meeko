@@ -259,39 +259,52 @@ def cmd_lineparser():
         % ("/".join(set(["json", "pdb"]) | set(_prody_parsers.keys())), need_prody_msg),
     )
     covalent_group.add_argument(
-        "--rec_attractor_names", 
-        help=("A string to define two \"attractor\" atoms within the receptor. " 
-              "Format: " 
-              "\"Chain_ID:Residue_Name:Residue_Number:Atom_Name1,Atom_Name2\". " 
-        "  The closer atom to the receptor core needs to be put first, "
-        "  followed by the other atom that is closer to the ligand. "
-        " examples: \"%s\", \"%s\"" % ("A:LYS:204:CA,CB", "B:RU:29:C1',N1")
-        )
-    )
-    covalent_group.add_argument(
         "--rec_residue", help='examples: "A:LYS:204", "A:HIS:" (all HIS in chain A), ":LYS:" (all LYS)'
     )
     covalent_group.add_argument(
-        "--rec_attractor_smarts", help='SMARTS pattern to define receptor atoms for ligand attachment'
+        "--rec_attractor_names", 
+        type=str,
+        nargs=2,
+        metavar="ATOM_NAME",
+        default=["CA", "CB"],
+        help=("Atom names of the two \"attractor\" atoms within the receptor. "
+        " (default: CA CB) " 
+        "  The closer atom to the receptor core needs to be put first, "
+        "  followed by the other atom that is closer to the ligand. "
+        )
+    )
+    covalent_group.add_argument(
+        "--rec_attractor_smarts", 
+        help=("SMARTS pattern to define receptor atoms for ligand attachment. "
+        "Overrides the default atom names (CA CB) if --rec_attractor_names is not explicitly provided. "
+        )
     )
     covalent_group.add_argument(
         "--rec_smarts_indices",
         type=int,
         nargs=2,
-        help="indices (1-based) of the receptor SMARTS atoms that will be attached",
+        default=[1, 2],
+        help=("indices (1-based) of the receptor SMARTS atoms that will be attached. "
+        " (default: 1 2) " 
+        "  The closer atom to the receptor core needs to be put first, "
+        "  followed by the other atom that is closer to the ligand. "
+        )
     )
     covalent_group.add_argument(
         "--tether_smarts",
-        help="SMARTS pattern to define ligand atoms for receptor attachment",
+        help="SMARTS pattern to define ligand atoms for receptor attachment. "
     )
     covalent_group.add_argument(
         "--tether_smarts_indices",
         type=int,
         nargs=2,
-        required=False,
         metavar="IDX",
         default=[1, 2],
-        help="indices (1-based) of the ligand SMARTS atoms that will be attached (default: 1 2)",
+        help=("indices (1-based) of the ligand SMARTS atoms that will be attached. "
+        " (default: 1 2) " 
+        "  The closer atom to the receptor core needs to be put first, "
+        "  followed by the other atom that is closer to the ligand. "
+        )
     )
 
     config = MoleculePreparation.get_defaults_dict()
@@ -309,6 +322,8 @@ def cmd_lineparser():
     parser.set_defaults(**config)
     args = parser.parse_args(remaining_argv)
 
+    print(f"{remaining_argv=}")
+
     # check reactive arguments
     if (args.reactive_smarts is None) != (args.reactive_smarts_idx is None):
         print(
@@ -325,12 +340,6 @@ def cmd_lineparser():
             )
             sys.exit(2)
         args.reactive_smarts_idx -= 1  # convert from 1- to 0-index
-
-    # check covalent arguments
-    # if args.rec_residue is None and 
-
-
-
 
     # This is where command line arguments override config file.
     # Relies on key/parameter names being equal.
@@ -374,21 +383,42 @@ def cmd_lineparser():
         )
         sys.exit(2)
     is_covalent = num_required_covalent_args == 3
-    if is_covalent and not _has_prody:
-        msg = "Covalent docking requires Prody which is not installed." + eol
-        msg += "Installable from PyPI (pip install prody) or conda-forge (micromamba install prody)"
-        print(_prody_import_error, file=sys.stderr)
-        print(msg)
-        sys.exit(2)
-    if min(args.tether_smarts_indices) < 1:
-        print(
-            "--tether_smarts_indices is 1-indexed, all values must be greater than zero",
-            file=sys.stderr,
-        )
-        sys.exit(2)
-    args.tether_smarts_indices = [
-        i - 1 for i in args.tether_smarts_indices
-    ]  # convert to 0-index
+
+    if is_covalent: 
+        # verify ways to specify receptor attractor atoms
+        provided_name = '--rec_attractor_names' in remaining_argv
+        provided_smarts = '--rec_attractor_smarts' in remaining_argv
+
+        if provided_name and provided_smarts: 
+        # when both are explicitly provided
+            print(
+                "Error: --rec_attractor_names and --rec_attractor_smarts are conflicting arguments. ",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+
+        if not provided_name and not provided_smarts: 
+        # when both are not explicitly provided
+        # use the default of --rec_attractor_names 
+            provided_name = True
+
+        if provided_smarts: 
+            if min(args.rec_smarts_indices) < 1:
+                print(
+                "--rec_smarts_indices is 1-indexed, all values must be greater than zero",
+                file=sys.stderr,
+                )
+                sys.exit(2)
+
+        if min(args.tether_smarts_indices) < 1:
+            print(
+                "--tether_smarts_indices is 1-indexed, all values must be greater than zero",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        args.tether_smarts_indices = [
+            i - 1 for i in args.tether_smarts_indices
+        ]  # convert to 0-index
 
     # verify sanity of SMARTS patterns to make bonds rigid and convert to 0-based indices
     rigidify_bonds_smarts = config["rigidify_bonds_smarts"]
@@ -642,6 +672,7 @@ def main():
                 )
                 chain, res, num = cov_lig.res_id
                 suffixes = output.get_suffixes(molsetups)
+                print(f"{suffixes=}")
                 for molsetup, suffix in zip(molsetups, suffixes):
                     pdbqt_string, success, error_msg = PDBQTWriterLegacy.write_string(
                         molsetup,
