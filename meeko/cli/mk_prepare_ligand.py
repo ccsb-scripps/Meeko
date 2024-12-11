@@ -27,8 +27,6 @@ from meeko import ResidueChemTemplates
 
 try:
     import prody
-    from meeko import CovalentBuilder
-
     _prody_parsers = {"pdb": prody.parsePDB, "mmcif": prody.parseMMCIF}
 except ImportError as err:
     _has_prody = False

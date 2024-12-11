@@ -78,6 +78,3 @@ __all__ = ['MoleculePreparation', 'RDKitMoleculeSetup', 'MoleculeSetupEncoder',
            'Restraint',
            ]
 
-if _has_prody:
-    from .covalentbuilder import CovalentBuilder
-    __all__.append("CovalentBuilder")
