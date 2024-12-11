@@ -39,3 +39,28 @@ def transform(ligand, index_pair, attractors_p3d):
     # perform alignment
     Chem.rdMolAlign.AlignMol(mol, target, -1, -1,[(index_pair[0],0), (index_pair[1], 1)] )
     return mol
+
+def get_fragments_by_atom_indices(mol: Chem.Mol,
+                                atom_idx1: int, atom_idx2: int) -> tuple[tuple[int], tuple[int]]:
+
+    """
+    Splits mol into two frags by bond between atoms w/ atom_idx1 and atom_idx2
+    """
+
+    bond = mol.GetBondBetweenAtoms(atom_idx1, atom_idx2)
+    if bond is None:
+        raise ValueError(f"No bond exists between the specified atom indices {atom_idx1, atom_idx2}.")
+
+    emol = Chem.EditableMol(mol)
+    emol.RemoveBond(atom_idx1, atom_idx2)
+    mol = emol.GetMol()
+
+    index_fragments = Chem.GetMolFrags(mol, asMols=False)
+    if len(index_fragments) != 2:
+        raise ValueError(f"Expected 2 fragments, but got {len(index_fragments)}.")
+
+    frag1_indices, frag2_indices = index_fragments
+    if atom_idx1 in frag1_indices:
+        return (frag1_indices, frag2_indices)
+    else:
+        return (frag2_indices, frag1_indices)

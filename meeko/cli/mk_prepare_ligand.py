@@ -12,12 +12,13 @@ import sys
 import json
 import tarfile
 import warnings
+import copy
 
 from rdkit import Chem
 
 from meeko.utils.utils import parse_cmdline_res_assign
 from meeko.utils.rdkitutils import getPdbInfoNoNull
-from meeko.covalentbuilder import find_smarts, transform
+from meeko.covalentbuilder import find_smarts, transform, get_fragments_by_atom_indices
 from meeko import MoleculePreparation
 from meeko import rdkitutils
 from meeko import PDBQTWriterLegacy
@@ -261,6 +262,14 @@ def cmd_lineparser():
         "--receptor",
         help="receptor filename. Supported formats: [%s]%s"
         % ("/".join(supported_recfile_formats), need_prody_msg),
+    )
+    covalent_group.add_argument(
+        "--write_receptor_json",
+        action="store_true",
+        help=(
+        "write receptor JSON files with consistent residue connect pattern tags. "
+        "Output receptor filename will be: <input_receptor_file_basepath>_<residue_connect_pattern>.json"
+        )
     )
     covalent_group.add_argument("--add_templates", help="include additional residue chemical template files [.json]", metavar="JSON_FILENAME", nargs="+", default=[])
     covalent_group.add_argument("--default_altloc", help="default alternate location (overridden by --wanted_altloc)")
@@ -729,7 +738,7 @@ def main():
                 chid, res_num = key.split(":")
                 res_type = monomer.input_resname
                 monomer_string = f"{chid}:{res_type}:{res_num}"
-                mol = Chem.Mol(monomer.raw_rdkit_mol)
+                mol = monomer.raw_rdkit_mol
 
                 input_atom_names = [getPdbInfoNoNull(atom).name for atom in mol.GetAtoms()]
                 at1_index = [idx for idx,item in enumerate(input_atom_names) if item==atname1]
@@ -746,12 +755,13 @@ def main():
 
                 conformer = mol.GetConformer()
                 monomer_to_attractor[monomer_string] = {}
+                mapidx_from_raw = {v:k for k,v in monomer.mapidx_to_raw.items()}
                 for idx_1 in at1_index: 
                     for idx_2 in at2_index: 
                         if idx_1 != idx_2: 
                             at1_p3d, at2_p3d = (conformer.GetAtomPosition(idx_1), 
                                                 conformer.GetAtomPosition(idx_2))
-                            monomer_to_attractor[monomer_string].update({f"{idx_1}-{idx_2}": (at1_p3d, at2_p3d)})
+                            monomer_to_attractor[monomer_string].update({f"{mapidx_from_raw[idx_1]}-{mapidx_from_raw[idx_2]}": (at1_p3d, at2_p3d)})
 
         else: 
             for key, monomer in target_monomers.items(): 
@@ -772,12 +782,42 @@ def main():
 
                 conformer = mol.GetConformer()
                 monomer_to_attractor[monomer_string] = {}
-                residue_connect_pattern = 1
                 for index_pair in rec_attractor_pairs: 
                     idx_1, idx_2 = index_pair
                     at1_p3d, at2_p3d = (conformer.GetAtomPosition(idx_1), 
                                         conformer.GetAtomPosition(idx_2))
                     monomer_to_attractor[monomer_string].update({f"{idx_1}-{idx_2}": (at1_p3d, at2_p3d)})
+        # endregion
+
+        # region writes updated receptor json
+        # atoms present in covalent ligand will be ignored in the connected monomer
+        if args.write_receptor_json: 
+            for monomer_string in monomer_to_attractor: 
+                chid, res_type, res_num = monomer_string.split(":")
+                monomer_label = "_".join([chid, res_type, res_num])
+                monomer_resid = ":".join([chid, res_num])
+                monomer = polymer.monomers[monomer_resid]
+                orig_molsetup = copy.deepcopy(monomer.molsetup)
+                for residue_connect_idx in monomer_to_attractor[monomer_string]: 
+                    idx_1, idx_2 = [int(x) for x in residue_connect_idx.split("-")]
+                    
+                    molsetup_mapidx_inv = {v:k for k,v in monomer.molsetup_mapidx.items()}
+                    rdkit_mol = Chem.Mol(monomer.rdkit_mol)
+
+                    _, ignore_indices = get_fragments_by_atom_indices(rdkit_mol, idx_1, idx_2)
+                    ignore_indices += (idx_1, ) 
+                    ignore_indices_in_molsetup = [molsetup_mapidx_inv[idx] for idx in ignore_indices]
+
+                    for atom in monomer.molsetup.atoms: 
+                        if atom.index in ignore_indices_in_molsetup: 
+                            atom.is_ignore = True
+
+                    receptor_input_basepath = os.path.splitext(os.path.basename(args.receptor))[0]
+                    receptor_output_fn = f"{receptor_input_basepath}_{monomer_label}_{residue_connect_idx}.json"
+                    with open(receptor_output_fn, "w") as f:
+                        f.write(polymer.to_json())
+
+                    monomer.molsetup = orig_molsetup
         # endregion
 
     input_mol_skipped = 0
@@ -841,7 +881,7 @@ def main():
             ligand_connect_pattern = 1
             for index_pair in lig_attractor_pairs: 
                 for monomer_string in monomer_to_attractor:
-                    for residue_connect_pattern, attractors_p3d in monomer_to_attractor[monomer_string].items():
+                    for residue_connect_idx, attractors_p3d in monomer_to_attractor[monomer_string].items():
                         root_atom_index = index_pair[0]
                         transformed_mol = transform(mol, index_pair, attractors_p3d)
                         
@@ -867,7 +907,7 @@ def main():
                                 )
                                 name = molsetup.name
                                 monomer_label = "_".join(monomer_string.split(":"))
-                                output.output_filename = f"{name}_{ligand_connect_pattern}_{monomer_label}_{residue_connect_pattern}.pdbqt"
+                                output.output_filename = f"{name}_{ligand_connect_pattern}_{monomer_label}_{residue_connect_idx}.pdbqt"
                                 output(pdbqt_string, name, (suffix,))
                             else:
                                 nr_failures += 1
