@@ -16,6 +16,8 @@ import warnings
 from rdkit import Chem
 
 from meeko.utils.utils import parse_cmdline_res_assign
+from meeko.utils.rdkitutils import getPdbInfoNoNull
+from meeko.covalentbuilder import find_smarts, transform
 from meeko import MoleculePreparation
 from meeko import rdkitutils
 from meeko import PDBQTWriterLegacy
@@ -616,7 +618,7 @@ def main():
     # initialize covalent object for receptor
     if is_covalent:
 
-        # region parsing receptor file and args into target_monomers
+        # region parses receptor file and args into target_monomers
         rec_filename = args.receptor
         _, rec_extension = os.path.splitext(rec_filename)
         rec_extension = rec_extension[1:].lower()
@@ -665,7 +667,6 @@ def main():
             if _has_prody: 
                 prody_parser = _prody_parsers[rec_extension]
                 rec_prody_mol = prody_parser(rec_filename, altloc="all")
-                # covalent_builder = CovalentBuilder(rec_prody_mol, args.rec_residue)
                 try:
                     polymer = Polymer.from_prody(
                         rec_prody_mol,
@@ -694,7 +695,6 @@ def main():
                 except PolymerCreationError as e:
                     print(e)
                     sys.exit(1)
-                pass
 
         residue_string = f"{args.rec_residue}"
         chid, res_type, res_num = residue_string.split(":")
@@ -707,14 +707,49 @@ def main():
                 keys = [key for key in keys if polymer.monomers[key].input_resname==res_type]
             if res_num: 
                 keys = [key for key in keys if key.split(":")[1]==res_num]
-            return keys
+            return {key: polymer.monomers[key] for key in keys}
 
         target_monomers = get_target_monomers(polymer, chid, res_type, res_num)
                 
         if not target_monomers: 
-            print("ERROR: no residue found with the following specification: \n"
-                  "chain[%s] residue[%s] number[%s]\n" % (chid, res_type, res_num))
+            print(
+                "Error: no residue found with the following specification: \n"
+                "chain[%s] residue[%s] number[%s]\n" % (chid, res_type, res_num), 
+                file=sys.stderr,
+            )
             sys.exit(1)
+        # endregion
+
+        # region gets attractor rdGeometry.Point3D objects for each target monomer
+        if provided_names: 
+            atname1, atname2 = args.rec_attractor_names
+            for key, monomer in target_monomers.items(): 
+                mol = Chem.Mol(monomer.raw_rdkit_mol)
+                input_atom_names = [getPdbInfoNoNull(atom).name for atom in mol.GetAtoms()]
+                at1_index = [idx for idx,item in enumerate(input_atom_names) if item==atname1]
+                at2_index = [idx for idx,item in enumerate(input_atom_names) if item==atname2]
+
+                if not len(at1_index)==1 or not len(at2_index)==1: 
+                    chid, res_num = key.split(":")
+                    res_type = monomer.input_resname
+                    print(
+                        f"Error: expected exactly 2 matched atoms for provided names, but found "
+                        f"{len(at1_index)} matches for {atname1} and {len(at2_index)} matches for {atname2} "
+                        f"in monomer {chid}:{res_type}:{res_num}", 
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+
+                conformer = mol.GetConformer()
+                at1_p3d, at2_p3d = (conformer.GetAtomPosition(at1_index[0]), 
+                                    conformer.GetAtomPosition(at2_index[0]))
+            else: 
+                
+            
+        else: 
+            pass
+
+
         # endregion
 
     input_mol_skipped = 0
@@ -763,6 +798,7 @@ def main():
         is_after_first = True
 
         if is_covalent:
+            
             connect_pattern = 1
             for cov_lig in covalent_builder.process(
                 mol, args.tether_smarts, args.tether_smarts_indices
