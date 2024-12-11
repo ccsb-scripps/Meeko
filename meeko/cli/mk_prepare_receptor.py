@@ -82,6 +82,11 @@ def get_args():
         metavar="MACROMOL_FILENAME",
         help=f"reads PDB/mmCIF file with Prody{need_prody_msg}")
     io_group.add_argument(
+        "-ij",
+        "--read_json",
+        metavar="MACROMOL_JSON_FILENAME",
+        help=f"reads receptor JSON file")
+    io_group.add_argument(
         "-o",
         "--output_basename",
         help="default basename for --write options used without filename",
@@ -216,15 +221,13 @@ def get_args():
     )
     args = parser.parse_args()
     
-    if args.read_pdb is None and args.read_with_prody is None:
-        parser.print_help()
-        msg = "Need input filename: use either -i/--read_with_prody or --read_pdb"
+    num_input_args = sum([args.read_pdb is not None, args.read_with_prody is not None, args.read_json is not None])
+    if num_input_args != 1:
+        msg = (
+            f"Need exactly one input argument: -i/--read_with_prody or --read_pdb or -ij/--read_json \n"
+            f"but {num_input_args} inputs were given. "
+        )
         print(eol + msg)
-        sys.exit(2)
-
-    if args.read_pdb is not None and args.read_with_prody is not None:
-        msg = "Can't use both -i/--read_with_prody and --read_pdb"
-        print(eol + msg, file=sys.stderr)
         sys.exit(2)
 
     if args.write_gpf is not None and args.write_pdbqt is None:
@@ -435,7 +438,17 @@ def main():
         templates.add_json_file(fn)
     
     # create polymers
-    if args.read_with_prody is not None:
+    if args.read_json is not None: 
+        try: 
+            with open(args.read_json, "r") as file:
+                json_string = file.read()
+            polymer = Polymer.from_json(json_string)
+
+        except Exception as e: 
+            print(e)
+            sys.exit(1)
+
+    elif args.read_with_prody is not None:
         if not _got_prody:
             print(_prody_import_error, file=sys.stderr)
             print("option --read_with_prody requires Prody, which is not installed.")
