@@ -62,6 +62,30 @@ def test_external_ring_closure():
             mindist = min(mindist, abs(x - xcoord))
         assert(mindist < 1e-3) # loose matching
 
+def test_aromatic_rings_unbroken():
+    write_pdbqt = PDBQTWriterLegacy.write_string
+    mol = Chem.MolFromMolFile(filenames["macrocycle3"], removeHs=False)
+    mk_prep = MoleculePreparation(min_ring_size=5)
+    setups = mk_prep(mol)
+    assert len(setups) == 1
+    setup = setups[0]
+    nr_rot = sum([b.rotatable for _, b in setup.bond_info.items()])
+    assert nr_rot == 9
+    pdbqt_string, is_ok, error_msg = write_pdbqt(setup)
+    assert pdbqt_string.count("ENDBRANCH") == 8
+    # now we will check that a 6-member ring that is not aromatic does break
+    # when we set the min ring size to six or less
+    mol2 = Chem.MolFromMolFile(filenames["macrocycle5"], removeHs=False)
+    setups_broken = mk_prep(mol2)
+    mk_prep = MoleculePreparation(min_ring_size=7) 
+    setups_unbroken = mk_prep(mol2)
+    assert len(setups_broken) == 1
+    assert len(setups_unbroken) == 1
+    pdbqt_broken, is_ok, err = write_pdbqt(setups_broken[0])
+    pdbqt_unbroken, is_ok, err = write_pdbqt(setups_unbroken[0])
+    assert pdbqt_broken.count("ENDBRANCH") > pdbqt_unbroken.count("ENDBRANCH")
+
+
 def run(molname):
     filename = filenames[molname]
     mol = Chem.MolFromMolFile(filename, removeHs=False)
@@ -76,3 +100,4 @@ def run(molname):
 def test_all():
     for molname in num_cycle_breaks:
         run(molname)
+
