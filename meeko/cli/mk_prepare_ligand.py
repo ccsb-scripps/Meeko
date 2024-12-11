@@ -761,7 +761,7 @@ def main():
                 monomer_to_attractor[monomer_string] = []
                 mol = Chem.Mol(monomer.rdkit_mol)
 
-                # list of matched lists containing indicies of the two attractor atoms
+                # list of lists containing matched indicies of the two attractor atoms
                 rec_attractor_pairs = find_smarts(mol, args.rec_attractor_smarts, args.rec_smarts_indices)
 
                 if not rec_attractor_pairs: 
@@ -836,9 +836,10 @@ def main():
                 sys.exit(1)
             # endregion
             
-            connect_pattern = 1
+            ligand_connect_pattern = 1
             for index_pair in lig_attractor_pairs: 
                 for monomer_string in monomer_to_attractor:
+                    residue_connect_pattern = 1
                     for attractors_p3d in monomer_to_attractor[monomer_string]:
                         root_atom_index = index_pair[0]
                         transformed_mol = transform(mol, index_pair, attractors_p3d)
@@ -865,13 +866,15 @@ def main():
                                 )
                                 name = molsetup.name
                                 monomer_label = "_".join(monomer_string.split(":"))
-                                output.output_filename = f"{name}_{connect_pattern}_{monomer_label}.pdbqt"
+                                output.output_filename = f"{name}_{ligand_connect_pattern}_{monomer_label}_{residue_connect_pattern}.pdbqt"
                                 output(pdbqt_string, name, (suffix,))
                             else:
                                 nr_failures += 1
                                 this_mol_had_failure = True
                                 print(error_msg, file=sys.stderr)
-                            connect_pattern += 1
+
+                        ligand_connect_pattern += 1
+                        residue_connect_pattern += 1
 
         else:
             try: 
