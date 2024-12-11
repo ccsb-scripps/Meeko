@@ -660,6 +660,7 @@ def main():
         is_after_first = True
 
         if is_covalent:
+            connect_pattern = 1
             for cov_lig in covalent_builder.process(
                 mol, args.tether_smarts, args.tether_smarts_indices
             ):
@@ -672,7 +673,6 @@ def main():
                 )
                 chain, res, num = cov_lig.res_id
                 suffixes = output.get_suffixes(molsetups)
-                print(f"{suffixes=}")
                 for molsetup, suffix in zip(molsetups, suffixes):
                     pdbqt_string, success, error_msg = PDBQTWriterLegacy.write_string(
                         molsetup,
@@ -686,11 +686,13 @@ def main():
                             )
                         )
                         name = molsetup.name
+                        output.output_filename = molsetup.name + f"_{connect_pattern}_{chain}_{res}_{num}.pdbqt"
                         output(pdbqt_string, name, (cov_lig.label, suffix))
                     else:
                         nr_failures += 1
                         this_mol_had_failure = True
                         print(error_msg, file=sys.stderr)
+                    connect_pattern += 1
 
         else:
             try: 
