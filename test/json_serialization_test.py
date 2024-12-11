@@ -525,13 +525,6 @@ def check_ring_equality(decoded_obj: Ring, starting_obj: Ring):
     """
     assert isinstance(decoded_obj.ring_id, tuple)
     assert decoded_obj.ring_id == starting_obj.ring_id
-    assert isinstance(decoded_obj.corner_flip, bool)
-    assert decoded_obj.corner_flip == starting_obj.corner_flip
-    assert len(decoded_obj.graph) == len(starting_obj.graph)
-    for idx, val in enumerate(starting_obj.graph):
-        assert decoded_obj.graph[idx] == val
-    assert isinstance(decoded_obj.is_aromatic, bool)
-    assert decoded_obj.is_aromatic == starting_obj.is_aromatic
     return
 
 

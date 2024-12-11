@@ -83,9 +83,7 @@ class FlexMacrocycle:
             setup.rings.keys()
         ):  # ring_id are the atom indices in each ring
             size = len(ring_id)
-            if setup.rings[ring_id].is_aromatic:
-                rigid_rings.append(ring_id)
-            elif size < self._min_ring_size:
+            if size < self._min_ring_size:
                 rigid_rings.append(ring_id)
                 # do not add rings > _max_ring_size to rigid_rings
                 # because bonds in rigid rings will not be breakable
