@@ -15,9 +15,13 @@ import warnings
 
 from rdkit import Chem
 
+from meeko.utils.utils import parse_cmdline_res_assign
 from meeko import MoleculePreparation
 from meeko import rdkitutils
 from meeko import PDBQTWriterLegacy
+from meeko import Polymer
+from meeko import PolymerCreationError
+from meeko import ResidueChemTemplates
 
 try:
     import prody
@@ -258,6 +262,9 @@ def cmd_lineparser():
         help="receptor filename. Supported formats: [%s]%s"
         % ("/".join(supported_recfile_formats), need_prody_msg),
     )
+    covalent_group.add_argument("--add_templates", help="include additional residue chemical template files [.json]", metavar="JSON_FILENAME", nargs="+", default=[])
+    covalent_group.add_argument("--default_altloc", help="default alternate location (overridden by --wanted_altloc)")
+    covalent_group.add_argument("--wanted_altloc", help="require altloc for specific residues, e.g. :5=B,B:17=A")
     covalent_group.add_argument(
         "--rec_residue", help='examples: "A:LYS:204", "A:HIS:" (all HIS in chain A), ":LYS:" (all LYS)'
     )
@@ -384,10 +391,10 @@ def cmd_lineparser():
 
     if is_covalent: 
         # verify ways to specify receptor attractor atoms
-        provided_name = '--rec_attractor_names' in remaining_argv
+        provided_names = '--rec_attractor_names' in remaining_argv
         provided_smarts = '--rec_attractor_smarts' in remaining_argv
 
-        if provided_name and provided_smarts: 
+        if provided_names and provided_smarts: 
         # when both are explicitly provided
             print(
                 "Error: --rec_attractor_names and --rec_attractor_smarts are conflicting arguments. ",
@@ -395,10 +402,10 @@ def cmd_lineparser():
             )
             sys.exit(2)
 
-        if not provided_name and not provided_smarts: 
+        if not provided_names and not provided_smarts: 
         # when both are not explicitly provided
         # use the default of --rec_attractor_names 
-            provided_name = True
+            provided_names = True
 
         if provided_smarts: 
             if min(args.rec_smarts_indices) < 1:
@@ -436,7 +443,7 @@ def cmd_lineparser():
         indices[0] = indices[0] - 1  # convert from 1- to 0-index
         indices[1] = indices[1] - 1
 
-    return args, config, is_covalent
+    return args, config, is_covalent, provided_names
 
 
 class Output:
@@ -567,7 +574,7 @@ class Output:
             return tuple("mk%d" % (i + 1) for i in range(len(molsetups)))
 
 def main():
-    args, config, is_covalent = cmd_lineparser()
+    args, config, is_covalent, provided_names = cmd_lineparser()
     input_molecule_filename = args.input_molecule_filename
 
     # read input
@@ -608,6 +615,8 @@ def main():
 
     # initialize covalent object for receptor
     if is_covalent:
+
+        # region receptor file parsing
         rec_filename = args.receptor
         _, rec_extension = os.path.splitext(rec_filename)
         rec_extension = rec_extension[1:].lower()
@@ -618,17 +627,77 @@ def main():
             % (rec_extension, "/".join(supported_recfile_formats), need_prody_msg)
             )
             sys.exit(1)
-
-        if rec_extension==".json": 
-            pass
-
-        elif _has_prody: 
-            prody_parser = _prody_parsers[rec_extension]
-            rec_prody_mol = prody_parser(rec_filename)
-            covalent_builder = CovalentBuilder(rec_prody_mol, args.rec_residue)
         
+        if provided_names: 
+            residue_string = f"{args.rec_residue}:{args.rec_attractor_names[0]},{args.rec_attractor_names[1]}"
+        else:
+            residue_string = f"{args.rec_residue}"
+
+        if rec_extension=="json": 
+            try: 
+                with open(rec_filename, "r") as file:
+                    json_string = file.read()
+                polymer = Polymer.from_json(json_string)
+            except Exception as e: 
+                print(e)
+                sys.exit(1)
+
         else: 
-            pass
+            templates = ResidueChemTemplates.create_from_defaults()
+            for fn in args.add_templates:
+                templates.add_json_file(fn)
+            mk_prep = MoleculePreparation()
+
+            if args.wanted_altloc is None:
+                wanted_altloc = None
+            else:
+                wanted_altloc = parse_cmdline_res_assign(args.wanted_altloc)
+                # Ensure meaningful wanted_altloc
+                for key, value in wanted_altloc.items():
+                    if isinstance(value, str) and value.strip() == "":
+                        msg = "Wanted atloc cannot be an empty string or a string with just space"
+                        print("Command line error: " + msg, file=sys.stderr)
+                        sys.exit(2)
+        
+            # Ensure meaningful default_altloc
+            if args.default_altloc is not None and args.default_altloc.strip()=="":
+                msg = "Allowed atloc cannot be an empty string or a string with just space"
+                print("Command line error: " + msg, file=sys.stderr)
+                sys.exit(2)
+
+
+            if _has_prody: 
+                prody_parser = _prody_parsers[rec_extension]
+                rec_prody_mol = prody_parser(rec_filename, altloc="all")
+                # covalent_builder = CovalentBuilder(rec_prody_mol, args.rec_residue)
+                try:
+                    polymer = Polymer.from_prody(
+                        rec_prody_mol,
+                        templates,
+                        mk_prep,
+                        wanted_altloc=wanted_altloc,
+                        default_altloc=args.default_altloc,
+                    )
+                except PolymerCreationError as e:
+                    print(e)
+                    sys.exit(1)
+            
+            else: 
+                try:
+                    with open(rec_filename, "r") as f:
+                        pdb_string = f.read()
+                    polymer = Polymer.from_pdb_string(
+                        pdb_string,
+                        templates,
+                        mk_prep,
+                        wanted_altloc=wanted_altloc,
+                        default_altloc=args.default_altloc,
+                    )
+                except PolymerCreationError as e:
+                    print(e)
+                    sys.exit(1)
+                pass
+        # endregion
 
     input_mol_skipped = 0
     input_mol_with_failure = (

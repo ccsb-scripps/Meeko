@@ -9,6 +9,7 @@ import sys
 
 import numpy as np
 
+from meeko.utils.utils import parse_cmdline_res, parse_cmdline_res_assign
 from meeko.reactive import atom_name_to_molsetup_index, assign_reactive_types_by_index
 from meeko import PDBQTMolecule
 from meeko import RDKitMolCreate
@@ -35,53 +36,6 @@ else:
     _got_prody = True
 
 path_to_this_script = pathlib.Path(__file__).resolve()
-
-
-def parse_cmdline_res(string):
-    """ "A:5,7,BB:12C  ->  "A:5", "A:7", "BB:12C" """
-    blocks = ("," + string).split(":")
-    nr_blocks = len(blocks) - 1
-    keys = []
-    for i in range(nr_blocks):
-        chain = blocks[i].split(",")[-1]
-        if i + 1 == nr_blocks:
-            resnums = blocks[i + 1].split(",")
-        else:
-            resnums = blocks[i + 1].split(",")[:-1]
-        if len(resnums) == 0:
-            raise ValueError(f"missing residue in {resnums}")
-        for resnum in resnums:
-            keys.append(f"{chain}:{resnum}")
-    return keys
-
-
-def parse_cmdline_res_assign(string):
-    """convert "A:5,7=CYX,A:19A,B:17=HID" to {"A:5": "CYX", "A:7": "CYX", ":19A": "HID"}"""
-
-    output = {}
-    nr_assignments = string.count("=")
-    string = "," + string  # enables `residues =` below to work in first iteraton
-    tmp = string.split("=")
-    for i in range(nr_assignments):
-        residues = tmp[i].split(",")[1:]
-        assigned_name = tmp[i + 1].split(",")[0]
-        chain = ""
-        for residue in residues:
-            fields = residue.split(":")
-            if len(fields) == 1:
-                resnum = fields[0]
-            elif len(fields) == 2:
-                chain = fields[0]
-                resnum = fields[1]
-            else:
-                raise ValueError(f"too many : in {residue}")
-            if len(resnum) == 0:
-                raise ValueError(f"missing residue in {residues}")
-            key = f"{chain}:{resnum}"
-            if key in output:
-                raise ValueError(f"repeated {key} in {residue}")
-            output[key] = assigned_name
-    return output
 
 
 class TalkativeParser(argparse.ArgumentParser):
@@ -170,7 +124,7 @@ def get_args():
     config_group.add_argument("-n", "--set_template", help="e.g. A:5,7=CYX,B:17=HID")
     config_group.add_argument("-d", "--delete_residues", help="e.g. A:350,B:15,16,17")
     config_group.add_argument("-b", "--blunt_ends", help="e.g. A:123,200=2,A:1=0")
-    config_group.add_argument("--add_templates", help="[.json]", metavar="JSON_FILENAME", nargs="+", default=[])
+    config_group.add_argument("--add_templates", help="include additional residue chemical template files [.json]", metavar="JSON_FILENAME", nargs="+", default=[])
     config_group.add_argument("--mk_config", help="[.json]", metavar="JSON_FILENAME")
     config_group.add_argument(
         "-a", "--allow_bad_res",
