@@ -84,8 +84,8 @@ def get_args():
     io_group.add_argument(
         "-ij",
         "--read_json",
-        metavar="MACROMOL_JSON_FILENAME",
-        help=f"reads receptor JSON file")
+        metavar="POLYMER_JSON_FILENAME",
+        help=f"reads Polymer JSON file")
     io_group.add_argument(
         "-o",
         "--output_basename",

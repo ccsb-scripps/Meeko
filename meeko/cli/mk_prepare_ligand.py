@@ -267,7 +267,7 @@ def cmd_lineparser():
         "--write_receptor_json",
         action="store_true",
         help=(
-        "write receptor JSON files with consistent residue connect pattern tags. "
+        "write Polymer JSON files for input receptor with updated covalent residue tags. "
         "Output receptor filename will be: <input_receptor_file_basepath>_<residue_connect_pattern>.json"
         )
     )
