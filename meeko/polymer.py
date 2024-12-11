@@ -2526,8 +2526,8 @@ class ResidueTemplate:
             result[element][key] += 1
         for atom in input_mol.GetAtoms():
             element = "H" if atom.GetAtomicNum() == 1 else "heavy"
-            if element == "H":
-                if atom.GetIdx() not in mapping_inv:
+            if atom.GetIdx() not in mapping_inv:
+                if element == "H":
                     if atom.GetNeighbors(): 
                         nei_idx = atom.GetNeighbors()[0].GetIdx()
                         if nei_idx in mapping_inv: 
@@ -2542,8 +2542,8 @@ class ResidueTemplate:
                         else:
                             logger.warning(f"WARNING: A lone hydrogen is ignored during monomer-template matching. \n") 
 
-            else:
-                result[element]["excess"] += 1
+                else:
+                    result[element]["excess"] += 1
         return result, mapping
 
 def rdkit_or_none_to_json(rdkit_mol):
