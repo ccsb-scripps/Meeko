@@ -866,7 +866,9 @@ def main():
                                     )
                                 )
                                 name = molsetup.name
-                                output(pdbqt_string, name, (monomer_string, str(connect_pattern), suffix))
+                                monomer_label = "_".join(monomer_string.split(":"))
+                                output.output_filename = f"{name}_{connect_pattern}_{monomer_label}.pdbqt"
+                                output(pdbqt_string, name, (suffix,))
                             else:
                                 nr_failures += 1
                                 this_mol_had_failure = True
