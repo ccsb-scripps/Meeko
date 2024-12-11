@@ -27,9 +27,12 @@ try:
 except ImportError as err:
     _has_prody = False
     _prody_parsers = {}
-    _prody_import_error = err
 else:
     _has_prody = True
+supported_recfile_formats = set(["json", "pdb"]) | set(_prody_parsers.keys())
+need_prody_msg = ""
+if not _has_prody:
+    need_prody_msg = ". Parsing of receptor mmCIF files needs Prody which can be installed from PyPI or conda-forge"
 
 
 def cmd_lineparser():
@@ -247,16 +250,13 @@ def cmd_lineparser():
         type=int,
     )
 
-    need_prody_msg = ""
-    if not _has_prody:
-        need_prody_msg = ". Parsing of receptor mmCIF files needs Prody which can be installed from PyPI or conda-forge"
     covalent_group = parser.add_argument_group(
-        "Covalent docking (tethered)%s" % (need_prody_msg)
+        "Covalent docking (tethered)"
     )
     covalent_group.add_argument(
         "--receptor",
         help="receptor filename. Supported formats: [%s]%s"
-        % ("/".join(set(["json", "pdb"]) | set(_prody_parsers.keys())), need_prody_msg),
+        % ("/".join(supported_recfile_formats), need_prody_msg),
     )
     covalent_group.add_argument(
         "--rec_residue", help='examples: "A:LYS:204", "A:HIS:" (all HIS in chain A), ":LYS:" (all LYS)'
@@ -321,8 +321,6 @@ def cmd_lineparser():
     # variable `config` with the values parsed with argparse
     parser.set_defaults(**config)
     args = parser.parse_args(remaining_argv)
-
-    print(f"{remaining_argv=}")
 
     # check reactive arguments
     if (args.reactive_smarts is None) != (args.reactive_smarts_idx is None):
@@ -409,6 +407,9 @@ def cmd_lineparser():
                 file=sys.stderr,
                 )
                 sys.exit(2)
+            args.rec_smarts_indices = [
+                i - 1 for i in args.rec_smarts_indices
+            ]  # convert to 0-index
 
         if min(args.tether_smarts_indices) < 1:
             print(
@@ -610,9 +611,24 @@ def main():
         rec_filename = args.receptor
         _, rec_extension = os.path.splitext(rec_filename)
         rec_extension = rec_extension[1:].lower()
-        prody_parser = _prody_parsers[rec_extension]
-        rec_prody_mol = prody_parser(rec_filename)
-        covalent_builder = CovalentBuilder(rec_prody_mol, args.rec_residue)
+
+        if rec_extension not in supported_recfile_formats: 
+            print(
+            "Error: Format [%s] not in supported receptor formats [%s]%s"
+            % (rec_extension, "/".join(supported_recfile_formats), need_prody_msg)
+            )
+            sys.exit(1)
+
+        if rec_extension==".json": 
+            pass
+
+        elif _has_prody: 
+            prody_parser = _prody_parsers[rec_extension]
+            rec_prody_mol = prody_parser(rec_filename)
+            covalent_builder = CovalentBuilder(rec_prody_mol, args.rec_residue)
+        
+        else: 
+            pass
 
     input_mol_skipped = 0
     input_mol_with_failure = (
