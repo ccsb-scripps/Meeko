@@ -919,7 +919,7 @@ def main():
                             raise ValueError(error_msg)
 
                         pdbqt_string = PDBQTWriterLegacy.adapt_pdbqt_for_autodock4_flexres(
-                            pdbqt_string, res, chain, num
+                            pdbqt_string, res, chain, num, skip_rename_ca_cb=True, 
                         )
                         
                         if output.output_filename: 
