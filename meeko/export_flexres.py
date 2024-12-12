@@ -52,65 +52,9 @@ def export_pdb_updated_flexres(polymer, pdbqt_mol):
             # smiles will be None if it's a typical flexres
             # but there will be a valid Smiles string if it's a covalent flexres
             if pdbqt_mol._pose_data["smiles"][mol_idx] is not None: 
-
-                orig_resmol = Chem.Mol(polymer.monomers[res_id].rdkit_mol)
-                orig_atomnames = polymer.monomers[res_id].atom_names
-                
-                backbone_SMARTS = "[NX3]([H])[CX4][CX3](=O)"
-                expected_names = ('N', 'H', 'CA', 'C', 'O')
-
-                backbone_qmol = Chem.MolFromSmarts(backbone_SMARTS)
-                backbone_matches = orig_resmol.GetSubstructMatches(backbone_qmol)
-
-                if not backbone_matches: 
-                    raise RuntimeError(f"Could not find standard backbone structures in receptor {res_id}. ")
-                backbone_expected = tuple(orig_atomnames.index(atom_name) for atom_name in expected_names)
-
-                if backbone_expected not in backbone_matches: 
-                    raise RuntimeError(f"Could not confirm residue's backbone by atom names in receptor {res_id}. ")
-                
-                not_backbone = [atom.GetIdx() for atom in orig_resmol.GetAtoms() if atom.GetIdx() not in backbone_expected]
-                orig_backbone = Chem.RWMol(orig_resmol)
-                for idx in sorted(not_backbone, reverse=True):
-                    orig_backbone.RemoveAtom(idx)
-                orig_backbone = orig_backbone.GetMol()
-              
-                covres_mol = RDKitMolCreate.from_pdbqt_mol(pdbqt_mol, 
-                                                           only_cluster_leads=False, 
-                                                           keep_flexres=True)[mol_idx]
-                
-                covres_conformer = covres_mol.GetConformer()
-                CA_index = None
-                target_coord = orig_backbone.GetConformer().GetPositions()[expected_names.index('CA')]
-                tolerance = 5e-3
-                for atom in covres_mol.GetAtoms():
-                    idx = atom.GetIdx()
-                    pos = covres_conformer.GetAtomPosition(idx)
-                    if (abs(pos.x - target_coord[0]) <= tolerance and
-                        abs(pos.y - target_coord[1]) <= tolerance and
-                        abs(pos.z - target_coord[2]) <= tolerance):
-                        CA_index = idx
-                        break
-                if CA_index is None:
-                    raise RuntimeError(f"Could not determine CA by coordinates in docked pose of {res_id}. ")
-                
-                CA_in_covres = covres_mol.GetAtomWithIdx(CA_index)
-                bonds_to_recover = []
-                for bond in CA_in_covres.GetBonds():
-                    neighbor_idx = bond.GetOtherAtomIdx(CA_index)
-                    bond_type = bond.GetBondType()
-                    bonds_to_recover.append((neighbor_idx, bond_type))
-
-                combined_res = Chem.RWMol(Chem.CombineMols(covres_mol, orig_backbone))
-                for neighbor_idx, bond_type in bonds_to_recover: 
-                    new_CA_idx = covres_mol.GetNumAtoms() + expected_names.index('CA')
-                    combined_res.AddBond(new_CA_idx, neighbor_idx, bond_type)
-                combined_res.RemoveAtom(CA_index)
-                combined_res = combined_res.GetMol()
-
-                polymer.monomers[res_id].rdkit_mol = combined_res
-                polymer.monomers[res_id].atom_names = [atom.GetSymbol() for atom in combined_res.GetAtoms()]
-                new_positions[res_id] = {idx: coord for idx,coord in enumerate(combined_res.GetConformer().GetPositions())}
+                print(pdbqt_mol)
+                continue
+                new_positions["covlig"] = {idx: coord for idx,coord in enumerate(pdbqt_mol.GetConformer().GetPositions())}
 
             else: # use templates
             

@@ -19,6 +19,7 @@ from rdkit import Chem
 from meeko.utils.utils import parse_cmdline_res_assign
 from meeko.utils.rdkitutils import getPdbInfoNoNull
 from meeko.covalentbuilder import find_smarts, transform, get_fragments_by_atom_indices
+from meeko.molsetup import Atom
 from meeko import MoleculePreparation
 from meeko import rdkitutils
 from meeko import PDBQTWriterLegacy
@@ -873,8 +874,17 @@ def main():
 
             # region gets lig_attractor_pairs
             lig_attractor_pairs = find_smarts(mol, args.tether_smarts, args.tether_smarts_indices)
+            lig_attractor_pairs_copy = lig_attractor_pairs.copy()
+            for index_pair in lig_attractor_pairs_copy: 
+                try: 
+                    test_mol = Chem.Mol(mol)
+                    f1, f2 = get_fragments_by_atom_indices(test_mol, index_pair[0], index_pair[1])
+                except Exception as e: 
+                    print(f"Skipping attractor pair because \n {e}")
+                    lig_attractor_pairs.remove(index_pair)
+
             if not lig_attractor_pairs:
-                print(f"Error: no match atoms for {args.rec_attractor_smarts}", file=sys.stderr)
+                print(f"Error: no proper ligand attractors found for {args.tether_smarts}", file=sys.stderr)
                 sys.exit(1)
             # endregion
 
@@ -896,6 +906,10 @@ def main():
 
                 for molsetup, suffix in zip(molsetups, suffixes):
                     try:
+                        for atom_idx in molsetup.atoms[root_atom_index].graph: 
+                            if atom_idx != index_pair[1]: 
+                                molsetup.atoms[atom_idx] = Atom(atom_idx, is_ignore=True)
+                    
                         pdbqt_string, success, error_msg = PDBQTWriterLegacy.write_string(
                             molsetup,
                             bad_charge_ok=args.bad_charge_ok,

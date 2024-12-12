@@ -49,7 +49,9 @@ def get_fragments_by_atom_indices(mol: Chem.Mol,
 
     bond = mol.GetBondBetweenAtoms(atom_idx1, atom_idx2)
     if bond is None:
-        raise ValueError(f"No bond exists between the specified atom indices {atom_idx1, atom_idx2}.")
+        raise ValueError(f"No bond exists between the attractor atoms. ")
+    if bond.GetBondType() != Chem.BondType.SINGLE: 
+        raise ValueError(f"Needs the bond between the attractor atoms to be a single bond, but got {bond.GetBondType()}")
 
     emol = Chem.EditableMol(mol)
     emol.RemoveBond(atom_idx1, atom_idx2)
@@ -57,7 +59,7 @@ def get_fragments_by_atom_indices(mol: Chem.Mol,
 
     index_fragments = Chem.GetMolFrags(mol, asMols=False)
     if len(index_fragments) != 2:
-        raise ValueError(f"Expected 2 fragments, but got {len(index_fragments)}.")
+        raise ValueError(f"Residue was expected to be split into two fragments (immobile, mobile) after removal of the attractor bond, but got {len(index_fragments)} fragments.")
 
     frag1_indices, frag2_indices = index_fragments
     if atom_idx1 in frag1_indices:
