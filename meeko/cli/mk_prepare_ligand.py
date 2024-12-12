@@ -921,13 +921,21 @@ def main():
                         pdbqt_string = PDBQTWriterLegacy.adapt_pdbqt_for_autodock4_flexres(
                             pdbqt_string, res, chain, num
                         )
-                        name = molsetup.name
-                        if not name: 
-                            ligand_input_basepath = os.path.splitext(os.path.basename(input_molecule_filename))[0]
-                            name =ligand_input_basepath
+                        
+                        if output.output_filename: 
+                            if output.output_filename.endswith(".pdbqt"): 
+                                output_basepath = output.output_filename[:-len(".pdbqt")]
+                            else:
+                                output_basepath = output.output_filename
+                        elif molsetup.name: 
+                            output_basepath = f"{molsetup.name}{suffix}_{ligand_connect_pattern}_{monomer_label}_{residue_connect_idx}.pdbqt"
+                        else: 
+                            output_basepath = os.path.splitext(input_molecule_filename)[0]
+                        
                         monomer_label = "_".join(monomer_string.split(":"))
-                        output.output_filename = f"{name}{suffix}_{ligand_connect_pattern}_{monomer_label}_{residue_connect_idx}.pdbqt"
+                        output.output_filename = f"{output_basepath}{suffix}_{ligand_connect_pattern}_{monomer_label}_{residue_connect_idx}.pdbqt"
                         output(pdbqt_string, name, (suffix,)) # in the call of output, name and suffix do not directly contribute to output filename
+                    
                     except ValueError as error_msg:
                         nr_failures += 1
                         this_mol_had_failure = True
