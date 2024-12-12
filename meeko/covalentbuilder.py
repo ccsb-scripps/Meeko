@@ -40,8 +40,7 @@ def transform(ligand, index_pair, attractors_p3d):
     Chem.rdMolAlign.AlignMol(mol, target, -1, -1,[(index_pair[0],0), (index_pair[1], 1)] )
     return mol
 
-def get_fragments_by_atom_indices(mol: Chem.Mol,
-                                atom_idx1: int, atom_idx2: int) -> tuple[tuple[int], tuple[int]]:
+def get_fragments_by_atom_indices(mol: Chem.Mol, atom_idx1: int, atom_idx2: int, get_as_mols = False) -> tuple[tuple[int], tuple[int]]:
 
     """
     Splits mol into two frags by bond between atoms w/ atom_idx1 and atom_idx2
@@ -60,9 +59,22 @@ def get_fragments_by_atom_indices(mol: Chem.Mol,
     index_fragments = Chem.GetMolFrags(mol, asMols=False)
     if len(index_fragments) != 2:
         raise ValueError(f"Residue was expected to be split into two fragments (immobile, mobile) after removal of the attractor bond, but got {len(index_fragments)} fragments.")
-
+    
     frag1_indices, frag2_indices = index_fragments
     if atom_idx1 in frag1_indices:
-        return (frag1_indices, frag2_indices)
+        reverse = False
     else:
-        return (frag2_indices, frag1_indices)
+        reverse = True
+
+    if not get_as_mols: 
+        if reverse: 
+            return (frag2_indices, frag1_indices)
+        else: 
+            return (frag1_indices, frag2_indices)
+        
+    else:
+        index_fragments = Chem.GetMolFrags(mol, asMols=True)
+        if reverse:
+            return (index_fragments[1], index_fragments[0])
+        else:
+            return (index_fragments[0], index_fragments[1])

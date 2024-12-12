@@ -19,6 +19,8 @@ from meeko import RDKitMolCreate
 from meeko import Polymer
 from meeko import export_pdb_updated_flexres
 from meeko.utils.utils import parse_begin_res
+from meeko.covalentbuilder import get_fragments_by_atom_indices
+from meeko.polymer import Monomer
 
 
 def cmd_lineparser():
@@ -136,17 +138,68 @@ def main():
     
         # write receptor with updated flexres
         if read_json is not None:
+            
+            # region modifies polymer if there's a covalent ligand
+            flexres_id = pdbqt_mol._pose_data["mol_index_to_flexible_residue"]
+            for mol_idx, _ in pdbqt_mol._atom_annotations["mol_index"].items(): 
+                pdbqt_mol_copy = copy.deepcopy(pdbqt_mol)
+                # if it's a covalent ligand as flexres, it will have smiles and index_map in pose_data
+                if flexres_id[mol_idx] is not None and pdbqt_mol._pose_data["smiles"][mol_idx] is not None: 
+                    covligmol = RDKitMolCreate.from_pdbqt_mol(pdbqt_mol_copy,
+                                                              only_cluster_leads=False, 
+                                                              keep_flexres=True)[mol_idx]
+                    index_map = pdbqt_mol_copy._pose_data['smiles_index_map'][mol_idx]
+                    
+                    # locate tethered atoms in ligmol and get xyz
+                    tethered_mol_index = [int(index_map[i * 2]) - 1 for i in (0,1)]
+                    tethered_xyz = [covligmol.GetConformer().GetPositions()[i] for i in tethered_mol_index]
+
+                    # match with ignored monomer atoms
+                    res_id = parse_begin_res(flexres_id[mol_idx])
+                    tolerance = 1e-2
+                    monomer_rdkit_mol = polymer.monomers[res_id].rdkit_mol
+                    monomer_conformer = monomer_rdkit_mol.GetConformer()
+
+                    attractor_mol_index = []
+                    for target_xyz in tethered_xyz: 
+                        target_x, target_y, target_z = target_xyz
+                        for atom in monomer_rdkit_mol.GetAtoms():
+                            idx = atom.GetIdx()
+                            pos = monomer_conformer.GetAtomPosition(idx)
+                            if (abs(pos.x - target_x) <= tolerance and
+                                abs(pos.y - target_y) <= tolerance and
+                                abs(pos.z - target_z) <= tolerance):
+                                attractor_mol_index.append(idx)
+                                break
+                    
+                    # breaks monomer's rdkit_mol by the attractors bond and keep only the receptor-side fragment
+                    keep_mol, _ = get_fragments_by_atom_indices(monomer_rdkit_mol, attractor_mol_index[0],
+                                                                attractor_mol_index[1], get_as_mols=True)
+                    polymer.monomers[res_id].rdkit_mol = keep_mol
+
+                    # creates a new monomer from pdbqt_mol and keeps only the ligand-side fragment
+                    _, keep_lig = get_fragments_by_atom_indices(covligmol, tethered_mol_index[0],
+                                                                tethered_mol_index[1], get_as_mols=True)
+                    _, keep_indices = get_fragments_by_atom_indices(covligmol, tethered_mol_index[0],
+                                                                tethered_mol_index[1], get_as_mols=False)
+                    
+                    new_chid = res_id.split(":")[0]
+                    new_resnum = max([int(key.split(":")[1]) for key in polymer.monomers if key.split(":")[0] == new_chid]) + 1
+                    new_res_id = f"{new_chid}:{new_resnum}"
+
+                    polymer.monomers[new_res_id] = Monomer(covligmol, 
+                                                           keep_lig, 
+                                                           {i:idx for i,idx in enumerate(keep_indices)},
+                                                            atom_names=["x"]*len(keep_indices))
+                    polymer.monomers[new_res_id].input_resname = "LIG"
+            # endregion 
+            
             pdb_string = ""
             pose_id_to_iter = [pose.pose_id for pose in pdbqt_mol]
-            iter_pose = copy.deepcopy(pdbqt_mol)
             for pose_id in pose_id_to_iter:
                 model_nr = pose_id + 1
-                iter_pose._positions = np.array([pdbqt_mol._positions[pose_id]])
-                iter_pose._pose_data['n_poses'] = 1  # Update the number of poses to reflect the reduction
-                iter_pose._current_pose = 0  # Reset to the first (and only) pose
                 pdb_string += "MODEL " + f"{model_nr:8}" + eol
-                pol_copy = copy.deepcopy(polymer)
-                pdb_string += export_pdb_updated_flexres(pol_copy, iter_pose)
+                pdb_string += export_pdb_updated_flexres(polymer, pdbqt_mol)
                 pdb_string += "ENDMDL" + eol
             if write_pdb is None:
                 fn = pathlib.Path(filename).with_suffix("").name + f"{suffix}.pdb"

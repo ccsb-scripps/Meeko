@@ -52,9 +52,7 @@ def export_pdb_updated_flexres(polymer, pdbqt_mol):
             # smiles will be None if it's a typical flexres
             # but there will be a valid Smiles string if it's a covalent flexres
             if pdbqt_mol._pose_data["smiles"][mol_idx] is not None: 
-                print(pdbqt_mol)
                 continue
-                new_positions["covlig"] = {idx: coord for idx,coord in enumerate(pdbqt_mol.GetConformer().GetPositions())}
 
             else: # use templates
             
