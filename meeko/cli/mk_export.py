@@ -17,7 +17,7 @@ from rdkit import Chem
 from meeko import PDBQTMolecule
 from meeko import RDKitMolCreate
 from meeko import Polymer
-from meeko import export_pdb_updated_flexres
+from meeko.export_flexres import export_pdb_updated_flexres, pdb_updated_flexres_from_rdkit
 from meeko.utils.utils import parse_begin_res
 from meeko.covalentbuilder import get_fragments_by_atom_indices
 from meeko.polymer import Monomer
@@ -138,10 +138,12 @@ def main():
     
         # write receptor with updated flexres
         if read_json is not None:
+            has_covlig = False
             
             # region modifies polymer if there's a covalent ligand
             flexres_id = pdbqt_mol._pose_data["mol_index_to_flexible_residue"]
             for mol_idx, _ in pdbqt_mol._atom_annotations["mol_index"].items(): 
+                has_covlig = True
                 pdbqt_mol_copy = copy.deepcopy(pdbqt_mol)
                 # if it's a covalent ligand as flexres, it will have smiles and index_map in pose_data
                 if flexres_id[mol_idx] is not None and pdbqt_mol._pose_data["smiles"][mol_idx] is not None: 
@@ -180,18 +182,17 @@ def main():
                     # creates a new monomer from pdbqt_mol and keeps only the ligand-side fragment
                     _, keep_lig = get_fragments_by_atom_indices(covligmol, tethered_mol_index[0],
                                                                 tethered_mol_index[1], get_as_mols=True)
-                    _, keep_indices = get_fragments_by_atom_indices(covligmol, tethered_mol_index[0],
-                                                                tethered_mol_index[1], get_as_mols=False)
+                    # _, keep_indices = get_fragments_by_atom_indices(covligmol, tethered_mol_index[0],
+                    #                                            tethered_mol_index[1], get_as_mols=False)
                     
-                    new_chid = res_id.split(":")[0]
-                    new_resnum = max([int(key.split(":")[1]) for key in polymer.monomers if key.split(":")[0] == new_chid]) + 1
-                    new_res_id = f"{new_chid}:{new_resnum}"
-
-                    polymer.monomers[new_res_id] = Monomer(covligmol, 
-                                                           keep_lig, 
-                                                           {i:idx for i,idx in enumerate(keep_indices)},
-                                                            atom_names=["x"]*len(keep_indices))
-                    polymer.monomers[new_res_id].input_resname = "LIG"
+                    # only if we need to export the updated polymer...
+                    # new_chid = res_id.split(":")[0]
+                    # new_resnum = max([int(key.split(":")[1]) for key in polymer.monomers if key.split(":")[0] == new_chid]) + 1
+                    # new_res_id = f"{new_chid}:{new_resnum}"
+                    # polymer.monomers[new_res_id] = Monomer(covligmol, keep_lig, 
+                    #                                        {i:idx for i,idx in enumerate(keep_indices)},
+                    #                                         atom_names=["x"]*len(keep_indices))
+                    # polymer.monomers[new_res_id].input_resname = "LIG"
             # endregion 
             
             pdb_string = ""
@@ -200,6 +201,8 @@ def main():
                 model_nr = pose_id + 1
                 pdb_string += "MODEL " + f"{model_nr:8}" + eol
                 pdb_string += export_pdb_updated_flexres(polymer, pdbqt_mol)
+                if has_covlig: 
+                    pdb_string += Chem.MolToPDBBlock(keep_lig, confId=pose_id)
                 pdb_string += "ENDMDL" + eol
             if write_pdb is None:
                 fn = pathlib.Path(filename).with_suffix("").name + f"{suffix}.pdb"

@@ -52,7 +52,7 @@ def export_pdb_updated_flexres(polymer, pdbqt_mol):
             # smiles will be None if it's a typical flexres
             # but there will be a valid Smiles string if it's a covalent flexres
             if pdbqt_mol._pose_data["smiles"][mol_idx] is not None: 
-                continue
+                pass
 
             else: # use templates
             
@@ -123,7 +123,7 @@ def pdb_updated_flexres_from_rdkit(polymer:Polymer, flexres_rdkit_mols:dict):
 
     new_positions = {}
     for res_id, mol in flexres_rdkit_mols.items():
-        print(Chem.MolToSmiles(mol))
+        # print(Chem.MolToSmiles(mol))
         #mol = Chem.RemoveHs(mol)
         # get templates for matching indices of rdkit mol to monomer in polymer
         key = polymer.monomers[res_id].residue_template_key
