@@ -625,7 +625,7 @@ def main():
     # initialize covalent object for receptor
     if is_covalent:
 
-        # region parses receptor file and args into target_monomers
+        # region determines parser
         rec_filename = args.receptor
         _, rec_extension = os.path.splitext(rec_filename)
         rec_extension = rec_extension[1:].lower()
@@ -636,7 +636,9 @@ def main():
             % (rec_extension, "/".join(supported_recfile_formats), need_prody_msg)
             )
             sys.exit(1)
+        # endregion
 
+        # region creates polymer
         if rec_extension=="json": 
             try: 
                 with open(rec_filename, "r") as file:
@@ -702,7 +704,9 @@ def main():
                 except PolymerCreationError as e:
                     print(e)
                     sys.exit(1)
+        # endregion
 
+        # region gets target_monomers
         residue_string = f"{args.rec_residue}"
         chid, res_type, res_num = residue_string.split(":")
 
@@ -869,52 +873,68 @@ def main():
 
             # region gets lig_attractor_pairs
             lig_attractor_pairs = find_smarts(mol, args.tether_smarts, args.tether_smarts_indices)
-            if not lig_attractor_pairs: 
-                print(
-                    f"Error: no match atoms for {args.rec_attractor_smarts}", 
-                    file=sys.stderr,
-                    )
+            if not lig_attractor_pairs:
+                print(f"Error: no match atoms for {args.rec_attractor_smarts}", file=sys.stderr)
                 sys.exit(1)
             # endregion
-            
-            # region transforms and outputs covalent PDBQT
-            ligand_connect_pattern = 1
-            for index_pair in lig_attractor_pairs: 
-                for monomer_string in monomer_to_attractor:
-                    for residue_connect_idx, attractors_p3d in monomer_to_attractor[monomer_string].items():
-                        root_atom_index = index_pair[0]
-                        transformed_mol = transform(mol, index_pair, attractors_p3d)
-                        
-                        molsetups = preparator.prepare(
-                            transformed_mol,
-                            root_atom_index=root_atom_index,
-                            not_terminal_atoms=[root_atom_index],
-                            rename_atoms=args.rename_atoms,
-                        )
-                        chain, res, num = monomer_string.split(":")
-                        suffixes = output.get_suffixes(molsetups)
-                        for molsetup, suffix in zip(molsetups, suffixes):
-                            pdbqt_string, success, error_msg = PDBQTWriterLegacy.write_string(
-                                molsetup,
-                                bad_charge_ok=args.bad_charge_ok,
-                                add_index_map=args.add_index_map,
-                            )
-                            if success:
-                                pdbqt_string = (
-                                    PDBQTWriterLegacy.adapt_pdbqt_for_autodock4_flexres(
-                                        pdbqt_string, res, chain, num
-                                    )
-                                )
-                                name = molsetup.name
-                                monomer_label = "_".join(monomer_string.split(":"))
-                                output.output_filename = f"{name}_{ligand_connect_pattern}_{monomer_label}_{residue_connect_idx}.pdbqt"
-                                output(pdbqt_string, name, (suffix,))
-                            else:
-                                nr_failures += 1
-                                this_mol_had_failure = True
-                                print(error_msg, file=sys.stderr)
 
-                        ligand_connect_pattern += 1
+            # region helper function for processing
+            def process_covlig(index_pair, monomer_string, residue_connect_idx, attractors_p3d):
+
+                nonlocal nr_failures, this_mol_had_failure
+                root_atom_index = index_pair[0]
+                transformed_mol = transform(mol, index_pair, attractors_p3d)
+
+                molsetups = preparator.prepare(
+                    transformed_mol,
+                    root_atom_index=root_atom_index,
+                    not_terminal_atoms=[root_atom_index],
+                    rename_atoms=args.rename_atoms,
+                )
+                chain, res, num = monomer_string.split(":")
+                suffixes = output.get_suffixes(molsetups)
+
+                for molsetup, suffix in zip(molsetups, suffixes):
+                    try:
+                        pdbqt_string, success, error_msg = PDBQTWriterLegacy.write_string(
+                            molsetup,
+                            bad_charge_ok=args.bad_charge_ok,
+                            add_index_map=args.add_index_map,
+                        )
+                        if not success:
+                            raise ValueError(error_msg)
+
+                        pdbqt_string = PDBQTWriterLegacy.adapt_pdbqt_for_autodock4_flexres(
+                            pdbqt_string, res, chain, num
+                        )
+                        name = molsetup.name
+                        if not name: 
+                            ligand_input_basepath = os.path.splitext(os.path.basename(input_molecule_filename))[0]
+                            name =ligand_input_basepath
+                        monomer_label = "_".join(monomer_string.split(":"))
+                        output.output_filename = f"{name}{suffix}_{ligand_connect_pattern}_{monomer_label}_{residue_connect_idx}.pdbqt"
+                        output(pdbqt_string, name, (suffix,)) # in the call of output, name and suffix do not directly contribute to output filename
+                    except ValueError as error_msg:
+                        nr_failures += 1
+                        this_mol_had_failure = True
+                        print(error_msg, file=sys.stderr)
+            # endregion
+            
+            # region helper function to generate combinations for list * dict[dict]
+            def generate_combinations(lig_attractor_pairs: list[tuple], monomer_to_attractor: dict[str,dict]):
+                for index_pair in lig_attractor_pairs:
+                    for monomer_string, attractor_data in monomer_to_attractor.items():
+                        for residue_connect_idx, attractors_p3d in attractor_data.items():
+                            yield index_pair, monomer_string, residue_connect_idx, attractors_p3d
+            # endregion
+
+            # region processes all covligs
+            ligand_connect_pattern = 1
+            for index_pair, monomer_string, residue_connect_idx, attractors_p3d in generate_combinations(
+                lig_attractor_pairs, monomer_to_attractor
+            ):
+                process_covlig(index_pair, monomer_string, residue_connect_idx, attractors_p3d)
+                ligand_connect_pattern += 1
             # endregion
 
         else:
