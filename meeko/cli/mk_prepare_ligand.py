@@ -642,6 +642,14 @@ def main():
 
         # region creates polymer
         if rec_extension=="json": 
+            
+            if provided_names: 
+                print(
+                "--rec_attractor_names is not supported when receptor input is JSON." 
+                "Consider using PDB/mmCIF as receptor input. Alternatively, specify the attractors by Smarts patterns (--rec_attractor_smarts, --rec_smarts_indices). "
+                )
+                sys.exit(1)
+
             try: 
                 with open(rec_filename, "r") as file:
                     json_string = file.read()
@@ -746,7 +754,7 @@ def main():
                 monomer_string = f"{chid}:{res_type}:{res_num}"
                 mol = monomer.raw_rdkit_mol
 
-                input_atom_names = [getPdbInfoNoNull(atom).name for atom in mol.GetAtoms()]
+                input_atom_names = [atom.GetMonomerInfo().GetName() for atom in mol.GetAtoms()]
                 at1_index = [idx for idx,item in enumerate(input_atom_names) if item==atname1]
                 at2_index = [idx for idx,item in enumerate(input_atom_names) if item==atname2]
 
