@@ -399,6 +399,7 @@ def cmd_lineparser():
         sys.exit(2)
     is_covalent = num_required_covalent_args == 3
 
+    provided_names = False
     if is_covalent: 
         # verify ways to specify receptor attractor atoms
         provided_names = '--rec_attractor_names' in remaining_argv
