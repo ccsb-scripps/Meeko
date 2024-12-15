@@ -743,6 +743,7 @@ class Polymer:
         mk_prep=None,
         set_template: dict[str, str] = None,
         blunt_ends: list[tuple[str, int]] = None,
+        get_atomprop_from_raw: dict = None,
     ):
         """
         Parameters
@@ -916,7 +917,7 @@ class Polymer:
             monomer.molsetup_mapidx = mapidx_from_pad
 
         if mk_prep is not None:
-            self.parameterize(mk_prep)
+            self.parameterize(mk_prep, get_atomprop_from_raw = get_atomprop_from_raw)
 
         return
 
@@ -1012,7 +1013,7 @@ class Polymer:
 
         return polymer
 
-
+    # region adapted from from_pdb_string
     @classmethod
     def from_pqr_string(
         cls,
@@ -1079,6 +1080,7 @@ class Polymer:
                         " than one bond between them"
                     )
                     raise NotImplementedError(msg)
+                
         polymer = cls(
             raw_input_mols,
             bonds,
@@ -1086,6 +1088,7 @@ class Polymer:
             mk_prep,
             set_template,
             blunt_ends,
+            get_atomprop_from_raw = {"PQRCharge": 0.},
         )
 
         unmatched_res = polymer.get_ignored_monomers()
@@ -1098,7 +1101,9 @@ class Polymer:
         )
 
         return polymer
+    # endregion
 
+            
     @classmethod
     def from_prody(
         cls,
@@ -1201,7 +1206,7 @@ class Polymer:
     def to_json(self):
         return json.dumps(self, cls=PolymerEncoder)
 
-    def parameterize(self, mk_prep):
+    def parameterize(self, mk_prep, get_atomprop_from_raw = None):
         """
 
         Parameters
@@ -1214,7 +1219,7 @@ class Polymer:
         """
 
         for residue_id in self.get_valid_monomers():
-            self.monomers[residue_id].parameterize(mk_prep, residue_id)
+            self.monomers[residue_id].parameterize(mk_prep, residue_id, get_atomprop_from_raw = get_atomprop_from_raw)
 
     @staticmethod
     def _build_rdkit_mol(raw_mol, template, mapping, nr_missing_H):
@@ -1861,6 +1866,7 @@ class Polymer:
                 resnum = int(atom_pqr_items.pop(0))
 
             token = atom_pqr_items.pop(0)
+            icode = "" # Optional in PQR 
             try:
                 x = float(token)
             except ValueError:
@@ -1873,7 +1879,7 @@ class Polymer:
             charge = float(atom_pqr_items.pop(0))
             radius = float(atom_pqr_items.pop(0))
 
-            return tuple(
+            return (
                 AtomField(
                         atomname, altloc, resname, chainid,
                         resnum, icode, x, y, z, element,
@@ -1895,6 +1901,9 @@ class Polymer:
             if pqr_items:
                 atom, pqr_charge, pqr_radius = atom_from_pqr_items(pqr_items)
                 reskey = f"{atom.chain}:{atom.resnum}{atom.icode}"
+                resname = atom.resname
+                reskey_to_resname.setdefault(reskey, set())
+                reskey_to_resname[reskey].add(resname)
 
                 if reskey == buffered_reskey:  # this line continues existing residue
                     pdb_block.append(atom)
@@ -1907,12 +1916,14 @@ class Polymer:
                             pdb_block,
                             interrupted_residues,
                         )
+                        blocks_qr[buffered_reskey] = block_qr
                     buffered_reskey = reskey
                     pdb_block = [atom]
                     block_qr = [(pqr_charge, pqr_radius)]
 
         if pdb_block:  # there was not a TER line
             Polymer._add_if_new(blocks_by_residue, reskey, pdb_block, interrupted_residues)
+            blocks_qr[reskey] = block_qr
 
         if interrupted_residues:
             msg = f"interrupted residues in PDB: {interrupted_residues}"
@@ -1924,9 +1935,7 @@ class Polymer:
             msg = "each residue key must have exactly 1 resname" + eol
             msg += f"but got {violations=}"
             raise ValueError(msg)
-        
         # endregion
-
 
         raw_input_mols = {}
 
@@ -2321,7 +2330,23 @@ class Monomer:
         monomer = json.loads(json_string, object_hook=cls.monomer_json_decoder)
         return monomer
 
-    def parameterize(self, mk_prep, residue_id):
+    def parameterize(self, mk_prep, residue_id, get_atomprop_from_raw: dict = None):
+
+        if get_atomprop_from_raw: 
+            if any(not isinstance(prop_name, str) for prop_name in get_atomprop_from_raw.keys()): 
+                raise ValueError(f"Atom property name must be str. Got {prop_name} ({type(prop_name)}) instead! ")
+            raw_mol = self.raw_rdkit_mol
+            atoms_in_raw_mol = [atom for atom in raw_mol.GetAtoms()]
+            mapidx_to_raw = self.mapidx_to_raw
+            molsetup_mapidx = self.molsetup_mapidx
+            for atom in self.padded_mol.GetAtoms(): 
+                atom_idx_in_raw = mapidx_to_raw.get(molsetup_mapidx.get(atom.GetIdx(), None), None)
+                for prop_name, default_value in get_atomprop_from_raw.items(): 
+                    if atom_idx_in_raw is not None: 
+                        prop_value = atoms_in_raw_mol[atom_idx_in_raw].GetProp(prop_name)
+                    else:
+                        prop_value = str(default_value)
+                    atom.SetProp(prop_name, prop_value)
 
         molsetups = mk_prep(self.padded_mol)
         if len(molsetups) != 1:
