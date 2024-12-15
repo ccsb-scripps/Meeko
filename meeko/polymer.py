@@ -1014,6 +1014,92 @@ class Polymer:
 
 
     @classmethod
+    def from_pqr_string(
+        cls,
+        pqr_string,
+        chem_templates,
+        mk_prep,
+        set_template=None,
+        residues_to_delete=None,
+        allow_bad_res=False,
+        bonds_to_delete=None,
+        blunt_ends=None,
+    ):
+        """
+
+        Parameters
+        ----------
+        pdb_string
+        chem_templates
+        mk_prep
+        set_template
+        residues_to_delete
+        allow_bad_res
+        bonds_to_delete
+        blunt_ends
+
+        Returns
+        -------
+
+        """
+
+        tmp_raw_input_mols = cls._pqr_to_residue_mols(
+            pqr_string,
+        )
+
+        # from here on it duplicates self.from_prody(), but extracting
+        # this out into a function felt like it sacrificed readibility
+        # so I decided to keep the duplication.
+        _delete_residues(residues_to_delete, tmp_raw_input_mols)
+        raw_input_mols = {}
+        res_needed_altloc = []
+        res_missed_altloc = []
+        unparsed_res = []
+        for res_id, stuff in tmp_raw_input_mols.items():
+            mol, resname, missed_altloc, needed_altloc = stuff
+            if mol is None and missed_altloc:
+                res_missed_altloc.append(res_id)
+            elif mol is None and needed_altloc:
+                res_needed_altloc.append(res_id)
+            elif mol is None:
+                unparsed_res.append(res_id)
+            else:
+                raw_input_mols[res_id] = (mol, resname)
+        bonds = find_inter_mols_bonds(raw_input_mols)
+        if bonds_to_delete is not None:
+            for res1, res2 in bonds_to_delete:
+                popped = ()
+                if (res1, res2) in bonds:
+                    popped = bonds.pop((res1, res2))
+                elif (res2, res1) in bonds:
+                    popped = bonds.pop((res2, res1))
+                if len(popped) >= 2:
+                    msg = (
+                        "can't delete bonds for residue pairs that have more"
+                        " than one bond between them"
+                    )
+                    raise NotImplementedError(msg)
+        polymer = cls(
+            raw_input_mols,
+            bonds,
+            chem_templates,
+            mk_prep,
+            set_template,
+            blunt_ends,
+        )
+
+        unmatched_res = polymer.get_ignored_monomers()
+        handle_parsing_situations(
+            unmatched_res,
+            unparsed_res,
+            allow_bad_res,
+            res_missed_altloc,
+            res_needed_altloc,
+        )
+
+        return polymer
+
+    @classmethod
     def from_prody(
         cls,
         prody_obj: Union[Selection, AtomGroup],
@@ -1602,6 +1688,14 @@ class Polymer:
                 if body_idx != root_body_idx or atom_idx == root_link_atom_idx:
                     monomer.is_flexres_atom[atom_idx] = True
         return
+    
+    @staticmethod
+    def _add_if_new(to_dict, key, value, repeat_log):
+        if key in to_dict:
+            repeat_log.add(key)
+        else:
+            to_dict[key] = value
+        return
 
     @staticmethod
     def _pdb_to_residue_mols(
@@ -1628,16 +1722,9 @@ class Polymer:
         interrupted_residues = set()
         pdb_block = []
 
-        def _add_if_new(to_dict, key, value, repeat_log):
-            if key in to_dict:
-                repeat_log.add(key)
-            else:
-                to_dict[key] = value
-            return
-
         for line in pdb_string.splitlines(True):
             if line.startswith("TER") and reskey is not None:
-                _add_if_new(blocks_by_residue, reskey, pdb_block, interrupted_residues)
+                Polymer._add_if_new(blocks_by_residue, reskey, pdb_block, interrupted_residues)
                 blocks_by_residue[reskey] = pdb_block
                 pdb_block = []
                 reskey = None
@@ -1665,7 +1752,7 @@ class Polymer:
                     pdb_block.append(atom)
                 else:
                     if buffered_reskey is not None:
-                        _add_if_new(
+                        Polymer._add_if_new(
                             blocks_by_residue,
                             buffered_reskey,
                             pdb_block,
@@ -1675,7 +1762,7 @@ class Polymer:
                     pdb_block = [atom]
 
         if pdb_block:  # there was not a TER line
-            _add_if_new(blocks_by_residue, reskey, pdb_block, interrupted_residues)
+            Polymer._add_if_new(blocks_by_residue, reskey, pdb_block, interrupted_residues)
 
         if interrupted_residues:
             msg = f"interrupted residues in PDB: {interrupted_residues}"
@@ -1698,6 +1785,165 @@ class Polymer:
                 requested_altloc,
                 default_altloc,
             )
+            resname = list(reskey_to_resname[reskey])[0]  # verified length 1
+            raw_input_mols[reskey] = (pdbmol, resname, missed_altloc, needed_altloc)
+
+        return raw_input_mols
+    
+
+    @staticmethod
+    def _pqr_to_residue_mols(
+        pqr_string
+    ):
+        blocks_by_residue = {}
+        blocks_qr = {}
+        reskey_to_resname = {}
+        reskey = None
+        buffered_reskey = None
+
+        # residues in non-consecutive lines due to TER or another res
+        interrupted_residues = set()
+        pdb_block = []
+
+        def get_pqr_atom_items(pqr_line): 
+            """
+            based on pdb2pqr.structures.Atom.from_pqr_line
+            """
+            items = [w.strip() for w in pqr_line.split()]
+            token = items.pop(0)
+            if token in [
+                "REMARK",
+                "TER",
+                "END",
+                "HEADER",
+                "TITLE",
+                "COMPND",
+                "SOURCE",
+                "KEYWDS",
+                "EXPDTA",
+                "AUTHOR",
+                "REVDAT",
+                "JRNL",
+            ]:
+                return None
+            elif token in ["ATOM", "HETATM"]:
+                return items
+            elif token[:4] == "ATOM":
+                return token[4:] + items
+            elif token[:6] == "HETATM": 
+                return token[6:] + items
+            else:
+                err = f"Unable to parse PQR line: {pqr_line}"
+                raise ValueError(err)
+
+        def atom_from_pqr_items(atom_pqr_items: list[str]) -> tuple[AtomField, float]: 
+
+            if not atom_pqr_items: 
+                return None
+            
+            atom_serial = int(atom_pqr_items.pop(0)) # Meeko doesn't need atom_serial (ID)
+            atomname = atom_pqr_items.pop(0)
+            element = next((char for char in atomname if char.isalpha()), None)
+            if element is None: 
+                err = f"Unable to parse element from PQR atomname: {atomname}"
+                raise ValueError(err)
+            element = element.upper()
+
+            altloc = "" # PQR doesn't have altloc
+            resname = atom_pqr_items.pop(0)
+
+            token = atom_pqr_items.pop(0)
+            chainid = "" # Optional in PQR 
+            try:
+                resnum = int(token) # Must be int in PQR
+            except ValueError:
+                chainid = token
+                resnum = int(atom_pqr_items.pop(0))
+
+            token = atom_pqr_items.pop(0)
+            try:
+                x = float(token)
+            except ValueError:
+                icode = token 
+                x = float(atom_pqr_items.pop(0))
+
+            y = float(atom_pqr_items.pop(0))
+            z = float(atom_pqr_items.pop(0))
+
+            charge = float(atom_pqr_items.pop(0))
+            radius = float(atom_pqr_items.pop(0))
+
+            return tuple(
+                AtomField(
+                        atomname, altloc, resname, chainid,
+                        resnum, icode, x, y, z, element,
+                ), 
+                charge, radius, 
+            )
+
+        # region adapted from _pdb_to_residue_mols
+        for line in pqr_string.splitlines(True):
+            pqr_items = get_pqr_atom_items(line)
+            if pqr_items is None and reskey is not None:
+                Polymer._add_if_new(blocks_by_residue, reskey, pdb_block, interrupted_residues)
+                blocks_by_residue[reskey] = pdb_block
+                blocks_qr[reskey] = block_qr
+                pdb_block = []
+                block_qr = []
+                reskey = None
+                buffered_reskey = None
+            if pqr_items:
+                atom, pqr_charge, pqr_radius = atom_from_pqr_items(pqr_items)
+                reskey = f"{atom.chain}:{atom.resnum}{atom.icode}"
+
+                if reskey == buffered_reskey:  # this line continues existing residue
+                    pdb_block.append(atom)
+                    block_qr.append((pqr_charge, pqr_radius))
+                else:
+                    if buffered_reskey is not None:
+                        Polymer._add_if_new(
+                            blocks_by_residue,
+                            buffered_reskey,
+                            pdb_block,
+                            interrupted_residues,
+                        )
+                    buffered_reskey = reskey
+                    pdb_block = [atom]
+                    block_qr = [(pqr_charge, pqr_radius)]
+
+        if pdb_block:  # there was not a TER line
+            Polymer._add_if_new(blocks_by_residue, reskey, pdb_block, interrupted_residues)
+
+        if interrupted_residues:
+            msg = f"interrupted residues in PDB: {interrupted_residues}"
+            raise ValueError(msg)
+
+        # verify that each identifier (e.g. "A:17" has a single resname
+        violations = {k: v for k, v in reskey_to_resname.items() if len(v) != 1}
+        if len(violations):
+            msg = "each residue key must have exactly 1 resname" + eol
+            msg += f"but got {violations=}"
+            raise ValueError(msg)
+        
+        # endregion
+
+
+        raw_input_mols = {}
+
+        # PQR shouldn't have altlocs
+        requested_altloc = None
+        default_altloc = ""
+        for reskey, atom_field_list in blocks_by_residue.items():
+            requested_altloc = None
+            pdbmol, _, missed_altloc, needed_altloc = _aux_altloc_mol_build(
+                atom_field_list,
+                requested_altloc,
+                default_altloc,
+            )
+            pqr_charges_per_atom = [item[0] for item in blocks_qr[reskey]]
+            for atom, charge in zip(pdbmol.GetAtoms(), pqr_charges_per_atom):
+                atom.SetDoubleProp("PQRCharge", charge)
+
             resname = list(reskey_to_resname[reskey])[0]  # verified length 1
             raw_input_mols[reskey] = (pdbmol, resname, missed_altloc, needed_altloc)
 
