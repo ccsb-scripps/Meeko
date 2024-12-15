@@ -642,13 +642,6 @@ def main():
 
         # region creates polymer
         if rec_extension=="json": 
-            
-            if provided_names: 
-                print(
-                "--rec_attractor_names is not supported when receptor input is JSON." 
-                "Consider using PDB/mmCIF as receptor input. Alternatively, specify the attractors by Smarts patterns (--rec_attractor_smarts, --rec_smarts_indices). "
-                )
-                sys.exit(1)
 
             try: 
                 with open(rec_filename, "r") as file:
@@ -752,9 +745,9 @@ def main():
                 chid, res_num = key.split(":")
                 res_type = monomer.input_resname
                 monomer_string = f"{chid}:{res_type}:{res_num}"
-                mol = monomer.raw_rdkit_mol
+                molsetup = monomer.molsetup 
 
-                input_atom_names = [atom.GetMonomerInfo().GetName() for atom in mol.GetAtoms()]
+                input_atom_names = [atom.pdbinfo.name for atom in molsetup.atoms]
                 at1_index = [idx for idx,item in enumerate(input_atom_names) if item==atname1]
                 at2_index = [idx for idx,item in enumerate(input_atom_names) if item==atname2]
 
@@ -767,15 +760,15 @@ def main():
                     )
                     sys.exit(1)
 
-                conformer = mol.GetConformer()
+                conformer = monomer.padded_mol.GetConformer()
                 monomer_to_attractor[monomer_string] = {}
-                mapidx_from_raw = {v:k for k,v in monomer.mapidx_to_raw.items()}
+                molsetup_mapidx = monomer.molsetup_mapidx
                 for idx_1 in at1_index: 
                     for idx_2 in at2_index: 
                         if idx_1 != idx_2: 
                             at1_p3d, at2_p3d = (conformer.GetAtomPosition(idx_1), 
                                                 conformer.GetAtomPosition(idx_2))
-                            monomer_to_attractor[monomer_string].update({f"{mapidx_from_raw[idx_1]}-{mapidx_from_raw[idx_2]}": (at1_p3d, at2_p3d)})
+                            monomer_to_attractor[monomer_string].update({f"{molsetup_mapidx[idx_1]}-{molsetup_mapidx[idx_2]}": (at1_p3d, at2_p3d)})
 
         else: 
             for key, monomer in target_monomers.items(): 
