@@ -179,7 +179,7 @@ def get_args():
                                   "(optionally) a provided JSON filename. " 
                                   "Default cache filename is: $HOME/.meeko_residue_chem_templates_cached.json) "
                                   "When the caching is ON, the templates for polymer construction will be read from "
-                                  "the specified cache file and updates may be made to the same file in a cumulative manner. ", 
+                                  "the specified cache file and updates may be made to the same file in a cumulative manner. " 
                               ), 
                               nargs = "?", 
                               default = False, 
