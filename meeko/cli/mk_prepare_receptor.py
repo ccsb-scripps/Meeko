@@ -179,8 +179,10 @@ def get_args():
                                   "(optionally) a provided JSON filename. " 
                                   "Default cache filename is: $HOME/.meeko_residue_chem_templates_cached.json) "
                                   "When the caching is ON, the templates for polymer construction will be read from "
-                                  "the specified cache file and updates may be made to the same file in a cumulative manner. "
-                              )
+                                  "the specified cache file and updates may be made to the same file in a cumulative manner. ", 
+                              ), 
+                              nargs = "?", 
+                              default = False, 
     )
     config_group.add_argument("--mk_config", help="[.json]", metavar="JSON_FILENAME")
     config_group.add_argument(
@@ -283,6 +285,13 @@ def get_args():
         msg = "Can't use both -i/--read_with_prody and --read_pdb"
         print(eol + msg, file=sys.stderr)
         sys.exit(2)
+
+    if args.cache_templates is not False: 
+        if not args.cache_templates:
+            print(f"--cache_templates is turned on, but a name is not provided. The default filename ($HOME/.meeko_residue_chem_templates_cached.json) will be used. ", 
+                file=sys.stderr)
+            default_cache_fn = ".meeko_residue_chem_templates_cached.json"
+            args.cache_templates = str(pathlib.Path.home() / default_cache_fn)
 
     if args.write_gpf is not None and args.write_pdbqt is None:
         # there's a few of places that assume this condition has been checked
@@ -497,8 +506,8 @@ def main():
                 json_str, object_hook=residue_chem_templates_json_decoder
             )
         except FileNotFoundError:
-            print(f"WARNING: specified cache file for residue chem templates not found. " +
-                  "The initial templates will be default, and a new cache will be created at {cache_file}. " + eol,
+            print(f"WARNING: specified cache file for residue chem templates not found. " + eol +
+                  f"The initial templates will be default, and a new cache will be created at {cache_file}. ", 
                   file=sys.stderr, 
                   )
             templates = ResidueChemTemplates.create_from_defaults()
