@@ -623,7 +623,7 @@ class ResidueChemTemplates:
     def add_dict(self, data, overwrite=False):
         bad_keys = set(data) - {"ambiguous", "residue_templates", "padders"}
         if bad_keys:
-            raise ValueError("unexpected keys: {bad_keys}")
+            raise ValueError(f"unexpected keys: {bad_keys}")
         new_ambiguous = data.get("ambiguous", {}) 
         if overwrite:
             self.ambiguous.update(new_ambiguous)

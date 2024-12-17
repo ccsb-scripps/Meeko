@@ -1903,45 +1903,6 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         return smiles, order
 
     # region Ring Construction
-    def _is_ring_aromatic(self, ring_atom_indices: list[(int, int)]):
-        """
-        Determines whether a ring is aromatic.
-
-        Parameters
-        ----------
-        ring_atom_indices: the atom indices in the ring.
-
-        Returns
-        -------
-        A boolean indicating whether this ring is aromatic.
-        """
-        for atom_idx1, atom_idx2 in self.get_bonds_in_ring(ring_atom_indices):
-            bond = self.mol.GetBondBetweenAtoms(atom_idx1, atom_idx2)
-            if not bond.GetIsAromatic():
-                return False
-        return True
-
-    @staticmethod
-    def _construct_old_graph(atom_list: list[Atom]):
-        """
-        To support older implementations of helper functions in Meeko, takes a list of atoms and uses it to create a
-        list of each atom's graph value, where the index of a graph in the list corresponds to the atom's atom_index.
-
-        Parameters
-        ----------
-        atom_list: list[Atom]
-            A list of populated Atom objects.
-
-        Returns
-        -------
-        A dict mapping from atom index to lists of ints, where each list of ints represents the bonds from that
-        atom index to other atom indices.
-        """
-        output_graph = {}
-        for atom in atom_list:
-            output_graph[atom.index] = atom.graph
-        return output_graph
-
     def perceive_rings(self, keep_chorded_rings: bool, keep_equivalent_rings: bool):
         """
         Uses Hanser-Jauffret-Kaufmann exhaustive ring detection to find the rings in the molecule
@@ -1957,7 +1918,8 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         -------
         None
         """
-        old_graph = self._construct_old_graph(self.atoms)
+
+        old_graph = {atom.index: atom.graph for atom in self.atoms}
         hjk_ring_detection = utils.HJKRingDetection(old_graph)
         rings = hjk_ring_detection.scan(keep_chorded_rings, keep_equivalent_rings)
         for ring_atom_indices in rings:
