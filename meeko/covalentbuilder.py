@@ -17,7 +17,7 @@ def find_smarts(mol, smarts, smarts_indices):
     return indices
 
 
-def transform(ligand, index_pair, attractors_p3d):
+def transform(ligand, index_pair, tethers_p3d):
     """ generate translatead and aligned molecules for each of the indices requested
         and for all the residues defined in the class constructor
         SOURCE: https://sourceforge.net/p/rdkit/mailman/message/36750909/
@@ -33,7 +33,7 @@ def transform(ligand, index_pair, attractors_p3d):
     # get the first conformer
     conf = target.GetConformer()
     # set coordinates to the ones of the actual target residue
-    c1, c2 = attractors_p3d
+    c1, c2 = tethers_p3d
     conf.SetAtomPosition(0, c1)
     conf.SetAtomPosition(1, c2)
     # perform alignment
@@ -48,9 +48,9 @@ def get_fragments_by_atom_indices(mol: Chem.Mol, atom_idx1: int, atom_idx2: int,
 
     bond = mol.GetBondBetweenAtoms(atom_idx1, atom_idx2)
     if bond is None:
-        raise ValueError(f"No bond exists between the attractor atoms. ")
+        raise ValueError(f"No bond exists between the tether atoms. ")
     if bond.GetBondType() != Chem.BondType.SINGLE: 
-        raise ValueError(f"Needs the bond between the attractor atoms to be a single bond, but got {bond.GetBondType()}")
+        raise ValueError(f"Needs the bond between the tether atoms to be a single bond, but got {bond.GetBondType()}")
 
     emol = Chem.EditableMol(mol)
     emol.RemoveBond(atom_idx1, atom_idx2)
@@ -58,7 +58,7 @@ def get_fragments_by_atom_indices(mol: Chem.Mol, atom_idx1: int, atom_idx2: int,
 
     index_fragments = Chem.GetMolFrags(mol, asMols=False)
     if len(index_fragments) != 2:
-        raise ValueError(f"Residue was expected to be split into two fragments (immobile, mobile) after removal of the attractor bond, but got {len(index_fragments)} fragments.")
+        raise ValueError(f"Residue was expected to be split into two fragments (immobile, mobile) after removal of the tether bond, but got {len(index_fragments)} fragments.")
     
     frag1_indices, frag2_indices = index_fragments
     if atom_idx1 in frag1_indices:

@@ -279,21 +279,21 @@ def cmd_lineparser():
         "--rec_residue", help='examples: "A:LYS:204", "A:HIS:" (all HIS in chain A), ":LYS:" (all LYS)'
     )
     covalent_group.add_argument(
-        "--rec_attractor_names", 
+        "--rec_tether_names", 
         type=str,
         nargs=2,
         metavar="ATOM_NAME",
         default=["CA", "CB"],
-        help=("Atom names of the two \"attractor\" atoms within the receptor. "
+        help=("Atom names of the two tether atoms within the receptor. "
         " (default: CA CB) " 
         "  The closer atom to the receptor core needs to be put first, "
         "  followed by the other atom that is closer to the ligand. "
         )
     )
     covalent_group.add_argument(
-        "--rec_attractor_smarts", 
+        "--rec_tether_smarts", 
         help=("SMARTS pattern to define receptor atoms for ligand attachment. "
-        "Overrides the default atom names (CA CB) if --rec_attractor_names is not explicitly provided. "
+        "Overrides the default atom names (CA CB) if --rec_tether_names is not explicitly provided. "
         )
     )
     covalent_group.add_argument(
@@ -401,21 +401,21 @@ def cmd_lineparser():
 
     provided_names = False
     if is_covalent: 
-        # verify ways to specify receptor attractor atoms
-        provided_names = '--rec_attractor_names' in remaining_argv
-        provided_smarts = '--rec_attractor_smarts' in remaining_argv
+        # verify ways to specify receptor tether atoms
+        provided_names = '--rec_tether_names' in remaining_argv
+        provided_smarts = '--rec_tether_smarts' in remaining_argv
 
         if provided_names and provided_smarts: 
         # when both are explicitly provided
             print(
-                "Error: --rec_attractor_names and --rec_attractor_smarts are conflicting arguments. ",
+                "Error: --rec_tether_names and --rec_tether_smarts are conflicting arguments. ",
                 file=sys.stderr,
             )
             sys.exit(2)
 
         if not provided_names and not provided_smarts: 
         # when both are not explicitly provided
-        # use the default of --rec_attractor_names 
+        # use the default of --rec_tether_names 
             provided_names = True
 
         if provided_smarts: 
@@ -734,13 +734,13 @@ def main():
             sys.exit(1)
         # endregion
 
-        # region gets attractor rdGeometry.Point3D objects for each target monomer
+        # region gets tether rdGeometry.Point3D objects for each target monomer
 
         # mapping of monomer_string ("{chid}:{res_type}:{res_num}") to 
-        # list of tuples containing the two attractor rdGeometry.Point3D objects
-        monomer_to_attractor = {}
+        # list of tuples containing the two tether rdGeometry.Point3D objects
+        monomer_to_tether = {}
         if provided_names: 
-            atname1, atname2 = args.rec_attractor_names
+            atname1, atname2 = args.rec_tether_names
             for key, monomer in target_monomers.items(): 
                 chid, res_num = key.split(":")
                 res_type = monomer.input_resname
@@ -761,14 +761,14 @@ def main():
                     sys.exit(1)
 
                 conformer = monomer.padded_mol.GetConformer()
-                monomer_to_attractor[monomer_string] = {}
+                monomer_to_tether[monomer_string] = {}
                 molsetup_mapidx = monomer.molsetup_mapidx
                 for idx_1 in at1_index: 
                     for idx_2 in at2_index: 
                         if idx_1 != idx_2: 
                             at1_p3d, at2_p3d = (conformer.GetAtomPosition(idx_1), 
                                                 conformer.GetAtomPosition(idx_2))
-                            monomer_to_attractor[monomer_string].update({f"{molsetup_mapidx[idx_1]}-{molsetup_mapidx[idx_2]}": (at1_p3d, at2_p3d)})
+                            monomer_to_tether[monomer_string].update({f"{molsetup_mapidx[idx_1]}-{molsetup_mapidx[idx_2]}": (at1_p3d, at2_p3d)})
 
         else: 
             for key, monomer in target_monomers.items(): 
@@ -777,35 +777,35 @@ def main():
                 monomer_string = f"{chid}:{res_type}:{res_num}"
                 mol = Chem.Mol(monomer.rdkit_mol)
 
-                # list of lists containing matched indicies of the two attractor atoms
-                rec_attractor_pairs = find_smarts(mol, args.rec_attractor_smarts, args.rec_smarts_indices)
+                # list of lists containing matched indicies of the two tether atoms
+                rec_tether_pairs = find_smarts(mol, args.rec_tether_smarts, args.rec_smarts_indices)
 
-                if not rec_attractor_pairs: 
+                if not rec_tether_pairs: 
                     print(
-                        f"Error: no match atoms for {args.rec_attractor_smarts}", 
+                        f"Error: no match atoms for {args.rec_tether_smarts}", 
                         file=sys.stderr,
                     )
                     sys.exit(1)
 
                 conformer = mol.GetConformer()
-                monomer_to_attractor[monomer_string] = {}
-                for index_pair in rec_attractor_pairs: 
+                monomer_to_tether[monomer_string] = {}
+                for index_pair in rec_tether_pairs: 
                     idx_1, idx_2 = index_pair
                     at1_p3d, at2_p3d = (conformer.GetAtomPosition(idx_1), 
                                         conformer.GetAtomPosition(idx_2))
-                    monomer_to_attractor[monomer_string].update({f"{idx_1}-{idx_2}": (at1_p3d, at2_p3d)})
+                    monomer_to_tether[monomer_string].update({f"{idx_1}-{idx_2}": (at1_p3d, at2_p3d)})
         # endregion
 
         # region writes updated receptor json
         # atoms present in covalent ligand will be ignored in the connected monomer
         if args.write_receptor_json: 
-            for monomer_string in monomer_to_attractor: 
+            for monomer_string in monomer_to_tether: 
                 chid, res_type, res_num = monomer_string.split(":")
                 monomer_label = "_".join([chid, res_type, res_num])
                 monomer_resid = ":".join([chid, res_num])
                 monomer = polymer.monomers[monomer_resid]
                 orig_molsetup = copy.deepcopy(monomer.molsetup)
-                for residue_connect_idx in monomer_to_attractor[monomer_string]: 
+                for residue_connect_idx in monomer_to_tether[monomer_string]: 
                     idx_1, idx_2 = [int(x) for x in residue_connect_idx.split("-")]
                     
                     molsetup_mapidx_inv = {v:k for k,v in monomer.molsetup_mapidx.items()}
@@ -874,28 +874,28 @@ def main():
 
         if is_covalent:
 
-            # region gets lig_attractor_pairs
-            lig_attractor_pairs = find_smarts(mol, args.tether_smarts, args.tether_smarts_indices)
-            lig_attractor_pairs_copy = lig_attractor_pairs.copy()
-            for index_pair in lig_attractor_pairs_copy: 
+            # region gets lig_tether_pairs
+            lig_tether_pairs = find_smarts(mol, args.tether_smarts, args.tether_smarts_indices)
+            lig_tether_pairs_copy = lig_tether_pairs.copy()
+            for index_pair in lig_tether_pairs_copy: 
                 try: 
                     test_mol = Chem.Mol(mol)
                     f1, f2 = get_fragments_by_atom_indices(test_mol, index_pair[0], index_pair[1])
                 except Exception as e: 
-                    print(f"Skipping attractor pair because \n {e}")
-                    lig_attractor_pairs.remove(index_pair)
+                    print(f"Skipping tether pair because \n {e}")
+                    lig_tether_pairs.remove(index_pair)
 
-            if not lig_attractor_pairs:
-                print(f"Error: no proper ligand attractors found for {args.tether_smarts}", file=sys.stderr)
+            if not lig_tether_pairs:
+                print(f"Error: no proper ligand tethers found for {args.tether_smarts}", file=sys.stderr)
                 sys.exit(1)
             # endregion
 
             # region helper function for processing
-            def process_covlig(index_pair, monomer_string, residue_connect_idx, attractors_p3d):
+            def process_covlig(index_pair, monomer_string, residue_connect_idx, tethers_p3d):
 
                 nonlocal nr_failures, this_mol_had_failure
                 root_atom_index = index_pair[0]
-                transformed_mol = transform(mol, index_pair, attractors_p3d)
+                transformed_mol = transform(mol, index_pair, tethers_p3d)
 
                 molsetups = preparator.prepare(
                     transformed_mol,
@@ -945,19 +945,19 @@ def main():
             # endregion
             
             # region helper function to generate combinations for list * dict[dict]
-            def generate_combinations(lig_attractor_pairs: list[tuple], monomer_to_attractor: dict[str,dict]):
-                for index_pair in lig_attractor_pairs:
-                    for monomer_string, attractor_data in monomer_to_attractor.items():
-                        for residue_connect_idx, attractors_p3d in attractor_data.items():
-                            yield index_pair, monomer_string, residue_connect_idx, attractors_p3d
+            def generate_combinations(lig_tether_pairs: list[tuple], monomer_to_tether: dict[str,dict]):
+                for index_pair in lig_tether_pairs:
+                    for monomer_string, tether_data in monomer_to_tether.items():
+                        for residue_connect_idx, tethers_p3d in tether_data.items():
+                            yield index_pair, monomer_string, residue_connect_idx, tethers_p3d
             # endregion
 
             # region processes all covligs
             ligand_connect_pattern = 1
-            for index_pair, monomer_string, residue_connect_idx, attractors_p3d in generate_combinations(
-                lig_attractor_pairs, monomer_to_attractor
+            for index_pair, monomer_string, residue_connect_idx, tethers_p3d in generate_combinations(
+                lig_tether_pairs, monomer_to_tether
             ):
-                process_covlig(index_pair, monomer_string, residue_connect_idx, attractors_p3d)
+                process_covlig(index_pair, monomer_string, residue_connect_idx, tethers_p3d)
                 ligand_connect_pattern += 1
             # endregion
 

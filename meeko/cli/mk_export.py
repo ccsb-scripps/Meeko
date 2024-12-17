@@ -162,7 +162,7 @@ def main():
                     monomer_rdkit_mol = polymer.monomers[res_id].rdkit_mol
                     monomer_conformer = monomer_rdkit_mol.GetConformer()
 
-                    attractor_mol_index = []
+                    tether_mol_index = []
                     for target_xyz in tethered_xyz: 
                         target_x, target_y, target_z = target_xyz
                         for atom in monomer_rdkit_mol.GetAtoms():
@@ -171,20 +171,20 @@ def main():
                             if (abs(pos.x - target_x) <= tolerance and
                                 abs(pos.y - target_y) <= tolerance and
                                 abs(pos.z - target_z) <= tolerance):
-                                attractor_mol_index.append(idx)
+                                tether_mol_index.append(idx)
                                 break                          
                     
-                    if not attractor_mol_index: 
+                    if not tether_mol_index: 
                         print(
-                            f"Alignment of ligand root atoms and receptor attractor atoms failed. "
+                            f"Alignment of ligand root atoms and receptor tether atoms failed. "
                             f"The ligand might have been setup with a different receptor structure, "
-                            f"or a significant deviation of the attractors (more than {tolerance} Angstrom) might have occured during docking. "
+                            f"or a significant deviation of the tethers (more than {tolerance} Angstrom) might have occured during docking. "
                         )
                         sys.exit(2)
 
-                    # breaks monomer's rdkit_mol by the attractors bond and keep only the receptor-side fragment
-                    keep_mol, _ = get_fragments_by_atom_indices(monomer_rdkit_mol, attractor_mol_index[0],
-                                                                attractor_mol_index[1], get_as_mols=True)
+                    # breaks monomer's rdkit_mol by the tethers bond and keep only the receptor-side fragment
+                    keep_mol, _ = get_fragments_by_atom_indices(monomer_rdkit_mol, tether_mol_index[0],
+                                                                tether_mol_index[1], get_as_mols=True)
                     polymer.monomers[res_id].rdkit_mol = keep_mol
 
                     # creates a new monomer from pdbqt_mol and keeps only the ligand-side fragment
