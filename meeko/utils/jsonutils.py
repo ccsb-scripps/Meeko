@@ -1,6 +1,9 @@
 from rdkit import Chem
 from rdkit.Chem import rdMolInterchange
 
+import json
+import logging
+
 
 SERIALIZATION_SEPARATOR_CHAR = ","
 
@@ -74,3 +77,49 @@ def string_to_tuple(input_string: str, element_type: type = str):
         )
     else:
         return tuple(input_string)
+
+class BaseJSONParsable:
+
+    # Define in Individual Subclasses 
+    expected_json_keys = None
+    object_hook = None 
+    # and some decoder function
+
+    # Inherit from_json and from_json_file
+    @classmethod
+    def from_json(cls, json_string):
+        try: 
+            obj = json.loads(json_string, object_hook=cls.object_hook)
+            # Log mismatched keys (maybe not a fatal problem)
+            if set(obj.keys()) != cls.expected_json_keys:
+                logging.error(
+                    f"Keys from JSON ({set(obj.keys())}) differ from "
+                    f"expected keys ({cls.expected_json_keys})."
+                )  
+            # Success
+            if isinstance(obj, cls): 
+                return obj
+
+        except Exception as decoder_error:     
+            try: 
+                obj = json.loads(json_string)
+            # Error occurred while parsing JSON
+            except Exception as parser_error: 
+                raise RuntimeError(
+                    f"Unable to parse the source JSON for {cls.__name__}: {parser_error}"
+                )
+            # Error occurred within the decoder function
+            raise RuntimeError(
+                f"An error occurred when creating {cls.__name__}: {decoder_error}"
+            )
+        # Failed to create obj
+        raise ValueError(
+            f"Unexpected object type created from JSON: {type(obj)}. "
+            f"Expected object type is: {cls.__name__}."
+        )
+            
+    @classmethod
+    def from_json_file(cls, json_file): 
+        with open(json_file, "r") as f: 
+            json_string = f.read()
+        return cls.from_json(json_string)

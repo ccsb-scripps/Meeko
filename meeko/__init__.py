@@ -31,7 +31,6 @@ from .polymer import ResiduePadder
 from .polymer import ResidueTemplate
 from .polymer import ResidueChemTemplates
 from .polymer import PolymerEncoder
-from .polymer import MonomerEncoder
 from .polymer import ResiduePadderEncoder
 from .polymer import ResidueTemplateEncoder
 from .polymer import ResidueChemTemplatesEncoder
@@ -64,7 +63,7 @@ __all__ = ['MoleculePreparation', 'RDKitMoleculeSetup', 'MoleculeSetupEncoder',
            'pdbutils', 'geomutils', 'rdkitutils', 'utils',
            'AtomTyper', 'PDBQTMolecule', 'PDBQTReceptor', 'analysis',
            'Polymer', 'Monomer', 'ResiduePadder', 'ResidueTemplate', 'ResidueChemTemplates',
-           'PolymerEncoder', 'MonomerEncoder', 'ResiduePadderEncoder', 'ResidueTemplateEncoder',
+           'PolymerEncoder', 'ResiduePadderEncoder', 'ResidueTemplateEncoder',
            'ResidueChemTemplatesEncoder',
            'add_rotamers_to_polymer_molsetups',
            'RDKitMolCreate',
