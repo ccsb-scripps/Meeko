@@ -163,7 +163,7 @@ def test_monomer_encoding_decoding(populated_monomer):
     starting_monomer = populated_monomer
     json_str = json.dumps(starting_monomer, cls=MonomerEncoder)
     decoded_monomer = json.loads(
-        json_str, object_hook=polymer.monomer_json_decoder
+        json_str, object_hook=Monomer.monomer_json_decoder
     )
 
     # Asserts that the starting and ending objects have the expected Monomer type

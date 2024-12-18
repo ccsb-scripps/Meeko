@@ -2005,6 +2005,7 @@ class Monomer:
         "molsetup_mapidx",
         "is_flexres_atom",
         "is_movable",
+        "mapidx_from_raw",
     })
 
     def __init__(
@@ -2082,6 +2083,10 @@ class Monomer:
             return obj
 
         if set(obj.keys()) != cls.expected_keys:
+            missing_keys = cls.expected_keys - obj.keys()
+            unexpected_keys = obj.keys() - cls.expected_keys
+            print("missing keys", missing_keys)
+            print("unexpected keys", unexpected_keys)
             return obj
         
         try:
