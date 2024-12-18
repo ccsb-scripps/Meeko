@@ -31,6 +31,12 @@ from rdkit.Chem import rdChemReactions
 
 from meeko.utils.pdbutils import PDBAtomInfo
 
+try:
+    import openforcefields
+    _got_openff = True
+except ImportError as err:
+    _got_openff = False
+
 # from ..meeko.utils.pdbutils import PDBAtomInfo
 
 pkgdir = pathlib.Path(meeko.__file__).parents[1]
@@ -413,6 +419,11 @@ def check_molsetup_equality(decoded_obj: MoleculeSetup, starting_obj: MoleculeSe
             decoded_obj.restraints[idx], starting_obj.restraints[idx]
         )
 
+    # dihedrals
+    assert decoded_obj.dihedral_partaking_atoms == starting_obj.dihedral_partaking_atoms
+    assert decoded_obj.dihedral_interactions == starting_obj.dihedral_interactions
+    assert decoded_obj.dihedral_labels == starting_obj.dihedral_labels
+
     # Checking flexibility model
     for key in starting_obj.flexibility_model:
         assert key in decoded_obj.flexibility_model
@@ -514,13 +525,6 @@ def check_ring_equality(decoded_obj: Ring, starting_obj: Ring):
     """
     assert isinstance(decoded_obj.ring_id, tuple)
     assert decoded_obj.ring_id == starting_obj.ring_id
-    assert isinstance(decoded_obj.corner_flip, bool)
-    assert decoded_obj.corner_flip == starting_obj.corner_flip
-    assert len(decoded_obj.graph) == len(starting_obj.graph)
-    for idx, val in enumerate(starting_obj.graph):
-        assert decoded_obj.graph[idx] == val
-    assert isinstance(decoded_obj.is_aromatic, bool)
-    assert decoded_obj.is_aromatic == starting_obj.is_aromatic
     return
 
 
@@ -763,5 +767,18 @@ def check_polymer_equality(
     assert decoded_obj.log == starting_obj.log
     return
 
+@pytest.mark.skipif(not _got_openff, reason="requires openff-forcefields")
+def test_dihedral_equality():
+    mk_prep = MoleculePreparation(
+        merge_these_atom_types=(),
+        dihedral_model="openff",
+    )
+    fn = str(pkgdir/"test"/"flexibility_data"/"non_sequential_atom_ordering_01.mol")
+    mol = Chem.MolFromMolFile(fn, removeHs=False)
+    starting_molsetup = mk_prep(mol)[0]
+    json_str = json.dumps(starting_molsetup, cls=MoleculeSetupEncoder)
+    decoded_molsetup = json.loads(json_str, object_hook=RDKitMoleculeSetup.from_json)
+    check_molsetup_equality(starting_molsetup, decoded_molsetup)
+    return
 
 # endregion

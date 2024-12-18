@@ -21,7 +21,7 @@ def find_files(directory):
 
 setup(
     name="meeko",
-    version='0.6.0',
+    version='0.6.1',
     author="Forli Lab",
     author_email="forli@scripps.edu",
     url="https://github.com/ccsb-scripps/meeko",
@@ -31,8 +31,6 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
-    install_requires=['numpy>=1.18', "rdkit", "scipy", "gemmi"],
-    python_requires='>=3.9, <3.12',
     license="LGPL-2.1",
     keywords=["molecular modeling", "drug design",
             "docking", "autodock"],

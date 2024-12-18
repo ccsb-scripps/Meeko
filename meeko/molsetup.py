@@ -9,8 +9,10 @@ from copy import deepcopy
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 import json
+eol="\n"
 import sys
 import warnings
+from typing import Union
 
 import numpy as np
 import rdkit.Chem
@@ -47,9 +49,6 @@ DEFAULT_GRAPH = []
 DEFAULT_BOND_ROTATABLE = False
 DEFAULT_BOND_CYCLE_BREAK = False
 
-DEFAULT_RING_CORNER_FLIP = False
-DEFAULT_RING_GRAPH = []
-DEFAULT_RING_IS_AROMATIC = False
 DEFAULT_RING_CLOSURE_BONDS_REMOVED = []
 DEFAULT_RING_CLOSURE_PSEUDOS_BY_ATOM = defaultdict
 # endregion
@@ -192,9 +191,9 @@ class UniqAtomParams:
 @dataclass
 class Atom:
     index: int
-    pdbinfo: str or PDBAtomInfo = DEFAULT_PDBINFO
+    pdbinfo: Union[str, PDBAtomInfo] = DEFAULT_PDBINFO
     charge: float = DEFAULT_CHARGE
-    coord: np.ndarray = field(default_factory=np.ndarray)
+    coord: np.ndarray = field(default_factory=lambda: np.zeros(3))
     atomic_num: int = DEFAULT_ATOMIC_NUM
     atom_type: str = DEFAULT_ATOM_TYPE
     is_ignore: bool = DEFAULT_IS_IGNORE
@@ -353,9 +352,6 @@ class Bond:
 @dataclass
 class Ring:
     ring_id: tuple
-    corner_flip: bool = DEFAULT_RING_CORNER_FLIP
-    graph: dict = field(default_factory=list)
-    is_aromatic: bool = DEFAULT_RING_IS_AROMATIC
 
     @staticmethod
     def from_json(obj: dict):
@@ -379,16 +375,13 @@ class Ring:
             return obj
 
         # Check that all the keys we expect are in the object dictionary as a safety measure
-        expected_json_keys = {"ring_id", "corner_flip", "graph", "is_aromatic"}
+        expected_json_keys = {"ring_id"}
         if set(obj.keys()) != expected_json_keys:
             return obj
 
         # Constructs a Ring object from the provided keys.
         ring_id = string_to_tuple(obj["ring_id"], int)
-        corner_flip = obj["corner_flip"]
-        graph = obj["graph"]
-        is_aromatic = obj["is_aromatic"]
-        output_ring = Ring(ring_id, corner_flip, graph, is_aromatic)
+        output_ring = Ring(ring_id)
         return output_ring
 
 
@@ -401,7 +394,7 @@ class RingClosureInfo:
 @dataclass
 class Restraint:
     atom_index: int
-    target_coords: (float, float, float)
+    target_coords: tuple[float, float, float]
     kcal_per_angstrom_square: float
     delay_angstroms: float
 
@@ -515,7 +508,7 @@ class MoleculeSetup:
         self,
         atom_index: int = None,
         overwrite: bool = False,
-        pdbinfo: str or PDBAtomInfo = DEFAULT_PDBINFO,
+        pdbinfo: Union[str, PDBAtomInfo] = DEFAULT_PDBINFO,
         charge: float = DEFAULT_CHARGE,
         coord: np.ndarray = None,
         atomic_num: int = DEFAULT_ATOMIC_NUM,
@@ -600,7 +593,7 @@ class MoleculeSetup:
 
     def add_pseudoatom(
         self,
-        pdbinfo: str or PDBAtomInfo = DEFAULT_PDBINFO,
+        pdbinfo: Union[str, PDBAtomInfo] = DEFAULT_PDBINFO,
         charge: float = DEFAULT_CHARGE,
         coord: np.ndarray = None,
         atom_type: str = DEFAULT_ATOM_TYPE,
@@ -1384,7 +1377,7 @@ class MoleculeSetup:
             obj["ring_closure_info"]["bonds_removed"],
             obj["ring_closure_info"]["pseudos_by_atom"],
         )
-        molsetup.rotamers = obj["rotamers"]
+        molsetup.rotamers = [{string_to_tuple(k, element_type=int): v for k,v in rotamer.items()} for rotamer in obj["rotamers"]]
         molsetup.atom_params = obj["atom_params"]
         molsetup.restraints = [Restraint.from_json(x) for x in obj["restraints"]]
         molsetup.flexibility_model = obj["flexibility_model"]
@@ -1487,7 +1480,7 @@ class MoleculeSetupExternalToolkit(ABC):
         return index
 
     @abstractmethod
-    def init_atom(self, assign_charges, coords):
+    def init_atom(self, compute_gasteiger_charges, read_charges_from_prop, coords):
         pass
 
     @abstractmethod
@@ -1529,8 +1522,6 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         a mapping from tuples of atom indices to dihedral labels
     atom_to_ring_id: dict()
         mapping of atom index to ring id of each atom belonging to the ring
-    ring_corners: dict()
-        unclear what this is a mapping of, but is used to store corner flexibility for the rings
     rmsd_symmetry_indices: tuple
         Tuples of the indices of the molecule's atoms that match a substructure query. needs info.
 
@@ -1548,7 +1539,6 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         self.dihedral_partaking_atoms: dict = {}
         self.dihedral_labels: dict = {}
         self.atom_to_ring_id = {}
-        self.ring_corners = {}
         self.rmsd_symmetry_indices = ()
 
     def copy(self):
@@ -1568,7 +1558,8 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         mol: Chem.Mol,
         keep_chorded_rings: bool = False,
         keep_equivalent_rings: bool = False,
-        assign_charges: bool = True,
+        compute_gasteiger_charges: bool = True,
+        read_charges_from_prop: str = None,
         conformer_id: int = -1,
     ):
         """
@@ -1579,7 +1570,8 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
             RDKit Mol object to build the RDKitMoleculeSetup from.
         keep_chorded_rings: bool
         keep_equivalent_rings: bool
-        assign_charges: bool
+        compute_gasteiger_charges: bool
+        read_charges_from_prop: str
         conformer_id: int
 
         Returns
@@ -1622,10 +1614,10 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         molsetup.atom_true_count = molsetup.get_num_mol_atoms()
         molsetup.name = molsetup.get_mol_name()
         coords = rdkit_conformer.GetPositions()
-        molsetup.init_atom(assign_charges, coords)
+        molsetup.init_atom(compute_gasteiger_charges, read_charges_from_prop, coords)
         molsetup.init_bond()
         molsetup.perceive_rings(keep_chorded_rings, keep_equivalent_rings)
-        molsetup.rmsd_symmetry_indices = cls.get_symmetries_for_rmsd(mol)
+        # molsetup.rmsd_symmetry_indices = cls.get_symmetries_for_rmsd(mol)
 
         # to store sets of coordinates, e.g. docked poses, as dictionaries indexed by
         # the atom index, because not all atoms need to have new coordinates specified
@@ -1666,14 +1658,14 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         return mol, idx_to_rm, rm_to_neigh
          
 
-    def init_atom(self, assign_charges: bool, coords: list[np.ndarray]):
+    def init_atom(self, compute_gasteiger_charges: bool, read_charges_from_prop: str, coords: list[np.ndarray]):
         """
         Generates information about the atoms in an RDKit Mol and adds them to an RDKitMoleculeSetup.
 
         Parameters
         ----------
-        assign_charges: bool
-            Indicates whether we should extract/generate charges.
+        compute_gasteiger_charges: bool
+            Indicates whether we should compute gasteiger charges.
         coords: list[np.ndarray]
             Atom coordinates for the RDKit Mol.
 
@@ -1682,7 +1674,11 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         None
         """
         # extract/generate charges
-        if assign_charges:
+        if compute_gasteiger_charges: 
+            if read_charges_from_prop is not None: 
+                raise ValueError(
+                    "Conflicting options: compute_gasteiger_charges and read_charges_from_prop cannot both be set. "
+                )
             things = self.remove_elements(self.mol)
             copy_mol, idx_rm_to_formal_charge, rm_to_neigh = things
             for atom in copy_mol.GetAtoms():
@@ -1723,6 +1719,23 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
                         # print(f"{idx=} {newidx=}")
                         ok_charges[i] += chrg_by_heavy_atom[newidx]
                 charges = ok_charges
+        elif read_charges_from_prop is not None: 
+            if not isinstance(read_charges_from_prop, str) or not read_charges_from_prop: 
+                raise ValueError(
+                    f"Invalid atom property name for read_charges_from_prop: expected a nonempty string (str), but got {type(read_charges_from_prop).__name__} instead. "
+                )
+            charges = [
+                        float(atom.GetProp(read_charges_from_prop)) 
+                        if atom.HasProp(read_charges_from_prop) else None
+                        for atom in self.mol.GetAtoms()
+                    ]
+            if None in charges: 
+                for idx, charge in enumerate(charges):
+                    if charge is None:
+                        print(f"Charge at index {idx} is None.")
+                raise ValueError(
+                    f"The list of charges based on atom property name {read_charges_from_prop} contains None. "
+                )  
         else:
             charges = [0.0] * self.mol.GetNumAtoms()
         # register atom
@@ -1765,7 +1778,8 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         The substruct matches in the RDKit Mol for the given SMARTS.
         """
         p = Chem.MolFromSmarts(smarts)
-        return self.mol.GetSubstructMatches(p)
+        nr_atoms = self.mol.GetNumAtoms()
+        return self.mol.GetSubstructMatches(p, maxMatches=nr_atoms)
 
     def get_mol_name(self):
         """
@@ -1896,45 +1910,6 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         return smiles, order
 
     # region Ring Construction
-    def _is_ring_aromatic(self, ring_atom_indices: list[(int, int)]):
-        """
-        Determines whether a ring is aromatic.
-
-        Parameters
-        ----------
-        ring_atom_indices: the atom indices in the ring.
-
-        Returns
-        -------
-        A boolean indicating whether this ring is aromatic.
-        """
-        for atom_idx1, atom_idx2 in self.get_bonds_in_ring(ring_atom_indices):
-            bond = self.mol.GetBondBetweenAtoms(atom_idx1, atom_idx2)
-            if not bond.GetIsAromatic():
-                return False
-        return True
-
-    @staticmethod
-    def _construct_old_graph(atom_list: list[Atom]):
-        """
-        To support older implementations of helper functions in Meeko, takes a list of atoms and uses it to create a
-        list of each atom's graph value, where the index of a graph in the list corresponds to the atom's atom_index.
-
-        Parameters
-        ----------
-        atom_list: list[Atom]
-            A list of populated Atom objects.
-
-        Returns
-        -------
-        A dict mapping from atom index to lists of ints, where each list of ints represents the bonds from that
-        atom index to other atom indices.
-        """
-        output_graph = {}
-        for atom in atom_list:
-            output_graph[atom.index] = atom.graph
-        return output_graph
-
     def perceive_rings(self, keep_chorded_rings: bool, keep_equivalent_rings: bool):
         """
         Uses Hanser-Jauffret-Kaufmann exhaustive ring detection to find the rings in the molecule
@@ -1950,18 +1925,12 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         -------
         None
         """
-        old_graph = self._construct_old_graph(self.atoms)
+
+        old_graph = {atom.index: atom.graph for atom in self.atoms}
         hjk_ring_detection = utils.HJKRingDetection(old_graph)
         rings = hjk_ring_detection.scan(keep_chorded_rings, keep_equivalent_rings)
         for ring_atom_indices in rings:
             ring_to_add = Ring(ring_atom_indices)
-            if self._is_ring_aromatic(ring_atom_indices):
-                ring_to_add.is_aromatic = True
-            for atom_idx in ring_atom_indices:
-                # TODO: add it to some sort of atom to ring id tracking thing -> add to atom data structure
-                ring_to_add.graph = self._recursive_graph_walk(
-                    atom_idx, collected=[], exclude=list(ring_atom_indices)
-                )
             self.rings[ring_atom_indices] = ring_to_add
         return
 
@@ -2133,7 +2102,6 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
             "dihedral_partaking_atoms",
             "dihedral_labels",
             "atom_to_ring_id",
-            "ring_corners",
             "rmsd_symmetry_indices",
         }
         for key in expected_molsetup_keys:
@@ -2154,13 +2122,12 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         ]
         # TODO: Dihedral decoding may need another look
         rdkit_molsetup.dihedral_interactions = obj["dihedral_interactions"]
-        rdkit_molsetup.dihedral_partaking_atoms = obj["dihedral_partaking_atoms"]
-        rdkit_molsetup.dihedral_labels = obj["dihedral_labels"]
+        rdkit_molsetup.dihedral_partaking_atoms = {string_to_tuple(k, element_type=int): v for k,v in obj["dihedral_partaking_atoms"].items()}
+        rdkit_molsetup.dihedral_labels = {string_to_tuple(k, element_type=int): v for k,v in obj["dihedral_labels"].items()}
         rdkit_molsetup.atom_to_ring_id = {
             int(k): [string_to_tuple(t) for t in v]
             for k, v in obj["atom_to_ring_id"].items()
         }
-        rdkit_molsetup.ring_corners = obj["ring_corners"]
         rdkit_molsetup.rmsd_symmetry_indices = [
             string_to_tuple(v) for v in obj["rmsd_symmetry_indices"]
         ]
@@ -2262,9 +2229,6 @@ class RingEncoder(json.JSONEncoder):
         if isinstance(obj, Ring):
             return {
                 "ring_id": tuple_to_string(obj.ring_id),
-                "corner_flip": obj.corner_flip,
-                "graph": obj.graph,
-                "is_aromatic": obj.is_aromatic,
             }
         return json.JSONEncoder.default(self, obj)
 
@@ -2340,7 +2304,7 @@ class MoleculeSetupEncoder(json.JSONEncoder):
                     for k, v in obj.rings.items()
                 },
                 "ring_closure_info": obj.ring_closure_info.__dict__,
-                "rotamers": obj.rotamers,
+                "rotamers": [{tuple_to_string(k): v for k, v in rotamer.items()} for rotamer in obj.rotamers],
                 "atom_params": obj.atom_params,
                 "restraints": [
                     self.restraint_encoder.default(x) for x in obj.restraints
@@ -2366,10 +2330,9 @@ class MoleculeSetupEncoder(json.JSONEncoder):
             output_dict["mol"] = rdMolInterchange.MolToJSON(obj.mol)
             output_dict["modified_atom_positions"] = obj.modified_atom_positions
             output_dict["dihedral_interactions"] = obj.dihedral_interactions
-            output_dict["dihedral_partaking_atoms"] = obj.dihedral_partaking_atoms
-            output_dict["dihedral_labels"] = obj.dihedral_labels
+            output_dict["dihedral_partaking_atoms"] = {tuple_to_string(k): v for k,v in obj.dihedral_partaking_atoms.items()}
+            output_dict["dihedral_labels"] = {tuple_to_string(k): v for k,v in obj.dihedral_labels.items()}
             output_dict["atom_to_ring_id"] = obj.atom_to_ring_id
-            output_dict["ring_corners"] = obj.ring_corners
             output_dict["rmsd_symmetry_indices"] = obj.rmsd_symmetry_indices
         # If nothing is in the dict, then none of the possible object types for this encoder matched and we should
         # return the default JSON encoder.

@@ -35,11 +35,13 @@ Install the additional packages and data from GitHub repositories
    git clone --single-branch --branch develop https://github.com/forlilab/scrubber.git
    cd scrubber; pip install --use-pep517 -e .; cd ..
 
-- (Example files for this tutorial) Forlilab Tutorials
+- (Example files for this tutorial) Meeko/example/tutorial1
+Originally from `Forlilab tutorials <https://github.com/forlilab/tutorials>`_
 
 .. code-block:: bash
 
-   git clone https://github.com/forlilab/tutorials.git
+  git clone --branch docwork --depth=1 --filter=tree:0 https://github.com/rwxayheee/Meeko.git
+  cd Meeko; git sparse-checkout set --no-cone example; git checkout; cd ..
 
 Ligand Preparation
 ==================
@@ -79,11 +81,11 @@ In case there are multiple molecules in the SDF file, ``mk_prepare_ligand.py`` n
 Batched Ligand Preparation from a ``.smi`` File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For virtual screening, it is possible to prepare ligands in batch mode from a ``.smi`` File. There is one such example file at ``tutorials/imatinib/step-4/mols.smi`` from `Forlilab tutorials <https://github.com/forlilab/tutorials>`_. Follow the example commands to process ``mols.smi``: 
+For virtual screening, it is possible to prepare ligands in batch mode from a ``.smi`` File. There is one such example file at ``Meeko/example/tutorial1/input_files/mols.smi``. Follow the example commands to process ``mols.smi``: 
 
 .. code-block:: bash
 
-    smi_file="tutorials/imatinib/step-4/mols.smi"
+    smi_file="Meeko/example/tutorial1/input_files/mols.smi"
     scrub.py $smi_file -o mols.sdf
 
 At the end of the execution, the expected standard output will tell you the total number of isomers written to the multi-molecule SDF file ``mols.sdf``. This will help you estimate the expected file size and system requirements beforehand. 
@@ -116,23 +118,23 @@ Docking with AutoDock-Vina requires the following receptor input files:
 - Receptor PDBQT file
 - (Optional) a TXT file that contains the box specifications, which can be reused as the config file for Vina
 
-Starting from a provided PDB file at ``tutorials/imatinib/step-3/1iep_protein.pdb`` from `Forlilab tutorials <https://github.com/forlilab/tutorials>`_, the generation of a Receptor PDBQT file is very straightforward: 
+Starting from a provided PDB file at ``Meeko/example/tutorial1/input_files/1iep_protein.pdb``, the generation of a Receptor PDBQT file is very straightforward: 
 
 .. code-block:: bash
 
-    pdb_file="tutorials/imatinib/step-3/1iep_protein.pdb"
+    pdb_file="Meeko/example/tutorial1/input_files/1iep_protein.pdb"
     mk_prepare_receptor.py --read_pdb $pdb_file -o rec_1iep -p 
 
 Here, we use ``-o`` to set the basename of the output files to ``rec_1iep`` with request ``-p``. The execution will generate only the receptor PDBQT file, ``rec_1iep.pdbqt``. 
 
 Note that ``--read_pdb``, which uses the PDB parser in RDKit, is not the only way for ``mk_prepare_receptor.py`` to parse a receptor PDB file. The alternate is ``-i`` (short for ``--read_with_prody``) and it requires ProDy as an additional dependency. If you wish to use the ProDy parser, run ``pip install prody`` to install ProDy. 
 
-To generate the TXT file that has the box dimension, we must find a way to define the wanted docking box. In this example, we will use a provided PDB file of ligand Imatinib at ``tutorials/imatinib/step-3/xray-imatinib.pdb`` that has been aligned to the expected binding site of the provided receptor PDB file. 
+To generate the TXT file that has the box dimension, we must find a way to define the wanted docking box. In this example, we will use a provided PDB file of ligand Imatinib at ``Meeko/example/tutorial1/input_files/xray-imatinib.pdb`` that has been aligned to the expected binding site of the provided receptor PDB file. 
 
 .. code-block:: bash
 
-    pdb_file="tutorials/imatinib/step-3/1iep_protein.pdb"
-    lig_file="tutorials/imatinib/step-3/xray-imatinib.pdb"
+    pdb_file="Meeko/example/tutorial1/input_files/1iep_protein.pdb"
+    lig_file="Meeko/example/tutorial1/input_files/xray-imatinib.pdb"
     mk_prepare_receptor.py --read_pdb $pdb_file -o rec_1iep -p -v \
     --box_enveloping $lig_file --padding 5
 
@@ -156,8 +158,8 @@ To use the AutoDock4 Scoring Function in AutoDock-Vina, an additional step needs
 
 .. code-block:: bash
 
-    pdb_file="tutorials/imatinib/step-3/1iep_protein.pdb"
-    lig_file="tutorials/imatinib/step-3/xray-imatinib.pdb"
+    pdb_file="Meeko/example/tutorial1/input_files/1iep_protein.pdb"
+    lig_file="Meeko/example/tutorial1/input_files/xray-imatinib.pdb"
     mk_prepare_receptor.py --read_pdb $pdb_file -o rec_1iep -p -v -g \
     --box_enveloping $lig_file --padding 5
 
@@ -183,8 +185,8 @@ Below is the sample command:
 
 .. code-block:: bash
 
-    pdb_file="tutorials/imatinib/step-3/1iep_protein.pdb"
-    lig_file="tutorials/imatinib/step-3/xray-imatinib.pdb"
+    pdb_file="Meeko/example/tutorial1/input_files/1iep_protein.pdb"
+    lig_file="Meeko/example/tutorial1/input_files/xray-imatinib.pdb"
     mk_prepare_receptor.py --read_pdb $pdb_file -o rec_1iep -p -g \
     --box_enveloping $lig_file --padding 5
 
@@ -201,12 +203,12 @@ And the expected standard output will be:
 Save a Receptor JSON File for Docking with Flexible and/or Reactive Residues
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Docking with flexible and/or reactive residues may require more files than basic docking, and ``mk_prepare_receptor.py`` is able to prepare those simultaneously when creating the receptor PDBQT file. The detailed procedure for Reactive Docking can be found in :ref:`tutorial2`. Here, we will use a different PDB file at ``tutorials/imatinib/step-3/2hzn_protein.pdb`` to showcase a simple docking preparation with flexible sidechains: 
+Docking with flexible and/or reactive residues may require more files than basic docking, and ``mk_prepare_receptor.py`` is able to prepare those simultaneously when creating the receptor PDBQT file. The detailed procedure for Reactive Docking can be found in :ref:`tutorial2`. Here, we will use a different PDB file at ``Meeko/example/tutorial1/input_files/2hzn_protein.pdb`` to showcase a simple docking preparation with flexible sidechains: 
 
 .. code-block:: bash
 
-    pdb_file="tutorials/imatinib/step-3/2hzn_protein.pdb"
-    lig_file="tutorials/imatinib/step-3/xray-imatinib.pdb"
+    pdb_file="Meeko/example/tutorial1/input_files/2hzn_protein.pdb"
+    lig_file="Meeko/example/tutorial1/input_files/xray-imatinib.pdb"
     mk_prepare_receptor.py --read_pdb $pdb_file -o rec_2hzn -p -v -g -j \
     --box_enveloping $lig_file --padding 5 \
     -f A:286,359 --allow_bad_res
