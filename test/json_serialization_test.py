@@ -160,10 +160,9 @@ def test_monomer_encoding_decoding(populated_monomer):
     # Starts by getting a Monomer object, converting it to a json string, and then decoding the string into
     # a new Monomer object
     starting_monomer = populated_monomer
-    json_str = json.dumps(starting_monomer, default=Monomer.json_encoder)
-    decoded_monomer = json.loads(
-        json_str, object_hook=Monomer.json_decoder
-    )
+    json_str = starting_monomer.to_json()
+
+    decoded_monomer = Monomer.from_json(json_str)
 
     # Asserts that the starting and ending objects have the expected Monomer type
     assert isinstance(starting_monomer, Monomer)

@@ -17,7 +17,8 @@ from rdkit.Geometry import Point3D
 
 from .molsetup import RDKitMoleculeSetup
 from .molsetup import MoleculeSetupEncoder
-from .utils.jsonutils import rdkit_mol_from_json
+from .utils.jsonutils import serialize_optional, rdkit_mol_from_json
+from .utils.jsonutils import BaseJSONParsable
 from .utils.rdkitutils import mini_periodic_table
 from .utils.rdkitutils import react_and_map
 from .utils.rdkitutils import AtomField
@@ -1959,7 +1960,7 @@ def add_rotamers_to_polymer_molsetups(rotamer_states_list, polymer):
     return state_indices_list
 
 
-class Monomer:
+class Monomer(BaseJSONParsable):
     """Individual subunit in a Polymer. Often called residue.
 
     Attributes
@@ -1993,7 +1994,7 @@ class Monomer:
     """
 
     # Keys to check for deserialized JSON 
-    expected_keys = frozenset({
+    expected_json_keys = frozenset({
         "raw_rdkit_mol",
         "rdkit_mol",
         "mapidx_to_raw",
@@ -2061,76 +2062,66 @@ class Monomer:
     @classmethod
     def json_decoder(cls, obj: dict[str, Any]) -> Optional["Monomer"]:
 
-        # if the input object is not a dict, we know that it will not be parsable and is unlikely to be usable or
-        # safe data, so we should ignore it.
+        # avoid using json_decoder as object_hook for nested objects
         if not isinstance(obj, dict):
             return obj
-
-        if set(obj.keys()) != cls.expected_keys:
-            missing_keys = cls.expected_keys - obj.keys()
-            unexpected_keys = obj.keys() - cls.expected_keys
-            print("missing keys", missing_keys)
-            print("unexpected keys", unexpected_keys)
+        if set(obj.keys()) != cls.expected_json_keys:
             return obj
-        
+
         try:
             raw_rdkit_mol = rdkit_mol_from_json(obj["raw_rdkit_mol"])
             rdkit_mol = rdkit_mol_from_json(obj["rdkit_mol"])
             padded_mol = rdkit_mol_from_json(obj["padded_mol"])
-        except Exception as e:
-            raise ValueError(f"Failed to decode RDKit molecules: {e}")
-        
-        try:
+  
             molsetup = RDKitMoleculeSetup.from_json(obj["molsetup"])
-        except Exception as e:
-            raise ValueError(f"Failed to decode molsetup: {e}")
         
-        mapidx_to_raw = cls._convert_to_int_keyed_dict(obj.get("mapidx_to_raw"))
-        molsetup_mapidx = cls._convert_to_int_keyed_dict(obj.get("molsetup_mapidx"))
-        mapidx_from_raw = cls._convert_to_int_keyed_dict(obj.get("mapidx_from_raw"))
+            mapidx_to_raw = cls._convert_to_int_keyed_dict(obj.get("mapidx_to_raw"))
+            molsetup_mapidx = cls._convert_to_int_keyed_dict(obj.get("molsetup_mapidx"))
+            mapidx_from_raw = cls._convert_to_int_keyed_dict(obj.get("mapidx_from_raw"))
 
-        monomer = cls(
-            raw_input_mol=raw_rdkit_mol,
-            rdkit_mol=rdkit_mol,
-            mapidx_to_raw=mapidx_to_raw,
-            input_resname=obj["input_resname"],
-            template_key=obj["residue_template_key"],
-            atom_names=obj["atom_names"],
-        )
+            monomer = cls(
+                raw_input_mol=raw_rdkit_mol,
+                rdkit_mol=rdkit_mol,
+                mapidx_to_raw=mapidx_to_raw,
+                input_resname=obj["input_resname"],
+                template_key=obj["residue_template_key"],
+                atom_names=obj["atom_names"],
+            )
 
-        monomer.padded_mol=padded_mol
-        monomer.molsetup=molsetup
-        monomer.molsetup_mapidx=molsetup_mapidx
-        monomer.is_flexres_atom=obj["is_flexres_atom"]
-        monomer.is_movable=obj["is_movable"]
-        monomer.mapidx_from_raw = mapidx_from_raw
+            monomer.padded_mol=padded_mol
+            monomer.molsetup=molsetup
+            monomer.molsetup_mapidx=molsetup_mapidx
+            monomer.is_flexres_atom=obj["is_flexres_atom"]
+            monomer.is_movable=obj["is_movable"]
+            monomer.mapidx_from_raw = mapidx_from_raw
 
-        return monomer
+            return monomer
+        
+        except Exception as e:
+            raise ValueError(
+                f"Failed to decode deserialized JSON object (dict) into an instance of {cls.__name__}. "
+                f"Error: {e}"
+                )
     
     @classmethod
     def json_encoder(cls, obj: "Monomer") -> Optional[dict[str, Any]]:
 
         molecule_setup_encoder = MoleculeSetupEncoder()
-        if isinstance(obj, cls):
-            if obj.molsetup is None:
-                molsetup_json = None
-            else:
-                molsetup_json = molecule_setup_encoder.default(obj.molsetup)
-            return {
-                "raw_rdkit_mol": rdkit_or_none_to_json(obj.raw_rdkit_mol),
-                "rdkit_mol": rdkit_or_none_to_json(obj.rdkit_mol),
-                "mapidx_to_raw": obj.mapidx_to_raw,
-                "residue_template_key": obj.residue_template_key,
-                "input_resname": obj.input_resname,
-                "atom_names": obj.atom_names,
-                "mapidx_from_raw": obj.mapidx_from_raw,
-                "padded_mol": rdkit_or_none_to_json(obj.padded_mol),
-                "molsetup": molsetup_json,
-                "is_flexres_atom": obj.is_flexres_atom,
-                "is_movable": obj.is_movable,
-                "molsetup_mapidx": obj.molsetup_mapidx,
-            }
-        raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+        return {
+            "raw_rdkit_mol": serialize_optional(rdMolInterchange.MolToJSON, obj.raw_rdkit_mol),
+            "rdkit_mol": serialize_optional(rdMolInterchange.MolToJSON, obj.rdkit_mol),
+            "mapidx_to_raw": obj.mapidx_to_raw,
+            "residue_template_key": obj.residue_template_key,
+            "input_resname": obj.input_resname,
+            "atom_names": obj.atom_names,
+            "mapidx_from_raw": obj.mapidx_from_raw,
+            "padded_mol": serialize_optional(rdMolInterchange.MolToJSON, obj.padded_mol),
+            "molsetup": serialize_optional(molecule_setup_encoder.default, obj.molsetup),
+            "is_flexres_atom": obj.is_flexres_atom,
+            "is_movable": obj.is_movable,
+            "molsetup_mapidx": obj.molsetup_mapidx,
+        }
 
     def set_atom_names(self, atom_names_list):
         """
@@ -2154,30 +2145,6 @@ class Monomer:
             raise ValueError(f"atom names must be str but {name_types=}")
         self.atom_names = atom_names_list
         return
-
-    def to_json(self):
-        """
-
-        Returns
-        -------
-
-        """
-        return json.dumps(self, default=Monomer.json_encoder)
-
-    @classmethod
-    def from_json(cls, json_string):
-        """
-
-        Parameters
-        ----------
-        json_string
-
-        Returns
-        -------
-
-        """
-        monomer = json.loads(json_string, object_hook=cls.json_decoder)
-        return monomer
 
     def parameterize(self, mk_prep, residue_id):
 
@@ -2640,12 +2607,6 @@ class ResidueTemplate:
                     result[element]["excess"] += 1
         return result, mapping
 
-def rdkit_or_none_to_json(rdkit_mol):
-    if rdkit_mol is None:
-        return None
-    return rdMolInterchange.MolToJSON(rdkit_mol)
-
-
 # region JSON Encoders
 
 class ResidueTemplateEncoder(json.JSONEncoder):
@@ -2949,6 +2910,7 @@ def polymer_json_decoder(obj: dict):
     )
 
     polymer = Polymer({}, {}, residue_chem_templates)
+
     polymer.monomers = {
         k: Monomer.json_decoder(v) for k, v in obj["monomers"].items()
     }

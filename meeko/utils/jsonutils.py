@@ -3,10 +3,13 @@ from rdkit.Chem import rdMolInterchange
 
 import json
 import logging
+from typing import Optional
 
 
 SERIALIZATION_SEPARATOR_CHAR = ","
 
+def serialize_optional(serializer, value):
+    return serializer(value) if value is not None else None
 
 def rdkit_mol_from_json(json_str: str):
     """
@@ -81,45 +84,71 @@ def string_to_tuple(input_string: str, element_type: type = str):
 class BaseJSONParsable:
 
     # Define in Individual Subclasses 
-    expected_json_keys = None
-    object_hook = None 
-    # and some decoder function
+    expected_json_keys: Optional[frozenset[str]] = None
 
-    # Inherit from_json and from_json_file
     @classmethod
-    def from_json(cls, json_string):
-        try: 
-            obj = json.loads(json_string, object_hook=cls.object_hook)
-            # Log mismatched keys (maybe not a fatal problem)
-            if set(obj.keys()) != cls.expected_json_keys:
-                logging.error(
-                    f"Keys from JSON ({set(obj.keys())}) differ from "
-                    f"expected keys ({cls.expected_json_keys})."
-                )  
-            # Success
-            if isinstance(obj, cls): 
-                return obj
+    def json_encoder(cls, obj):
+        raise NotImplementedError("Subclasses must implement json_encoder.")
 
-        except Exception as decoder_error:     
-            try: 
-                obj = json.loads(json_string)
-            # Error occurred while parsing JSON
-            except Exception as parser_error: 
-                raise RuntimeError(
-                    f"Unable to parse the source JSON for {cls.__name__}: {parser_error}"
+    @classmethod
+    def json_decoder(cls, obj):
+        raise NotImplementedError("Subclasses must implement json_decoder.")
+
+    # Inheritable JSON Interchange Functions
+    @classmethod
+    def from_json(cls, json_string: str):
+        try: 
+            # Log mismatched keys if non-critical 
+            obj_dict = json.loads(json_string)
+            actual_keys = obj_dict.keys()
+            if actual_keys != cls.expected_json_keys:
+                missing_keys = cls.expected_json_keys - actual_keys
+                extra_keys = actual_keys - cls.expected_json_keys
+                logging.warning(
+                    f"Key mismatch for {cls.__name__}. "
+                    f"Missing keys: {missing_keys}, Extra keys: {extra_keys}."
                 )
-            # Error occurred within the decoder function
+
+            try: 
+                obj = json.loads(json_string, object_hook=cls.json_decoder)
+            
+            # Error occurred within cls.json_decoder
+            except Exception as decoder_error: 
+                raise RuntimeError(
+                    f"An error occurred when creating {cls.__name__} from JSON."
+                    f"Error: {decoder_error}"
+                )
+
+            # Validate the decoded object type
+            if not isinstance(obj, cls):
+                raise ValueError(
+                    f"Decoded object is not an instance of {cls.__name__}. "
+                    f"Got: {type(obj)}"
+                )
+            return obj
+
+        # Error occurred within json.loads
+        except Exception as parser_error: 
             raise RuntimeError(
-                f"An error occurred when creating {cls.__name__}: {decoder_error}"
+                    f"Unable to load JSON string for {cls.__name__}. "
+                    f"Error: {parser_error}"
             )
-        # Failed to create obj
-        raise ValueError(
-            f"Unexpected object type created from JSON: {type(obj)}. "
-            f"Expected object type is: {cls.__name__}."
-        )
+
+    @classmethod
+    def from_dict(cls, obj: dict) -> "BaseJSONParsable":
+        return cls.json_decoder(obj)
             
     @classmethod
-    def from_json_file(cls, json_file): 
+    def from_json_file(cls, json_file) -> "BaseJSONParsable": 
         with open(json_file, "r") as f: 
             json_string = f.read()
         return cls.from_json(json_string)
+    
+    def to_json(self):
+        return json.dumps(self, default=self.__class__.json_encoder)
+    
+    def to_json_file(self, json_file): 
+        json_string = self.to_json()
+        with open(json_file, "w") as f: 
+            f.write(json_string)
+
