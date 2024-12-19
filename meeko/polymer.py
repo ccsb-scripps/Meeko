@@ -5,7 +5,9 @@ import traceback
 from importlib.resources import files
 eol="\n"
 from sys import exc_info
-from typing import Optional, Union, Any
+from typing import Union
+from typing import Optional
+from typing import Any
 
 import rdkit.Chem
 from rdkit import Chem
@@ -1635,7 +1637,7 @@ class Polymer(BaseJSONParsable):
         )
 
         molsetup = monomer.molsetup
-
+        is_rigid_atom = [False for _ in molsetup.atoms]
         graph = molsetup.flexibility_model["rigid_body_graph"]
         root_body_idx = molsetup.flexibility_model["root"]
         conn = molsetup.flexibility_model["rigid_body_connectivity"]
@@ -1849,15 +1851,10 @@ class Polymer(BaseJSONParsable):
                 icode = ""
             resnum = int(resnum)
 
-            atoms_in_rdkitmol = [atom for atom in rdkit_mol.GetAtoms()]
-            atom_names = self.monomers[res_id].atom_names
-            if not atom_names:
-                self.monomers[res_id]._set_pdbinfo(res_id)
-
-            for i, atom in enumerate(atoms_in_rdkitmol):
+            for i, atom in enumerate(rdkit_mol.GetAtoms()):
                 atom_count += 1
                 props = atom.GetPropsAsDict()
-                atom_name = atom_names[i]
+                atom_name = self.monomers[res_id].atom_names[i]
                 x, y, z = positions[i]
                 element = mini_periodic_table[atom.GetAtomicNum()]
                 pdbout += pdb_line.format(
@@ -2160,6 +2157,26 @@ class Monomer(BaseJSONParsable):
         return monomer
     # endregion
 
+    def set_atom_names(self, atom_names_list):
+        """
+        Parameters
+        ----------
+        atom_names_list
+        Returns
+        -------
+        """
+        if self.rdkit_mol is None:
+            raise RuntimeError("can't set atom_names if rdkit_mol is not set yet")
+        if len(atom_names_list) != self.rdkit_mol.GetNumAtoms():
+            raise ValueError(
+                f"{len(atom_names_list)=} differs from {self.rdkit_mol.GetNumAtoms()=}"
+            )
+        name_types = set([type(name) for name in atom_names_list])
+        if name_types != {str}:
+            raise ValueError(f"atom names must be str but {name_types=}")
+        self.atom_names = atom_names_list
+        return
+
     def parameterize(self, mk_prep, residue_id):
 
         molsetups = mk_prep(self.padded_mol)
@@ -2251,7 +2268,7 @@ class ResiduePadder(BaseJSONParsable):
     # reaction should not delete atoms, not even Hs
     # reaction should create bonds at non-real Hs (implicit or explicit rdktt H)
 
-    def __init__(self, rxn_smarts: str, adjacent_smarts: str = None, auto_blunt:bool=False): 
+    def __init__(self, rxn_smarts: str, adjacent_res_smarts: str = None, auto_blunt:bool=False): 
         """
         Initialize the ResiduePadder with reaction SMARTS and optional adjacent residue SMARTS.
 
@@ -2261,9 +2278,9 @@ class ResiduePadder(BaseJSONParsable):
             Reaction SMARTS to pad a link atom of a Monomer molecule.
             Product atoms that are not mapped in the reactants will have
             their coordinates set from an adjacent residue molecule, given
-            that adjacent_smarts is provided and the atom labels match
+            that adjacent_res_smarts is provided and the atom labels match
             the unmapped product atoms of rxn_smarts.
-        adjacent_smarts: str
+        adjacent_res_smarts: str
             SMARTS pattern to identify atoms in molecule of adjacent residue
             and copy their positions to padding atoms. The SMARTS atom labels
             must match those of the product atoms of rxn_smarts that are
@@ -2278,13 +2295,13 @@ class ResiduePadder(BaseJSONParsable):
         self.auto_blunt = auto_blunt
 
         # Fill in adjacent_smartsmol_mapidx
-        if adjacent_smarts is None:
+        if adjacent_res_smarts is None:
             self.adjacent_smartsmol = None
             self.adjacent_smartsmol_mapidx = None
             return
 
-        # Ensure adjacent_smarts is None or a valid SMARTS        
-        self.adjacent_smartsmol = self._initialize_adj_smartsmol(adjacent_smarts)
+        # Ensure adjacent_res_smarts is None or a valid SMARTS        
+        self.adjacent_smartsmol = self._initialize_adj_smartsmol(adjacent_res_smarts)
 
         # Ensure the mapping numbers are the same in adjacent_smartsmol and rxn_smarts's product
         self._check_adj_smarts(self.rxn, self.adjacent_smartsmol)
@@ -2307,11 +2324,11 @@ class ResiduePadder(BaseJSONParsable):
         return rxn
     
     @staticmethod
-    def _initialize_adj_smartsmol(adjacent_smarts: str) -> Chem.Mol:
-        """Validate adjacent_smarts and return adjacent_smartsmol"""
-        adjacent_smartsmol = Chem.MolFromSmarts(adjacent_smarts)
+    def _initialize_adj_smartsmol(adjacent_res_smarts: str) -> Chem.Mol:
+        """Validate adjacent_res_smarts and return adjacent_smartsmol"""
+        adjacent_smartsmol = Chem.MolFromSmarts(adjacent_res_smarts)
         if adjacent_smartsmol is None:
-            raise RuntimeError("Invalid SMARTS pattern in adjacent_smarts")
+            raise RuntimeError("Invalid SMARTS pattern in adjacent_res_smarts")
         return adjacent_smartsmol
     
     @staticmethod
@@ -2459,7 +2476,7 @@ class ResiduePadder(BaseJSONParsable):
         there's exactly one match that includes atom with adjacent_required_atom_index
         """
         if expected_adjacent_smartsmol is None:
-            raise RuntimeError("adjacent_smarts must be initialized to support adjacent_mol.")
+            raise RuntimeError("adjacent_res_smarts must be initialized to support adjacent_mol.")
 
         hits = adjacent_mol.GetSubstructMatches(expected_adjacent_smartsmol)
         if adjacent_required_atom_index is not None:

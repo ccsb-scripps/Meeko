@@ -954,6 +954,7 @@ class MoleculeSetup(BaseJSONParsable):
         """
         new_atoms = []
         removed_atom_count = 0
+        atom_index_mapping = {}
 
         for atom in self.atoms:
             if remove_pseudoatoms and atom.is_pseudo_atom:
@@ -2093,7 +2094,7 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit, BaseJSONPa
         stereo_isomorphism = StereoIsomorphism()
         mapping, idx = stereo_isomorphism(target_mol, self.mol)
         lig_to_drive = {b: a for (a, b) in mapping}
-
+        num_real_atoms = target_mol.GetNumAtoms()
         target_positions = target_mol.GetConformer().GetPositions()
         for atom_index in range(len(mapping)):
             target_xyz = target_positions[lig_to_drive[atom_index]]
