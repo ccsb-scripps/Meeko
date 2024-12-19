@@ -3,13 +3,26 @@ from rdkit.Chem import rdMolInterchange
 
 import json
 import logging
-from typing import Optional
+from typing import Optional, Any
 
 
 SERIALIZATION_SEPARATOR_CHAR = ","
 
 def serialize_optional(serializer, value):
     return serializer(value) if value is not None else None
+
+
+def convert_to_int_keyed_dict(data: Optional[dict[str, Any]]) -> Optional[dict[int, Any]]:
+    if data is None:
+        return None
+    return {int(k): v for k, v in data.items()}
+
+
+def convert_to_tuple_keyed_dict(data: Optional[dict[str, Any]], element_type = int) -> Optional[dict[tuple[int], Any]]:
+    if data is None:
+        return None
+    return {string_to_tuple(k, element_type = element_type): v for k, v in data.items()}
+
 
 def rdkit_mol_from_json(json_str: str):
     """

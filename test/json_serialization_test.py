@@ -11,7 +11,6 @@ from meeko import (
     PolymerEncoder,
     MoleculePreparation,
     MoleculeSetup,
-    MoleculeSetupEncoder,
     RDKitMoleculeSetup,
     ResiduePadder,
     ResiduePadderEncoder,
@@ -129,8 +128,8 @@ def test_rdkit_molsetup_encoding_decoding(populated_rdkit_molsetup):
     # we will need to make other tests for those empty fields.
     # Encode and decode MoleculeSetup from json
     starting_molsetup = populated_rdkit_molsetup
-    json_str = json.dumps(starting_molsetup, cls=MoleculeSetupEncoder)
-    decoded_molsetup = json.loads(json_str, object_hook=RDKitMoleculeSetup.from_json)
+    json_str = starting_molsetup.to_json() 
+    decoded_molsetup = RDKitMoleculeSetup.from_json(json_str)
 
     # First asserts that all types are as expected
     assert isinstance(starting_molsetup, RDKitMoleculeSetup)
@@ -774,8 +773,8 @@ def test_dihedral_equality():
     fn = str(pkgdir/"test"/"flexibility_data"/"non_sequential_atom_ordering_01.mol")
     mol = Chem.MolFromMolFile(fn, removeHs=False)
     starting_molsetup = mk_prep(mol)[0]
-    json_str = json.dumps(starting_molsetup, cls=MoleculeSetupEncoder)
-    decoded_molsetup = json.loads(json_str, object_hook=RDKitMoleculeSetup.from_json)
+    json_str = starting_molsetup.to_json()
+    decoded_molsetup = RDKitMoleculeSetup.from_json(json_str)
     check_molsetup_equality(starting_molsetup, decoded_molsetup)
     return
 

@@ -16,7 +16,6 @@ else:
 from .preparation import MoleculePreparation
 from .molsetup import RDKitMoleculeSetup
 from .molsetup import MoleculeSetup
-from .molsetup import MoleculeSetupEncoder
 from .molsetup import Restraint
 from .molsetup import UniqAtomParams
 from .utils import rdkitutils
@@ -59,7 +58,7 @@ rdkit_logger.handlers[0].setFormatter(
 )
 rdBase.LogToPythonLogger()
 
-__all__ = ['MoleculePreparation', 'RDKitMoleculeSetup', 'MoleculeSetupEncoder',
+__all__ = ['MoleculePreparation', 'RDKitMoleculeSetup', 
            'pdbutils', 'geomutils', 'rdkitutils', 'utils',
            'AtomTyper', 'PDBQTMolecule', 'PDBQTReceptor', 'analysis',
            'Polymer', 'Monomer', 'ResiduePadder', 'ResidueTemplate', 'ResidueChemTemplates',

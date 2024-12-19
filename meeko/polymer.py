@@ -5,8 +5,7 @@ import traceback
 from importlib.resources import files
 eol="\n"
 from sys import exc_info
-from typing import Union, Any
-from typing import Optional
+from typing import Optional, Union, Any
 
 import rdkit.Chem
 from rdkit import Chem
@@ -16,9 +15,11 @@ from rdkit.Chem import rdMolInterchange
 from rdkit.Geometry import Point3D
 
 from .molsetup import RDKitMoleculeSetup
-from .molsetup import MoleculeSetupEncoder
-from .utils.jsonutils import serialize_optional, rdkit_mol_from_json
+from .molsetup import MoleculeSetup
 from .utils.jsonutils import BaseJSONParsable
+from .utils.jsonutils import serialize_optional
+from .utils.jsonutils import rdkit_mol_from_json
+from .utils.jsonutils import convert_to_int_keyed_dict
 from .utils.rdkitutils import mini_periodic_table
 from .utils.rdkitutils import react_and_map
 from .utils.rdkitutils import AtomField
@@ -1591,7 +1592,7 @@ class Polymer:
         )
 
         molsetup = monomer.molsetup
-        is_rigid_atom = [False for _ in molsetup.atoms]
+
         graph = molsetup.flexibility_model["rigid_body_graph"]
         root_body_idx = molsetup.flexibility_model["root"]
         conn = molsetup.flexibility_model["rigid_body_connectivity"]
@@ -2052,15 +2053,9 @@ class Monomer(BaseJSONParsable):
                 raise RuntimeError(f"Mapping is not invertible: {mapping}")
             inverted[value] = key
         return inverted
-    
-    @staticmethod
-    def _convert_to_int_keyed_dict(data: Optional[dict]) -> Optional[dict[int, Any]]:
-        if data is None:
-            return None
-        return {int(k): v for k, v in data.items()}
         
     @classmethod
-    def json_decoder(cls, obj: dict[str, Any]) -> Optional["Monomer"]:
+    def json_decoder(cls, obj: dict[str, Any]): 
 
         # avoid using json_decoder as object_hook for nested objects
         if not isinstance(obj, dict):
@@ -2073,11 +2068,11 @@ class Monomer(BaseJSONParsable):
             rdkit_mol = rdkit_mol_from_json(obj["rdkit_mol"])
             padded_mol = rdkit_mol_from_json(obj["padded_mol"])
   
-            molsetup = RDKitMoleculeSetup.from_json(obj["molsetup"])
+            molsetup = MoleculeSetup.json_decoder(obj["molsetup"])
         
-            mapidx_to_raw = cls._convert_to_int_keyed_dict(obj.get("mapidx_to_raw"))
-            molsetup_mapidx = cls._convert_to_int_keyed_dict(obj.get("molsetup_mapidx"))
-            mapidx_from_raw = cls._convert_to_int_keyed_dict(obj.get("mapidx_from_raw"))
+            mapidx_to_raw = convert_to_int_keyed_dict(obj.get("mapidx_to_raw"))
+            molsetup_mapidx = convert_to_int_keyed_dict(obj.get("molsetup_mapidx"))
+            mapidx_from_raw = convert_to_int_keyed_dict(obj.get("mapidx_from_raw"))
 
             monomer = cls(
                 raw_input_mol=raw_rdkit_mol,
@@ -2106,7 +2101,7 @@ class Monomer(BaseJSONParsable):
     @classmethod
     def json_encoder(cls, obj: "Monomer") -> Optional[dict[str, Any]]:
 
-        molecule_setup_encoder = MoleculeSetupEncoder()
+        molecule_setup_encoder = MoleculeSetup.json_encoder
 
         return {
             "raw_rdkit_mol": serialize_optional(rdMolInterchange.MolToJSON, obj.raw_rdkit_mol),
@@ -2117,7 +2112,7 @@ class Monomer(BaseJSONParsable):
             "atom_names": obj.atom_names,
             "mapidx_from_raw": obj.mapidx_from_raw,
             "padded_mol": serialize_optional(rdMolInterchange.MolToJSON, obj.padded_mol),
-            "molsetup": serialize_optional(molecule_setup_encoder.default, obj.molsetup),
+            "molsetup": serialize_optional(molecule_setup_encoder, obj.molsetup),
             "is_flexres_atom": obj.is_flexres_atom,
             "is_movable": obj.is_movable,
             "molsetup_mapidx": obj.molsetup_mapidx,
