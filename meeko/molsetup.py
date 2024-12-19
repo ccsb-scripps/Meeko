@@ -12,7 +12,8 @@ import json
 eol="\n"
 import sys
 import warnings
-from typing import Optional, Union, Any
+from typing import Union
+from typing import Optional, Any
 
 import numpy as np
 import rdkit.Chem
@@ -20,10 +21,9 @@ from rdkit import Chem
 from rdkit.Chem import rdPartialCharges
 from rdkit.Chem import rdMolInterchange
 
-from .utils.jsonutils import BaseJSONParsable
-from .utils.jsonutils import rdkit_mol_from_json
-from .utils.jsonutils import tuple_to_string, string_to_tuple
+from .utils.jsonutils import rdkit_mol_from_json, tuple_to_string, string_to_tuple
 from .utils.jsonutils import convert_to_tuple_keyed_dict
+from .utils.jsonutils import BaseJSONParsable
 from .utils import rdkitutils
 from .utils import utils
 from .utils.geomutils import calcDihedral
@@ -209,7 +209,7 @@ class Atom(BaseJSONParsable):
     @classmethod
     def json_encoder(cls, obj: "Atom") -> Optional[dict[str, Any]]:
 
-        return {
+        output_dict = {
             "index": obj.index,
             "pdbinfo": obj.pdbinfo,
             "charge": obj.charge,
@@ -222,6 +222,7 @@ class Atom(BaseJSONParsable):
             "is_dummy": obj.is_dummy,
             "is_pseudo_atom": obj.is_pseudo_atom,
         }
+        return output_dict
     
     # Keys to check for deserialized JSON 
     expected_json_keys = {
@@ -272,25 +273,39 @@ class Atom(BaseJSONParsable):
 
 @dataclass
 class Bond(BaseJSONParsable):
-    canon_id: tuple[int, int]
+    canon_id: tuple[int, int] = field(init=False)  # Excluded from __init__
     index1: int
     index2: int
     rotatable: bool = DEFAULT_BOND_ROTATABLE
 
+    def __post_init__(self):
+        self.canon_id = self.get_bond_id(self.index1, self.index2)
+    
+    # region JSON-interchange functions
+    @classmethod
+    def json_encoder(cls, obj: "Bond") -> Optional[dict[str, Any]]:
+        
+        output_dict = {
+                "canon_id": tuple_to_string(obj.canon_id),
+                "index1": obj.index1,
+                "index2": obj.index2,
+                "rotatable": obj.rotatable,
+        }
+        return output_dict
+    
     # Keys to check for deserialized JSON 
     expected_json_keys = {"canon_id", "index1", "index2", "rotatable"}
 
-    def __init__(
-        self,
-        index1: int,
-        index2: int,
-        rotatable: bool = DEFAULT_BOND_ROTATABLE,
-    ):
-        self.canon_id = self.get_bond_id(index1, index2)
-        self.index1 = index1
-        self.index2 = index2
-        self.rotatable = rotatable
-        return
+    @classmethod
+    def _decode_object(cls, obj: dict[str, Any]): 
+
+        # Constructs a bond object from the provided keys.
+        index1 = obj["index1"]
+        index2 = obj["index2"]
+        rotatable = obj["rotatable"]
+        output_bond = Bond(index1, index2, rotatable)
+        return output_bond
+    # endregion
 
     @staticmethod
     def get_bond_id(idx1: int, idx2: int):
@@ -313,33 +328,23 @@ class Bond(BaseJSONParsable):
         idx_max = max(idx1, idx2)
         return idx_min, idx_max
 
-    @classmethod
-    def _decode_object(cls, obj: dict[str, Any]): 
-
-        # Constructs a bond object from the provided keys.
-        index1 = obj["index1"]
-        index2 = obj["index2"]
-        rotatable = obj["rotatable"]
-        output_bond = Bond(index1, index2, rotatable)
-        return output_bond
-    
-    @classmethod
-    def json_encoder(cls, obj: "Bond") -> Optional[dict[str, Any]]:
-        return {
-                "canon_id": tuple_to_string(obj.canon_id),
-                "index1": obj.index1,
-                "index2": obj.index2,
-                "rotatable": obj.rotatable,
-        }
-
 
 @dataclass
 class Ring(BaseJSONParsable):
     ring_id: tuple
+    
+    # region JSON-interchange functions
+    @classmethod
+    def json_encoder(cls, obj: "Ring") -> Optional[dict[str, Any]]:
 
+        output_dict = {
+            "ring_id": tuple_to_string(obj.ring_id),
+        }
+        return output_dict
+    
     # Keys to check for deserialized JSON 
     expected_json_keys = {"ring_id"}
-
+    
     @classmethod
     def _decode_object(cls, obj: dict[str, Any]): 
 
@@ -347,16 +352,11 @@ class Ring(BaseJSONParsable):
         ring_id = string_to_tuple(obj["ring_id"], int)
         output_ring = Ring(ring_id)
         return output_ring
-    
-    @classmethod
-    def json_encoder(cls, obj: "Ring") -> Optional[dict[str, Any]]:
-        return {
-            "ring_id": tuple_to_string(obj.ring_id),
-        }
+    # endregion
 
 
 @dataclass
-class RingClosureInfo(BaseJSONParsable):
+class RingClosureInfo:
     bonds_removed: list = field(default_factory=list)
     pseudos_by_atom: dict = DEFAULT_RING_CLOSURE_PSEUDOS_BY_ATOM
 
@@ -368,6 +368,18 @@ class Restraint(BaseJSONParsable):
     kcal_per_angstrom_square: float
     delay_angstroms: float
 
+    # region JSON-interchange functions
+    @classmethod
+    def json_encoder(cls, obj: "Restraint") -> Optional[dict[str, Any]]:
+
+        output_dict = {
+            "atom_index": obj.atom_index,
+            "target_coords": tuple_to_string(obj.target_coords),
+            "kcal_per_angstrom_square": obj.kcal_per_angstrom_square,
+            "delay_angstroms": obj.delay_angstroms,
+        }
+        return output_dict
+    
     # Keys to check for deserialized JSON 
     expected_json_keys = {
             "atom_index",
@@ -375,20 +387,6 @@ class Restraint(BaseJSONParsable):
             "kcal_per_angstrom_square",
             "delay_angstroms",
         }
-
-    def copy(self):
-        new_target_coords = (
-            self.target_coords[0],
-            self.target_coords[1],
-            self.target_coords[2],
-        )
-        new_restraint = Restraint(
-            self.atom_index,
-            new_target_coords,
-            self.kcal_per_angstrom_square,
-            self.delay_angstroms,
-        )
-        return new_restraint
 
     @classmethod
     def _decode_object(cls, obj: dict[str, Any]): 
@@ -402,18 +400,21 @@ class Restraint(BaseJSONParsable):
             atom_index, target_coords, kcal_per_angstrom_square, delay_angstroms
         )
         return output_restraint
-
-    @classmethod
-    def json_encoder(cls, obj: "Restraint") -> Optional[dict[str, Any]]:
-
-        return {
-            "atom_index": obj.atom_index,
-            "target_coords": tuple_to_string(obj.target_coords),
-            "kcal_per_angstrom_square": obj.kcal_per_angstrom_square,
-            "delay_angstroms": obj.delay_angstroms,
-        }
-
-
+    # endregion
+    
+    def copy(self):
+        new_target_coords = (
+            self.target_coords[0],
+            self.target_coords[1],
+            self.target_coords[2],
+        )
+        new_restraint = Restraint(
+            self.atom_index,
+            new_target_coords,
+            self.kcal_per_angstrom_square,
+            self.delay_angstroms,
+        )
+        return new_restraint
 # endregion
 
 
@@ -442,21 +443,6 @@ class MoleculeSetup(BaseJSONParsable):
     PSEUDOATOM_ATOMIC_NUM = 0
     # endregion
 
-    # Keys to check for deserialized JSON 
-    expected_json_keys = {
-            "name",
-            "is_sidechain",
-            "pseudoatom_count",
-            "atoms",
-            "bond_info",
-            "rings",
-            "ring_closure_info",
-            "rotamers",
-            "atom_params",
-            "restraints",
-            "flexibility_model",
-        }
-
     def __init__(self, name: str = None, is_sidechain: bool = False):
 
         # Initializer attributes 
@@ -477,7 +463,70 @@ class MoleculeSetup(BaseJSONParsable):
 
         # TODO: redesign flexibility model to resolve some of the circular imports and to make it more structured
         self.flexibility_model = None  # from flexibility_model - from flexibility.py
+    
+    # region JSON-interchange functions
+    @classmethod
+    def json_encoder(cls, obj: "MoleculeSetup") -> Optional[dict[str, Any]]:
+            
+        output_dict = {}
 
+        atom_encoder = Atom.json_encoder
+        bond_encoder = Bond.json_encoder
+        ring_encoder = Ring.json_encoder
+        restraint_encoder = Restraint.json_encoder
+
+        output_dict = {
+            "name": obj.name,
+            "is_sidechain": obj.is_sidechain,
+            "pseudoatom_count": obj.pseudoatom_count,
+            "atoms": [atom_encoder(x) for x in obj.atoms],
+            "bond_info": {
+                tuple_to_string(k): bond_encoder(v)
+                for k, v in obj.bond_info.items()
+            },
+            "rings": {
+                tuple_to_string(k): ring_encoder(v)
+                for k, v in obj.rings.items()
+            },
+            "ring_closure_info": obj.ring_closure_info.__dict__,
+            "rotamers": [{tuple_to_string(k): v for k, v in rotamer.items()} for rotamer in obj.rotamers],
+            "atom_params": obj.atom_params,
+            "restraints": [
+                restraint_encoder(x) for x in obj.restraints
+            ],
+            "flexibility_model": obj.flexibility_model,
+        }
+        # Addressing some flexibility model-specific structures.
+        if "rigid_body_connectivity" in obj.flexibility_model:
+            new_rigid_body_conn_dict = {
+                tuple_to_string(k): v
+                for k, v in obj.flexibility_model["rigid_body_connectivity"].items()
+            }
+            output_dict["flexibility_model"] = {
+                k: (
+                    v
+                    if k != "rigid_body_connectivity"
+                    else new_rigid_body_conn_dict
+                )
+                for k, v in obj.flexibility_model.items()
+            }
+        return output_dict
+    
+    # Keys to check for deserialized JSON 
+    expected_json_keys = {
+            "name",
+            "is_sidechain",
+            "pseudoatom_count",
+            "atoms",
+            "bond_info",
+            "rings",
+            "ring_closure_info",
+            "rotamers",
+            "atom_params",
+            "restraints",
+            "flexibility_model",
+        }
+    
     @classmethod
     def _decode_object(cls, obj: dict[str, Any]):
 
@@ -528,54 +577,7 @@ class MoleculeSetup(BaseJSONParsable):
                 for k, v in molsetup.flexibility_model["rigid_index_by_atom"].items()
             }
         return molsetup
-    
-    @classmethod
-    def json_encoder(cls, obj: "MoleculeSetup") -> Optional[dict[str, Any]]:
-            
-        output_dict = {}
-
-        atom_encoder = Atom.json_encoder
-        bond_encoder = Bond.json_encoder
-        ring_encoder = Ring.json_encoder
-        restraint_encoder = Restraint.json_encoder
-
-        output_dict = {
-            "name": obj.name,
-            "is_sidechain": obj.is_sidechain,
-            "pseudoatom_count": obj.pseudoatom_count,
-            "atoms": [atom_encoder(x) for x in obj.atoms],
-            "bond_info": {
-                tuple_to_string(k): bond_encoder(v)
-                for k, v in obj.bond_info.items()
-            },
-            "rings": {
-                tuple_to_string(k): ring_encoder(v)
-                for k, v in obj.rings.items()
-            },
-            "ring_closure_info": obj.ring_closure_info.__dict__,
-            "rotamers": [{tuple_to_string(k): v for k, v in rotamer.items()} for rotamer in obj.rotamers],
-            "atom_params": obj.atom_params,
-            "restraints": [
-                restraint_encoder(x) for x in obj.restraints
-            ],
-            "flexibility_model": obj.flexibility_model,
-        }
-        # Addressing some flexibility model-specific structures.
-        if "rigid_body_connectivity" in obj.flexibility_model:
-            new_rigid_body_conn_dict = {
-                tuple_to_string(k): v
-                for k, v in obj.flexibility_model["rigid_body_connectivity"].items()
-            }
-            output_dict["flexibility_model"] = {
-                k: (
-                    v
-                    if k != "rigid_body_connectivity"
-                    else new_rigid_body_conn_dict
-                )
-                for k, v in obj.flexibility_model.items()
-            }
-        return output_dict
-        
+    # endregion
 
     # region Manually Building A MoleculeSetup
     def add_atom(
@@ -1507,19 +1509,6 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit, BaseJSONPa
         constructor for the RDKitMoleculeSetup object (consider adapting to init?)
     """
 
-    # Keys to check for deserialized JSON 
-    expected_json_keys = frozenset(
-        MoleculeSetup.expected_json_keys.union({
-            "mol",
-            "modified_atom_positions",
-            "dihedral_interactions",
-            "dihedral_partaking_atoms",
-            "dihedral_labels",
-            "atom_to_ring_id",
-            "rmsd_symmetry_indices",
-        })
-    )
-
     def __init__(self, name: str = None, is_sidechain: bool = False, 
                  source: "MoleculeSetup" = None):
         
@@ -1542,6 +1531,34 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit, BaseJSONPa
         self.atom_to_ring_id = {}
         self.rmsd_symmetry_indices = ()
 
+    # region JSON-interchange functions
+    @classmethod
+    def json_encoder(cls, obj: "RDKitMoleculeSetup") -> Optional[dict[str, Any]]:
+
+        output_dict = MoleculeSetup.json_encoder(obj)
+
+        output_dict["mol"] = rdMolInterchange.MolToJSON(obj.mol)
+        output_dict["modified_atom_positions"] = obj.modified_atom_positions
+        output_dict["dihedral_interactions"] = obj.dihedral_interactions
+        output_dict["dihedral_partaking_atoms"] = {tuple_to_string(k): v for k,v in obj.dihedral_partaking_atoms.items()}
+        output_dict["dihedral_labels"] = {tuple_to_string(k): v for k,v in obj.dihedral_labels.items()}
+        output_dict["atom_to_ring_id"] = obj.atom_to_ring_id
+        output_dict["rmsd_symmetry_indices"] = obj.rmsd_symmetry_indices
+
+        return output_dict
+    
+    # Keys to check for deserialized JSON 
+    expected_json_keys = frozenset(
+        MoleculeSetup.expected_json_keys.union({
+            "mol",
+            "modified_atom_positions",
+            "dihedral_interactions",
+            "dihedral_partaking_atoms",
+            "dihedral_labels",
+            "atom_to_ring_id",
+            "rmsd_symmetry_indices",
+        })
+    )
     
     @classmethod
     def _decode_object(cls, obj: dict[str, Any]): 
@@ -1569,21 +1586,7 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit, BaseJSONPa
                 f"Failed to decode deserialized JSON object (dict) into an instance of {cls.__name__}. "
                 f"Error: {e}"
                 )
-
-    @classmethod
-    def json_encoder(cls, obj: "RDKitMoleculeSetup") -> Optional[dict[str, Any]]:
-
-        output_dict = MoleculeSetup.json_encoder(obj)
-
-        output_dict["mol"] = rdMolInterchange.MolToJSON(obj.mol)
-        output_dict["modified_atom_positions"] = obj.modified_atom_positions
-        output_dict["dihedral_interactions"] = obj.dihedral_interactions
-        output_dict["dihedral_partaking_atoms"] = {tuple_to_string(k): v for k,v in obj.dihedral_partaking_atoms.items()}
-        output_dict["dihedral_labels"] = {tuple_to_string(k): v for k,v in obj.dihedral_labels.items()}
-        output_dict["atom_to_ring_id"] = obj.atom_to_ring_id
-        output_dict["rmsd_symmetry_indices"] = obj.rmsd_symmetry_indices
-
-        return output_dict
+    # endregion
 
     def copy(self):
         """
