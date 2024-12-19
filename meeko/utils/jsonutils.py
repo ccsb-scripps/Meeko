@@ -18,7 +18,7 @@ def convert_to_int_keyed_dict(data: Optional[dict[str, Any]]) -> Optional[dict[i
     return {int(k): v for k, v in data.items()}
 
 
-def convert_to_tuple_keyed_dict(data: Optional[dict[str, Any]], element_type = int) -> Optional[dict[tuple[int], Any]]:
+def convert_to_tuple_keyed_dict(data: Optional[dict[str, Any]], element_type: type = str) -> Optional[dict[tuple[int], Any]]:
     if data is None:
         return None
     return {string_to_tuple(k, element_type = element_type): v for k, v in data.items()}

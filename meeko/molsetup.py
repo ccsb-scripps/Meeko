@@ -23,6 +23,7 @@ from rdkit.Chem import rdMolInterchange
 
 from .utils.jsonutils import rdkit_mol_from_json, tuple_to_string, string_to_tuple
 from .utils.jsonutils import convert_to_tuple_keyed_dict
+from .utils.jsonutils import convert_to_int_keyed_dict
 from .utils.jsonutils import BaseJSONParsable
 from .utils import rdkitutils
 from .utils import utils
@@ -468,31 +469,24 @@ class MoleculeSetup(BaseJSONParsable):
     @classmethod
     def json_encoder(cls, obj: "MoleculeSetup") -> Optional[dict[str, Any]]:
             
-        output_dict = {}
-
-        atom_encoder = Atom.json_encoder
-        bond_encoder = Bond.json_encoder
-        ring_encoder = Ring.json_encoder
-        restraint_encoder = Restraint.json_encoder
-
         output_dict = {
             "name": obj.name,
             "is_sidechain": obj.is_sidechain,
             "pseudoatom_count": obj.pseudoatom_count,
-            "atoms": [atom_encoder(x) for x in obj.atoms],
+            "atoms": [Atom.json_encoder(x) for x in obj.atoms],
             "bond_info": {
-                tuple_to_string(k): bond_encoder(v)
+                tuple_to_string(k): Bond.json_encoder(v)
                 for k, v in obj.bond_info.items()
             },
             "rings": {
-                tuple_to_string(k): ring_encoder(v)
+                tuple_to_string(k): Ring.json_encoder(v)
                 for k, v in obj.rings.items()
             },
             "ring_closure_info": obj.ring_closure_info.__dict__,
             "rotamers": [{tuple_to_string(k): v for k, v in rotamer.items()} for rotamer in obj.rotamers],
             "atom_params": obj.atom_params,
             "restraints": [
-                restraint_encoder(x) for x in obj.restraints
+                Restraint.json_encoder(x) for x in obj.restraints
             ],
             "flexibility_model": obj.flexibility_model,
         }
@@ -534,6 +528,7 @@ class MoleculeSetup(BaseJSONParsable):
         name = obj["name"]
         is_sidechain = obj["is_sidechain"]
         molsetup = MoleculeSetup(name, is_sidechain)
+
         molsetup.pseudoatom_count = obj["pseudoatom_count"]
         molsetup.atoms = [Atom.json_decoder(x) for x in obj["atoms"]]
         molsetup.bond_info = {
@@ -547,7 +542,7 @@ class MoleculeSetup(BaseJSONParsable):
             obj["ring_closure_info"]["bonds_removed"],
             obj["ring_closure_info"]["pseudos_by_atom"],
         )
-        molsetup.rotamers = [{string_to_tuple(k, element_type=int): v for k,v in rotamer.items()} for rotamer in obj["rotamers"]]
+        molsetup.rotamers = [convert_to_tuple_keyed_dict(rotamer, int) for rotamer in obj["rotamers"]]
         molsetup.atom_params = obj["atom_params"]
         molsetup.restraints = [Restraint.json_decoder(x) for x in obj["restraints"]]
         molsetup.flexibility_model = obj["flexibility_model"]
@@ -561,21 +556,13 @@ class MoleculeSetup(BaseJSONParsable):
             molsetup.flexibility_model["rigid_body_connectivity"] = (
                 tuples_rigid_body_connectivity
             )
-        if "rigid_body_graph" in molsetup.flexibility_model:
-            molsetup.flexibility_model["rigid_body_graph"] = {
-                int(k): v
-                for k, v in molsetup.flexibility_model["rigid_body_graph"].items()
-            }
-        if "rigid_body_members" in molsetup.flexibility_model:
-            molsetup.flexibility_model["rigid_body_members"] = {
-                int(k): v
-                for k, v in molsetup.flexibility_model["rigid_body_members"].items()
-            }
-        if "rigid_index_by_atom" in molsetup.flexibility_model:
-            molsetup.flexibility_model["rigid_index_by_atom"] = {
-                int(k): v
-                for k, v in molsetup.flexibility_model["rigid_index_by_atom"].items()
-            }
+
+        for attribute in ["rigid_body_graph", "rigid_body_members", "rigid_index_by_atom"]: 
+            if attribute in molsetup.flexibility_model:
+                molsetup.flexibility_model[attribute] = convert_to_int_keyed_dict(
+                    molsetup.flexibility_model[attribute]
+                )
+
         return molsetup
     # endregion
 
@@ -1563,29 +1550,21 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit, BaseJSONPa
     @classmethod
     def _decode_object(cls, obj: dict[str, Any]): 
         
-        try:
+        base_molsetup = MoleculeSetup.json_decoder(obj)
+        rdkit_molsetup = RDKitMoleculeSetup(source = base_molsetup)
 
-            base_molsetup = MoleculeSetup.json_decoder(obj)
-            rdkit_molsetup = RDKitMoleculeSetup(source = base_molsetup)
-
-            # Restores RDKitMoleculeSetup-specific attributes from the json dict
-            rdkit_molsetup.mol = rdkit_mol_from_json(obj["mol"])
-            rdkit_molsetup.modified_atom_positions = list(map(int, obj["modified_atom_positions"]))
-            rdkit_molsetup.dihedral_interactions = obj["dihedral_interactions"]
-            rdkit_molsetup.dihedral_partaking_atoms = convert_to_tuple_keyed_dict(obj["dihedral_partaking_atoms"])
-            rdkit_molsetup.dihedral_labels = convert_to_tuple_keyed_dict(obj["dihedral_labels"])
-            rdkit_molsetup.atom_to_ring_id = {
-                int(k): [string_to_tuple(t) for t in v]
-                for k, v in obj["atom_to_ring_id"].items()
-            }
-            rdkit_molsetup.rmsd_symmetry_indices = list(map(string_to_tuple, obj["rmsd_symmetry_indices"]))
-            return rdkit_molsetup
-        
-        except Exception as e:
-            raise ValueError(
-                f"Failed to decode deserialized JSON object (dict) into an instance of {cls.__name__}. "
-                f"Error: {e}"
-                )
+        # Restores RDKitMoleculeSetup-specific attributes from the json dict
+        rdkit_molsetup.mol = rdkit_mol_from_json(obj["mol"])
+        rdkit_molsetup.modified_atom_positions = list(map(int, obj["modified_atom_positions"]))
+        rdkit_molsetup.dihedral_interactions = obj["dihedral_interactions"]
+        rdkit_molsetup.dihedral_partaking_atoms = convert_to_tuple_keyed_dict(obj["dihedral_partaking_atoms"], int)
+        rdkit_molsetup.dihedral_labels = convert_to_tuple_keyed_dict(obj["dihedral_labels"], int)
+        rdkit_molsetup.atom_to_ring_id = {
+            int(k): [string_to_tuple(t) for t in v]
+            for k, v in obj["atom_to_ring_id"].items()
+        }
+        rdkit_molsetup.rmsd_symmetry_indices = list(map(string_to_tuple, obj["rmsd_symmetry_indices"]))
+        return rdkit_molsetup
     # endregion
 
     def copy(self):
