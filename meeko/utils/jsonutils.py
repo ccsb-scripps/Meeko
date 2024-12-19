@@ -113,7 +113,7 @@ class BaseJSONParsable:
                 obj = json.loads(json_string, object_hook=cls.json_decoder)
             
             # Error occurred within cls.json_decoder
-            except Exception as decoder_error: 
+            except ValueError as decoder_error: 
                 raise RuntimeError(
                     f"An error occurred when creating {cls.__name__} from JSON."
                     f"Error: {decoder_error}"
