@@ -2101,7 +2101,7 @@ class Monomer(BaseJSONParsable):
             "mapidx_to_raw": obj.mapidx_to_raw,
             "residue_template_key": obj.residue_template_key,
             "input_resname": obj.input_resname,
-            "atom_names": obj.atom_names,
+            "atom_name": obj.atom_names,
             "mapidx_from_raw": obj.mapidx_from_raw,
             "padded_mol": serialize_optional(rdMolInterchange.MolToJSON, obj.padded_mol),
             "molsetup": molsetup,
@@ -2117,7 +2117,7 @@ class Monomer(BaseJSONParsable):
         "mapidx_to_raw",
         "residue_template_key",
         "input_resname",
-        "atom_names",
+        "atom_name",
         "padded_mol",
         "molsetup",
         "molsetup_mapidx",
@@ -2147,7 +2147,7 @@ class Monomer(BaseJSONParsable):
             mapidx_to_raw=mapidx_to_raw,
             input_resname=obj["input_resname"],
             template_key=obj["residue_template_key"],
-            atom_names=obj["atom_names"],
+            atom_names=obj["atom_name"],
         )
 
         monomer.padded_mol=padded_mol
@@ -2483,7 +2483,7 @@ class ResiduePadder(BaseJSONParsable):
     def json_encoder(cls, obj: "ResiduePadder") -> Optional[dict[str, Any]]:
         output_dict = {
             "rxn_smarts": rdChemReactions.ReactionToSmarts(obj.rxn),
-            "adjacent_smarts": serialize_optional(Chem.MolToSmarts, obj.adjacent_smartsmol),
+            "adjacent_res_smarts": serialize_optional(Chem.MolToSmarts, obj.adjacent_smartsmol),
             "auto_blunt": obj.auto_blunt,
         }
         # we are not serializing the adjacent_smartsmol_mapidx as that will
@@ -2493,14 +2493,14 @@ class ResiduePadder(BaseJSONParsable):
     # Keys to check for deserialized JSON 
     expected_json_keys = {
         "rxn_smarts",
-        "adjacent_smarts",
+        "adjacent_res_smarts",
         "auto_blunt",
     }
 
     @classmethod
     def _decode_object(cls, obj: dict[str, Any]): 
 
-        residue_padder = cls(obj["rxn_smarts"], obj["adjacent_smarts"], obj.get("auto_blunt", False))
+        residue_padder = cls(obj["rxn_smarts"], obj["adjacent_res_smarts"], obj.get("auto_blunt", False))
     
         return residue_padder
     # endregion
@@ -2600,12 +2600,12 @@ class ResidueTemplate(BaseJSONParsable):
         output_dict = {
             "mol": rdMolInterchange.MolToJSON(obj.mol),
             "link_labels": obj.link_labels,
-            "atom_names": obj.atom_names,
+            "atom_name": obj.atom_names,
         }
         return output_dict
     
     # Keys to check for deserialized JSON 
-    expected_json_keys = {"mol", "link_labels", "atom_names"}
+    expected_json_keys = {"mol", "link_labels", "atom_name"}
     
     @classmethod
     def _decode_object(cls, obj: dict[str, Any]): 
@@ -2622,7 +2622,7 @@ class ResidueTemplate(BaseJSONParsable):
         link_labels = convert_to_int_keyed_dict(obj.get("link_labels"))
 
         # Construct a ResidueTemplate object
-        residue_template = cls(mol_smiles, None, obj.get("atom_names"))
+        residue_template = cls(mol_smiles, None, obj.get("atom_name"))
         # Separately ensure that link_labels is restored to the value we expect it to be so there are not errors in
         # the constructor
         residue_template.link_labels = link_labels
