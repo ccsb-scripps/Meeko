@@ -204,7 +204,25 @@ class Atom(BaseJSONParsable):
 
     is_dummy: bool = False
     is_pseudo_atom: bool = False
+    
+    # region JSON-interchange functions
+    @classmethod
+    def json_encoder(cls, obj: "Atom") -> Optional[dict[str, Any]]:
 
+        return {
+            "index": obj.index,
+            "pdbinfo": obj.pdbinfo,
+            "charge": obj.charge,
+            "coord": obj.coord.tolist(),  # converts coord from numpy array to lists
+            "atomic_num": obj.atomic_num,
+            "atom_type": obj.atom_type,
+            "is_ignore": obj.is_ignore,
+            "graph": obj.graph,
+            "interaction_vectors": [v.tolist() for v in obj.interaction_vectors],
+            "is_dummy": obj.is_dummy,
+            "is_pseudo_atom": obj.is_pseudo_atom,
+        }
+    
     # Keys to check for deserialized JSON 
     expected_json_keys = {
             "index",
@@ -221,13 +239,7 @@ class Atom(BaseJSONParsable):
         }
 
     @classmethod
-    def json_decoder(cls, obj: dict[str, Any]): 
-
-        # avoid using json_decoder as object_hook for nested objects
-        if not isinstance(obj, dict):
-            return obj
-        if set(obj.keys()) != cls.expected_json_keys:
-            return obj
+    def _decode_object(cls, obj: dict[str, Any]): 
 
         # Constructs an atom object from the provided keys.
         index = obj["index"]
@@ -255,23 +267,7 @@ class Atom(BaseJSONParsable):
             is_pseudo_atom,
         )
         return output_atom
-    
-    @classmethod
-    def json_encoder(cls, obj: "Atom") -> Optional[dict[str, Any]]:
-
-        return {
-            "index": obj.index,
-            "pdbinfo": obj.pdbinfo,
-            "charge": obj.charge,
-            "coord": obj.coord.tolist(),  # converts coord from numpy array to lists
-            "atomic_num": obj.atomic_num,
-            "atom_type": obj.atom_type,
-            "is_ignore": obj.is_ignore,
-            "graph": obj.graph,
-            "interaction_vectors": [v.tolist() for v in obj.interaction_vectors],
-            "is_dummy": obj.is_dummy,
-            "is_pseudo_atom": obj.is_pseudo_atom,
-        }
+    # endregion
 
 
 @dataclass
@@ -318,13 +314,7 @@ class Bond(BaseJSONParsable):
         return idx_min, idx_max
 
     @classmethod
-    def json_decoder(cls, obj: dict[str, Any]): 
-        
-        # avoid using json_decoder as object_hook for nested objects
-        if not isinstance(obj, dict):
-            return obj
-        if set(obj.keys()) != cls.expected_json_keys:
-            return obj
+    def _decode_object(cls, obj: dict[str, Any]): 
 
         # Constructs a bond object from the provided keys.
         index1 = obj["index1"]
@@ -351,13 +341,7 @@ class Ring(BaseJSONParsable):
     expected_json_keys = {"ring_id"}
 
     @classmethod
-    def json_decoder(cls, obj: dict[str, Any]): 
-
-        # avoid using json_decoder as object_hook for nested objects
-        if not isinstance(obj, dict):
-            return obj
-        if set(obj.keys()) != cls.expected_json_keys:
-            return obj
+    def _decode_object(cls, obj: dict[str, Any]): 
 
         # Constructs a Ring object from the provided keys.
         ring_id = string_to_tuple(obj["ring_id"], int)
@@ -407,13 +391,7 @@ class Restraint(BaseJSONParsable):
         return new_restraint
 
     @classmethod
-    def json_decoder(cls, obj: dict[str, Any]): 
-
-        # avoid using json_decoder as object_hook for nested objects
-        if not isinstance(obj, dict):
-            return obj
-        if set(obj.keys()) != cls.expected_json_keys:
-            return obj
+    def _decode_object(cls, obj: dict[str, Any]): 
 
         # Constructs a Restraint object from the provided keys.
         atom_index = obj["atom_index"]
@@ -501,14 +479,7 @@ class MoleculeSetup(BaseJSONParsable):
         self.flexibility_model = None  # from flexibility_model - from flexibility.py
 
     @classmethod
-    def json_decoder(cls, obj: dict[str, Any]):
-
-        # avoid using json_decoder as object_hook for nested objects
-        if not isinstance(obj, dict):
-            return obj
-        # allows more keys in RDKitMoleculeSetup
-        if not cls.expected_json_keys.issubset(obj.keys()):
-            return obj
+    def _decode_object(cls, obj: dict[str, Any]):
 
         # Constructs a MoleculeSetup object and restores the expected attributes
         name = obj["name"]
@@ -1573,13 +1544,7 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit, BaseJSONPa
 
     
     @classmethod
-    def json_decoder(cls, obj: dict[str, Any]): 
-
-        # avoid using json_decoder as object_hook for nested objects
-        if not isinstance(obj, dict):
-            return obj
-        if set(obj.keys()) != cls.expected_json_keys:
-            return obj
+    def _decode_object(cls, obj: dict[str, Any]): 
         
         try:
 

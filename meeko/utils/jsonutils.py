@@ -102,12 +102,23 @@ class BaseJSONParsable:
     @classmethod
     def json_encoder(cls, obj):
         raise NotImplementedError("Subclasses must implement json_encoder.")
-
+    
     @classmethod
-    def json_decoder(cls, obj):
-        raise NotImplementedError("Subclasses must implement json_decoder.")
+    def _decode_object(cls, obj):
+        raise NotImplementedError("Subclasses must implement _decode_object.")
 
     # Inheritable JSON Interchange Functions
+    @classmethod
+    def json_decoder(cls, obj: dict[str, Any]):
+        # Avoid using json_decoder as object_hook for nested objects
+        if not isinstance(obj, dict):
+            return obj
+        if not cls.expected_json_keys.issubset(obj.keys()):
+            return obj
+
+        # Delegate specific decoding logic to a subclass-defined method
+        return cls._decode_object(obj)
+
     @classmethod
     def from_json(cls, json_string: str):
         try: 

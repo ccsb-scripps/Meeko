@@ -594,13 +594,7 @@ class ResidueChemTemplates(BaseJSONParsable):
         self.ambiguous = ambiguous
 
     @classmethod
-    def json_decoder(cls, obj: dict[str, Any]):
-
-        # avoid using json_decoder as object_hook for nested objects
-        if not isinstance(obj, dict):
-            return obj
-        if set(obj.keys()) != cls.expected_json_keys:
-            return obj
+    def _decode_object(cls, obj: dict[str, Any]):
 
         # Extracting the constructor args from the json representation and creating a ResidueChemTemplates instance
         templates = {
@@ -973,13 +967,7 @@ class Polymer(BaseJSONParsable):
     
 
     @classmethod
-    def json_decoder(cls, obj: dict[str, Any]): 
-        
-        # avoid using json_decoder as object_hook for nested objects
-        if not isinstance(obj, dict):
-            return obj
-        if set(obj.keys()) != cls.expected_json_keys:
-            return obj
+    def _decode_object(cls, obj: dict[str, Any]): 
 
         # Deserializes ResidueChemTemplates from the dict to use as an input, then constructs a Polymer object
         # and sets its values using deserialized JSON values.
@@ -2135,13 +2123,7 @@ class Monomer(BaseJSONParsable):
         return inverted
         
     @classmethod
-    def json_decoder(cls, obj: dict[str, Any]): 
-
-        # avoid using json_decoder as object_hook for nested objects
-        if not isinstance(obj, dict):
-            return obj
-        if set(obj.keys()) != cls.expected_json_keys:
-            return obj
+    def _decode_object(cls, obj: dict[str, Any]): 
 
         try:
             raw_rdkit_mol = rdkit_mol_from_json(obj["raw_rdkit_mol"])
@@ -2555,13 +2537,7 @@ class ResiduePadder(BaseJSONParsable):
             return False
 
     @classmethod
-    def json_decoder(cls, obj: dict[str, Any]): 
-
-        # avoid using json_decoder as object_hook for nested objects
-        if not isinstance(obj, dict):
-            return obj
-        if set(obj.keys()) != cls.expected_json_keys:
-            return obj
+    def _decode_object(cls, obj: dict[str, Any]): 
     
         return ResiduePadder(obj["rxn_smarts"], obj["adjacent_smarts"], obj["auto_blunt"])
 
@@ -2678,13 +2654,7 @@ class ResidueTemplate(BaseJSONParsable):
         return output_dict
     
     @classmethod
-    def json_decoder(cls, obj: dict[str, Any]): 
-
-        # avoid using json_decoder as object_hook for nested objects
-        if not isinstance(obj, dict):
-            return obj
-        if set(obj.keys()) != cls.expected_json_keys:
-            return obj
+    def _decode_object(cls, obj: dict[str, Any]): 
 
         # Converting ResidueTemplate init values that need conversion
         deserialized_mol = rdkit_mol_from_json(obj["mol"])
