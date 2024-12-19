@@ -236,15 +236,19 @@ class MoleculePreparation:
         """
         expected_keys = cls.get_defaults_dict().keys()
         bad_keys = [k for k in config if k not in expected_keys]
-        if len(bad_keys) > 0:
-            err_msg = (
-                "unexpected keys in MoleculePreparation.from_config():" + eol
-            )
-            for key in bad_keys:
-                err_msg += "  - %s" % key + eol
-            raise ValueError(err_msg)
+        if bad_keys:
+            warnings.warn(f"Ignore unexpected keys: {bad_keys}")
+        config = {k: v for k,v in config.items() if k in expected_keys}
         p = cls(**config)
         return p
+    
+    @classmethod
+    def from_json_file(cls, filename): 
+        with open(filename) as f:
+            jsonstr = f.read()
+        alldata = json.loads(jsonstr)
+
+        return cls.from_config(alldata)
 
     def calc_flex(
         self,
