@@ -13,11 +13,8 @@ from meeko import (
     MoleculeSetup,
     RDKitMoleculeSetup,
     ResiduePadder,
-    ResiduePadderEncoder,
     ResidueTemplate,
-    ResidueTemplateEncoder,
     ResidueChemTemplates,
-    ResidueChemTemplatesEncoder,
     PDBQTWriterLegacy,
 )
 
@@ -216,10 +213,8 @@ def test_residue_template_encoding_decoding(populated_residue_template):
     # Starts by getting a ResidueTemplate object, converting it to a json string, and then decoding the string into
     # a new ResidueTemplate object
     starting_template = populated_residue_template
-    json_str = json.dumps(starting_template, cls=ResidueTemplateEncoder)
-    decoded_template = json.loads(
-        json_str, object_hook=polymer.residue_template_json_decoder
-    )
+    json_str = starting_template.to_json()
+    decoded_template = ResidueTemplate.from_json(json_str)
 
     # Asserts that the starting and ending objects have the expected ResidueTemplate type
     assert isinstance(starting_template, ResidueTemplate)
@@ -248,10 +243,8 @@ def test_residue_padder_encoding_decoding(populated_residue_padder):
     # Starts by getting a ResiduePadder object, converting it to a json string, and then decoding the string into
     # a new ResiduePadder object
     starting_padder = populated_residue_padder
-    json_str = json.dumps(starting_padder, cls=ResiduePadderEncoder)
-    decoded_padder = json.loads(
-        json_str, object_hook=polymer.residue_padder_json_decoder
-    )
+    json_str = starting_padder.to_json()
+    decoded_padder = ResiduePadder.from_json(json_str)
 
     # Asserts that the starting and ending objects have the expected ResiduePadder type
     assert isinstance(starting_padder, ResiduePadder)
@@ -280,10 +273,8 @@ def test_residue_chem_templates_encoding_decoding(populated_residue_chem_templat
     # Starts by getting a ResidueChemTemplates object, converting it to a json string, and then decoding the string into
     # a new ResidueChemTemplates object
     starting_templates = populated_residue_chem_templates
-    json_str = json.dumps(starting_templates, cls=ResidueChemTemplatesEncoder)
-    decoded_templates = json.loads(
-        json_str, object_hook=polymer.residue_chem_templates_json_decoder
-    )
+    json_str = starting_templates.to_json()
+    decoded_templates = ResidueChemTemplates.from_json(json_str)
 
     # Asserts that the starting and ending objects have the expected ResidueChemTemplates type
     assert isinstance(starting_templates, ResidueChemTemplates)

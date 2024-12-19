@@ -205,6 +205,7 @@ class Atom(BaseJSONParsable):
     is_dummy: bool = False
     is_pseudo_atom: bool = False
 
+    # Keys to check for deserialized JSON 
     expected_json_keys = {
             "index",
             "pdbinfo",
@@ -280,6 +281,7 @@ class Bond(BaseJSONParsable):
     index2: int
     rotatable: bool = DEFAULT_BOND_ROTATABLE
 
+    # Keys to check for deserialized JSON 
     expected_json_keys = {"canon_id", "index1", "index2", "rotatable"}
 
     def __init__(
@@ -332,7 +334,7 @@ class Bond(BaseJSONParsable):
         return output_bond
     
     @classmethod
-    def json_encoder(cls, obj: "Bond"): 
+    def json_encoder(cls, obj: "Bond") -> Optional[dict[str, Any]]:
         return {
                 "canon_id": tuple_to_string(obj.canon_id),
                 "index1": obj.index1,
@@ -345,6 +347,7 @@ class Bond(BaseJSONParsable):
 class Ring(BaseJSONParsable):
     ring_id: tuple
 
+    # Keys to check for deserialized JSON 
     expected_json_keys = {"ring_id"}
 
     @classmethod
@@ -381,6 +384,7 @@ class Restraint(BaseJSONParsable):
     kcal_per_angstrom_square: float
     delay_angstroms: float
 
+    # Keys to check for deserialized JSON 
     expected_json_keys = {
             "atom_index",
             "target_coords",

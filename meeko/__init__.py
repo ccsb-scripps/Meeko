@@ -30,9 +30,6 @@ from .polymer import ResiduePadder
 from .polymer import ResidueTemplate
 from .polymer import ResidueChemTemplates
 from .polymer import PolymerEncoder
-from .polymer import ResiduePadderEncoder
-from .polymer import ResidueTemplateEncoder
-from .polymer import ResidueChemTemplatesEncoder
 from .polymer import add_rotamers_to_polymer_molsetups
 from .polymer import polymer_json_decoder
 from .polymer import PolymerCreationError
