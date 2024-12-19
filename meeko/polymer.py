@@ -2067,8 +2067,10 @@ class Monomer(BaseJSONParsable):
             raw_rdkit_mol = rdkit_mol_from_json(obj["raw_rdkit_mol"])
             rdkit_mol = rdkit_mol_from_json(obj["rdkit_mol"])
             padded_mol = rdkit_mol_from_json(obj["padded_mol"])
-  
-            molsetup = MoleculeSetup.json_decoder(obj["molsetup"])
+
+            molsetup = RDKitMoleculeSetup.json_decoder(obj["molsetup"])
+            if not isinstance(molsetup, RDKitMoleculeSetup):
+                molsetup = MoleculeSetup.json_decoder(obj["molsetup"])
         
             mapidx_to_raw = convert_to_int_keyed_dict(obj.get("mapidx_to_raw"))
             molsetup_mapidx = convert_to_int_keyed_dict(obj.get("molsetup_mapidx"))
@@ -2101,7 +2103,13 @@ class Monomer(BaseJSONParsable):
     @classmethod
     def json_encoder(cls, obj: "Monomer") -> Optional[dict[str, Any]]:
 
+        rdkit_molecule_setup_encoder = RDKitMoleculeSetup.json_encoder
         molecule_setup_encoder = MoleculeSetup.json_encoder
+
+        try: 
+            molsetup = serialize_optional(rdkit_molecule_setup_encoder, obj.molsetup)
+        except KeyError: 
+            molsetup = serialize_optional(molecule_setup_encoder, obj.molsetup)
 
         return {
             "raw_rdkit_mol": serialize_optional(rdMolInterchange.MolToJSON, obj.raw_rdkit_mol),
@@ -2112,7 +2120,7 @@ class Monomer(BaseJSONParsable):
             "atom_names": obj.atom_names,
             "mapidx_from_raw": obj.mapidx_from_raw,
             "padded_mol": serialize_optional(rdMolInterchange.MolToJSON, obj.padded_mol),
-            "molsetup": serialize_optional(molecule_setup_encoder, obj.molsetup),
+            "molsetup": molsetup,
             "is_flexres_atom": obj.is_flexres_atom,
             "is_movable": obj.is_movable,
             "molsetup_mapidx": obj.molsetup_mapidx,
