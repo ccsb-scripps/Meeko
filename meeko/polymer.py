@@ -619,46 +619,10 @@ class ResidueChemTemplates(BaseJSONParsable):
         }
         padders = {k: ResiduePadder.json_decoder(v) for k, v in obj["padders"].items()}
 
-        residue_chem_templates = ResidueChemTemplates(templates, padders, obj["ambiguous"])
+        residue_chem_templates = cls(templates, padders, obj["ambiguous"])
 
         return residue_chem_templates
     # endregion
-
-    @classmethod
-    def from_dict(cls, alldata):
-        """
-        constructs ResidueTemplates and ResiduePadders from a dictionary
-        with raw data such as that in data/residue_chem_templates.json
-        This is pretty much a JSON deserializer that takes a dictionary
-        as input to allow users to modify the input dict in Python
-        """
-
-        ambiguous = {k: v.copy() for k, v in alldata["ambiguous"].items()}
-        residue_templates = {}
-        padders = {}
-        for key, data in alldata["residue_templates"].items():
-            res_template = cls.residue_template_from_dict(data)
-            residue_templates[key] = res_template
-        for link_label, data in alldata["padders"].items():
-            padders[link_label] = cls.padder_from_dict(data)
-        return cls(residue_templates, padders, ambiguous)
-
-    @staticmethod
-    def residue_template_from_dict(data):
-        if "link_labels" in data:
-            link_labels = convert_to_int_keyed_dict(data["link_labels"])
-        else:
-            link_labels = None
-        atom_names = data.get("atom_name", None)
-        return ResidueTemplate(data["smiles"], link_labels, atom_names)
-
-    @staticmethod
-    def padder_from_dict(data):
-        rxn_smarts = data["rxn_smarts"]
-        adjacent_res_smarts = data.get("adjacent_res_smarts", None)
-        auto_blunt = data.get("auto_blunt", False)
-        padder = ResiduePadder(rxn_smarts, adjacent_res_smarts, auto_blunt)
-        return padder
 
     def add_dict(self, data, overwrite=False):
         bad_keys = set(data) - {"ambiguous", "residue_templates", "padders"}
@@ -673,11 +637,11 @@ class ResidueChemTemplates(BaseJSONParsable):
             self.ambiguous = new_ambiguous
         for key, value in data.get("residue_templates", {}).items():
             if overwrite or key not in self.residue_templates:
-                res_template = self.residue_template_from_dict(value)
+                res_template = ResidueTemplate.from_dict(value)
                 self.residue_templates[key] = res_template
         for link_label, value in data.get("padders", {}).items():
             if overwrite or key not in self.padders:
-                padder = self.padder_from_dict(data)
+                padder = ResiduePadder.from_dict(data)
                 self.padders[link_label] = padder
         return
 
@@ -698,9 +662,18 @@ class ResidueChemTemplates(BaseJSONParsable):
         filename = cls.lookup_filename(filename, data_path)
         with open(filename) as f:
             jsonstr = f.read()
-        data = json.loads(jsonstr)
-        return cls.from_dict(data)
+        alldata = json.loads(jsonstr)
 
+        ambiguous = {k: v.copy() for k,v in alldata.get("ambiguous", {}).items()}
+        residue_templates = {}
+        padders = {}
+        for key, data in alldata.get("residue_templates", {}).items():
+            res_template = ResidueTemplate.from_dict(data)
+            residue_templates[key] = res_template
+        for link_label, data in alldata.get("padders", {}).items():
+            padders[link_label] = ResiduePadder.from_dict(data)
+        return cls(residue_templates, padders, ambiguous)
+ 
     @classmethod
     def create_from_defaults(cls):
         return cls.from_json_file("residue_chem_templates")
@@ -992,7 +965,7 @@ class Polymer(BaseJSONParsable):
             obj["residue_chem_templates"]
         )
 
-        polymer = Polymer({}, {}, residue_chem_templates)
+        polymer = cls({}, {}, residue_chem_templates)
 
         polymer.monomers = {
             k: Monomer.json_decoder(v) for k, v in obj["monomers"].items()
@@ -1876,10 +1849,15 @@ class Polymer(BaseJSONParsable):
                 icode = ""
             resnum = int(resnum)
 
-            for i, atom in enumerate(rdkit_mol.GetAtoms()):
+            atoms_in_rdkitmol = [atom for atom in rdkit_mol.GetAtoms()]
+            atom_names = self.monomers[res_id].atom_names
+            if not atom_names:
+                self.monomers[res_id]._set_pdbinfo(res_id)
+
+            for i, atom in enumerate(atoms_in_rdkitmol):
                 atom_count += 1
                 props = atom.GetPropsAsDict()
-                atom_name = self.monomers[res_id].atom_names[i]
+                atom_name = atom_names[i]
                 x, y, z = positions[i]
                 element = mini_periodic_table[atom.GetAtomicNum()]
                 pdbout += pdb_line.format(
@@ -2182,29 +2160,6 @@ class Monomer(BaseJSONParsable):
         return monomer
     # endregion
 
-    def set_atom_names(self, atom_names_list):
-        """
-
-        Parameters
-        ----------
-        atom_names_list
-
-        Returns
-        -------
-
-        """
-        if self.rdkit_mol is None:
-            raise RuntimeError("can't set atom_names if rdkit_mol is not set yet")
-        if len(atom_names_list) != self.rdkit_mol.GetNumAtoms():
-            raise ValueError(
-                f"{len(atom_names_list)=} differs from {self.rdkit_mol.GetNumAtoms()=}"
-            )
-        name_types = set([type(name) for name in atom_names_list])
-        if name_types != {str}:
-            raise ValueError(f"atom names must be str but {name_types=}")
-        self.atom_names = atom_names_list
-        return
-
     def parameterize(self, mk_prep, residue_id):
 
         molsetups = mk_prep(self.padded_mol)
@@ -2296,7 +2251,7 @@ class ResiduePadder(BaseJSONParsable):
     # reaction should not delete atoms, not even Hs
     # reaction should create bonds at non-real Hs (implicit or explicit rdktt H)
 
-    def __init__(self, rxn_smarts: str, adjacent_res_smarts: str = None, auto_blunt:bool=False): 
+    def __init__(self, rxn_smarts: str, adjacent_smarts: str = None, auto_blunt:bool=False): 
         """
         Initialize the ResiduePadder with reaction SMARTS and optional adjacent residue SMARTS.
 
@@ -2306,9 +2261,9 @@ class ResiduePadder(BaseJSONParsable):
             Reaction SMARTS to pad a link atom of a Monomer molecule.
             Product atoms that are not mapped in the reactants will have
             their coordinates set from an adjacent residue molecule, given
-            that adjacent_res_smarts is provided and the atom labels match
+            that adjacent_smarts is provided and the atom labels match
             the unmapped product atoms of rxn_smarts.
-        adjacent_res_smarts: str
+        adjacent_smarts: str
             SMARTS pattern to identify atoms in molecule of adjacent residue
             and copy their positions to padding atoms. The SMARTS atom labels
             must match those of the product atoms of rxn_smarts that are
@@ -2323,13 +2278,13 @@ class ResiduePadder(BaseJSONParsable):
         self.auto_blunt = auto_blunt
 
         # Fill in adjacent_smartsmol_mapidx
-        if adjacent_res_smarts is None:
+        if adjacent_smarts is None:
             self.adjacent_smartsmol = None
             self.adjacent_smartsmol_mapidx = None
             return
 
-        # Ensure adjacent_res_smarts is None or a valid SMARTS        
-        self.adjacent_smartsmol = self._initialize_adj_smartsmol(adjacent_res_smarts)
+        # Ensure adjacent_smarts is None or a valid SMARTS        
+        self.adjacent_smartsmol = self._initialize_adj_smartsmol(adjacent_smarts)
 
         # Ensure the mapping numbers are the same in adjacent_smartsmol and rxn_smarts's product
         self._check_adj_smarts(self.rxn, self.adjacent_smartsmol)
@@ -2352,11 +2307,11 @@ class ResiduePadder(BaseJSONParsable):
         return rxn
     
     @staticmethod
-    def _initialize_adj_smartsmol(adjacent_res_smarts: str) -> Chem.Mol:
-        """Validate adjacent_res_smarts and return adjacent_smartsmol"""
-        adjacent_smartsmol = Chem.MolFromSmarts(adjacent_res_smarts)
+    def _initialize_adj_smartsmol(adjacent_smarts: str) -> Chem.Mol:
+        """Validate adjacent_smarts and return adjacent_smartsmol"""
+        adjacent_smartsmol = Chem.MolFromSmarts(adjacent_smarts)
         if adjacent_smartsmol is None:
-            raise RuntimeError("Invalid SMARTS pattern in adjacent_res_smarts")
+            raise RuntimeError("Invalid SMARTS pattern in adjacent_smarts")
         return adjacent_smartsmol
     
     @staticmethod
@@ -2504,7 +2459,7 @@ class ResiduePadder(BaseJSONParsable):
         there's exactly one match that includes atom with adjacent_required_atom_index
         """
         if expected_adjacent_smartsmol is None:
-            raise RuntimeError("adjacent_res_smarts must be initialized to support adjacent_mol.")
+            raise RuntimeError("adjacent_smarts must be initialized to support adjacent_mol.")
 
         hits = adjacent_mol.GetSubstructMatches(expected_adjacent_smartsmol)
         if adjacent_required_atom_index is not None:
@@ -2544,8 +2499,10 @@ class ResiduePadder(BaseJSONParsable):
 
     @classmethod
     def _decode_object(cls, obj: dict[str, Any]): 
+
+        residue_padder = cls(obj["rxn_smarts"], obj["adjacent_smarts"], obj.get("auto_blunt", False))
     
-        return ResiduePadder(obj["rxn_smarts"], obj["adjacent_smarts"], obj["auto_blunt"])
+        return residue_padder
     # endregion
 
 # Utility Functions
@@ -2654,13 +2611,18 @@ class ResidueTemplate(BaseJSONParsable):
     def _decode_object(cls, obj: dict[str, Any]): 
 
         # Converting ResidueTemplate init values that need conversion
-        deserialized_mol = rdkit_mol_from_json(obj["mol"])
+        deserialized_mol = rdkit_mol_from_json(obj.get("mol"))
         # do not write canonical smiles to preserve original atom order
-        mol_smiles = rdkit.Chem.MolToSmiles(deserialized_mol, canonical=False)
-        link_labels = convert_to_int_keyed_dict(obj["link_labels"])
+        if deserialized_mol: 
+            mol_smiles = rdkit.Chem.MolToSmiles(deserialized_mol, canonical=False)
+        # if dry json (data) is supplied
+        else:
+            mol_smiles = obj.get("smiles")
+
+        link_labels = convert_to_int_keyed_dict(obj.get("link_labels"))
 
         # Construct a ResidueTemplate object
-        residue_template = ResidueTemplate(mol_smiles, None, obj["atom_names"])
+        residue_template = cls(mol_smiles, None, obj.get("atom_names"))
         # Separately ensure that link_labels is restored to the value we expect it to be so there are not errors in
         # the constructor
         residue_template.link_labels = link_labels

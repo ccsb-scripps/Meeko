@@ -255,7 +255,7 @@ class Atom(BaseJSONParsable):
         interaction_vectors = [np.asarray(i) for i in obj["interaction_vectors"]]
         is_dummy = obj["is_dummy"]
         is_pseudo_atom = obj["is_pseudo_atom"]
-        output_atom = Atom(
+        output_atom = cls(
             index,
             pdbinfo,
             charge,
@@ -304,7 +304,7 @@ class Bond(BaseJSONParsable):
         index1 = obj["index1"]
         index2 = obj["index2"]
         rotatable = obj["rotatable"]
-        output_bond = Bond(index1, index2, rotatable)
+        output_bond = cls(index1, index2, rotatable)
         return output_bond
     # endregion
 
@@ -351,7 +351,7 @@ class Ring(BaseJSONParsable):
 
         # Constructs a Ring object from the provided keys.
         ring_id = string_to_tuple(obj["ring_id"], int)
-        output_ring = Ring(ring_id)
+        output_ring = cls(ring_id)
         return output_ring
     # endregion
 
@@ -397,7 +397,7 @@ class Restraint(BaseJSONParsable):
         target_coords = tuple(obj["target_coords"])
         kcal_per_angstrom_square = obj["kcal_per_angstrom_square"]
         delay_angstroms = obj["delay_angstroms"]
-        output_restraint = Restraint(
+        output_restraint = cls(
             atom_index, target_coords, kcal_per_angstrom_square, delay_angstroms
         )
         return output_restraint
@@ -527,7 +527,7 @@ class MoleculeSetup(BaseJSONParsable):
         # Constructs a MoleculeSetup object and restores the expected attributes
         name = obj["name"]
         is_sidechain = obj["is_sidechain"]
-        molsetup = MoleculeSetup(name, is_sidechain)
+        molsetup = cls(name, is_sidechain)
 
         molsetup.pseudoatom_count = obj["pseudoatom_count"]
         molsetup.atoms = [Atom.json_decoder(x) for x in obj["atoms"]]
@@ -1551,7 +1551,7 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit, BaseJSONPa
     def _decode_object(cls, obj: dict[str, Any]): 
         
         base_molsetup = MoleculeSetup.json_decoder(obj)
-        rdkit_molsetup = RDKitMoleculeSetup(source = base_molsetup)
+        rdkit_molsetup = cls(source = base_molsetup)
 
         # Restores RDKitMoleculeSetup-specific attributes from the json dict
         rdkit_molsetup.mol = rdkit_mol_from_json(obj["mol"])

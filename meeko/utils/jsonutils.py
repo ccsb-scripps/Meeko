@@ -109,11 +109,11 @@ class BaseJSONParsable:
 
     # Inheritable JSON Interchange Functions
     @classmethod
-    def json_decoder(cls, obj: dict[str, Any]):
+    def json_decoder(cls, obj: dict[str, Any], check_keys: bool = True):
         # Avoid using json_decoder as object_hook for nested objects
         if not isinstance(obj, dict):
             return obj
-        if not cls.expected_json_keys.issubset(obj.keys()):
+        if check_keys and not cls.expected_json_keys.issubset(obj.keys()):
             return obj
 
         # Delegate specific decoding logic to a subclass-defined method
@@ -160,19 +160,7 @@ class BaseJSONParsable:
 
     @classmethod
     def from_dict(cls, obj: dict) -> "BaseJSONParsable":
-        return cls.json_decoder(obj)
-            
-    @classmethod
-    def from_json_file(cls, json_file) -> "BaseJSONParsable": 
-        with open(json_file, "r") as f: 
-            json_string = f.read()
-        return cls.from_json(json_string)
+        return cls.json_decoder(obj, check_keys=False)
     
     def to_json(self):
         return json.dumps(self, default=self.__class__.json_encoder)
-    
-    def to_json_file(self, json_file): 
-        json_string = self.to_json()
-        with open(json_file, "w") as f: 
-            f.write(json_string)
-

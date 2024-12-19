@@ -621,7 +621,8 @@ def main():
             fn = args.write_json[0]
         else:  # args.write_json is empty list (was used without arg)
             fn = str(outpath) + ".json"
-        polymer.to_json_file(fn)
+        with open(fn, "w") as f:
+            f.write(polymer.to_json())
         written_files_log["filename"].append(fn)
         written_files_log["description"].append("parameterized receptor")
     
