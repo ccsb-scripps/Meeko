@@ -8,7 +8,6 @@ import pytest
 from meeko import (
     Monomer,
     Polymer,
-    PolymerEncoder,
     MoleculePreparation,
     MoleculeSetup,
     RDKitMoleculeSetup,
@@ -185,10 +184,8 @@ def test_pdbqt_writing_from_decoded_polymer(populated_polymer):
 
     starting_polymer = populated_polymer
     starting_pdbqt = PDBQTWriterLegacy.write_from_polymer(starting_polymer)
-    json_str = json.dumps(starting_polymer, cls=PolymerEncoder)
-    decoded_polymer = json.loads(
-        json_str, object_hook=polymer.polymer_json_decoder
-    )
+    json_str = starting_polymer.to_json()
+    decoded_polymer = Polymer.from_json(json_str)
     decoded_pdbqt = PDBQTWriterLegacy.write_from_polymer(decoded_polymer) 
     assert decoded_pdbqt == starting_pdbqt
     return
@@ -309,10 +306,8 @@ def test_polymer_encoding_decoding(
         populated_polymer_missing,
     )
     for starting_polymer in polymers:
-        json_str = json.dumps(starting_polymer, cls=PolymerEncoder)
-        decoded_polymer = json.loads(
-            json_str, object_hook=polymer.polymer_json_decoder
-        )
+        json_str = starting_polymer.to_json()
+        decoded_polymer  = Polymer.from_json(json_str)
 
         # Asserts that the starting and ending objects have the expected Polymer type
         assert isinstance(starting_polymer, Polymer)

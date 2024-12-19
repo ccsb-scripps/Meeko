@@ -758,7 +758,7 @@ class ResidueChemTemplates(BaseJSONParsable):
         return
 
 
-class Polymer:
+class Polymer(BaseJSONParsable):
     """Represents polymer with its subunits as individual RDKit molecules.
 
     Used for proteins and nucleic acids. The key class is Monomer,
@@ -778,6 +778,13 @@ class Polymer:
     disulfide_bridges:
     suggested_mutations:
     """
+
+    # Keys to check for deserialized JSON 
+    expected_json_keys = {
+        "residue_chem_templates",
+        "monomers",
+        "log",
+    }
 
     def __init__(
         self,
@@ -963,7 +970,48 @@ class Polymer:
             self.parameterize(mk_prep)
 
         return
+    
 
+    @classmethod
+    def json_decoder(cls, obj: dict[str, Any]): 
+        
+        # avoid using json_decoder as object_hook for nested objects
+        if not isinstance(obj, dict):
+            return obj
+        if set(obj.keys()) != cls.expected_json_keys:
+            return obj
+
+        # Deserializes ResidueChemTemplates from the dict to use as an input, then constructs a Polymer object
+        # and sets its values using deserialized JSON values.
+        residue_chem_templates = ResidueChemTemplates.json_decoder(
+            obj["residue_chem_templates"]
+        )
+
+        polymer = Polymer({}, {}, residue_chem_templates)
+
+        polymer.monomers = {
+            k: Monomer.json_decoder(v) for k, v in obj["monomers"].items()
+        }
+        polymer.log = obj["log"]
+
+        return polymer
+    
+
+    @classmethod
+    def json_encoder(cls, obj: "Polymer") -> Optional[dict[str, Any]]:
+        
+        output_dict = {
+            "residue_chem_templates": ResidueChemTemplates.json_encoder(
+                obj.residue_chem_templates
+            ),
+            "monomers": {
+                k: Monomer.json_encoder(v)
+                for k, v in obj.monomers.items()
+            },
+            "log": obj.log,
+        }
+        return output_dict
+    
     @classmethod
     def from_pdb_string(
         cls,
@@ -1148,16 +1196,6 @@ class Polymer:
         )
 
         return polymer
-
-    @classmethod
-    def from_json(cls, json_string):
-        return json.loads(
-            json_string,
-            object_hook=polymer_json_decoder,
-        )
-
-    def to_json(self):
-        return json.dumps(self, cls=PolymerEncoder)
 
     def parameterize(self, mk_prep):
         """
@@ -2714,90 +2752,6 @@ class ResidueTemplate(BaseJSONParsable):
 # region JSON Encoders
 
 
-class PolymerEncoder(json.JSONEncoder):
-    """
-    JSON Encoder class for Polymer objects.
-    """
-
-    residue_chem_templates_encoder = ResidueChemTemplates.json_encoder
-    monomer_encoder = Monomer.json_encoder
-
-    def default(self, obj):
-        """
-        Overrides the default JSON encoder for data structures for Polymer objects.
-
-        Parameters
-        ----------
-        obj: object
-            Can take any object as input, but will only create the Polymer JSON format for Polymer
-            objects. For all other objects will return the default json encoding.
-
-        Returns
-        -------
-        A JSON serializable object that represents the Polymer class or the default JSONEncoder output for an
-        object.
-        """
-        if isinstance(obj, Polymer):
-            output_dict = {
-                "residue_chem_templates": self.residue_chem_templates_encoder(
-                    obj.residue_chem_templates
-                ),
-                "monomers": {
-                    k: self.monomer_encoder(v)
-                    for k, v in obj.monomers.items()
-                },
-                "log": obj.log,
-            }
-            return output_dict
-        return json.JSONEncoder.default(self, obj)
-
 
 # endregion
 
-# region JSON Decoders
-
-
-def polymer_json_decoder(obj: dict):
-    """
-    Takes an object and attempts to deserialize it into a Polymer object.
-
-    Parameters
-    ----------
-    obj: Object
-        This can be any object, but it should be a dictionary constructed by deserializing the JSON representation of a
-        Polymer object.
-
-    Returns
-    -------
-    If the input is a dictionary corresponding to a Polymer, will return a Polymer with data
-    populated from the dictionary. Otherwise, returns the input object.
-    """
-    # if the input object is not a dict, we know that it will not be parsable and is unlikely to be usable or
-    # safe data, so we should ignore it.
-    if type(obj) is not dict:
-        return obj
-
-    # Check that all the keys we expect are in the object dictionary as a safety measure
-    expected_json_keys = {
-        "residue_chem_templates",
-        "monomers",
-        "log",
-    }
-    if set(obj.keys()) != expected_json_keys:
-        return obj
-
-    # Deserializes ResidueChemTemplates from the dict to use as an input, then constructs a Polymer object
-    # and sets its values using deserialized JSON values.
-    residue_chem_templates = ResidueChemTemplates.json_decoder(
-        obj["residue_chem_templates"]
-    )
-
-    polymer = Polymer({}, {}, residue_chem_templates)
-
-    polymer.monomers = {
-        k: Monomer.json_decoder(v) for k, v in obj["monomers"].items()
-    }
-    polymer.log = obj["log"]
-
-    return polymer
-# endregion

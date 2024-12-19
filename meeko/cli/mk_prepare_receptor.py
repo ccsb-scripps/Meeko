@@ -13,16 +13,13 @@ from meeko.reactive import atom_name_to_molsetup_index, assign_reactive_types_by
 from meeko import PDBQTMolecule
 from meeko import RDKitMolCreate
 from meeko import MoleculePreparation
-from meeko import MoleculeSetup
 from meeko import ResidueChemTemplates
 from meeko import PDBQTWriterLegacy
 from meeko import Polymer
-from meeko import PolymerEncoder
 from meeko import PolymerCreationError
 from meeko import reactive_typer
 from meeko import get_reactive_config
 from meeko import gridbox
-from meeko import __file__ as pkg_init_path
 from rdkit import Chem
 
 try:
@@ -622,8 +619,7 @@ def main():
             fn = args.write_json[0]
         else:  # args.write_json is empty list (was used without arg)
             fn = str(outpath) + ".json"
-        with open(fn, "w") as f:
-            json.dump(polymer, f, cls=PolymerEncoder)
+        polymer.to_json_file(fn)
         written_files_log["filename"].append(fn)
         written_files_log["description"].append("parameterized receptor")
     
