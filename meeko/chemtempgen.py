@@ -9,29 +9,23 @@ import re
 import atexit
 import os
 
-from meeko.utils.rdkitutils import covalent_radius
+from meeko.utils.autodock4_atom_types_elements import autodock4_atom_types_elements
+from meeko.utils.utils import is_metal
+autodock4_elements = {v for k,v in autodock4_atom_types_elements.items()}
 
 from rdkit import Chem
 from rdkit.Chem import rdmolops
+periodic_table = Chem.GetPeriodicTable()
 
 from rdkit import RDLogger
 import sys, logging
 
 logger = logging.getLogger(__name__)
 
-
-list_of_AD_elements_as_AtomicNum = list(covalent_radius.keys())
-metal_AtomicNums = {12, 20, 25, 26, 30}  # Mg: 12, Ca: 20, Mn: 25, Fe: 26, Zn: 30
+list_of_AD_elements_as_AtomicNum = list(periodic_table.GetAtomicNumber(element) for element in autodock4_elements)
+metal_AtomicNums = {atomic_num for atomic_num in list_of_AD_elements_as_AtomicNum if is_metal(atomic_num)} 
 
 # Utility Functions
-def mol_contains_unexpected_element(mol: Chem.Mol, allowed_elements: list[str] = list_of_AD_elements_as_AtomicNum) -> bool:
-    """Check if mol contains unexpected elements"""
-    for atom in mol.GetAtoms():
-        if atom.GetAtomicNum() not in allowed_elements:
-            return True
-    return False
-
-
 def get_atom_idx_by_names(mol: Chem.Mol, wanted_names: set[str] = set()) -> set[int]:
     
     if not wanted_names:
@@ -380,11 +374,6 @@ class ChemicalComponent:
                 rdkit_atom.SetFormalCharge(int(target_charge)) # this needs to be int for rdkit
             rwmol.AddAtom(rdkit_atom)
 
-        # Check if rwmol contains unexpected elements
-        if mol_contains_unexpected_element(rwmol):
-            logger.warning(f"Molecule contains unexpected elements -> template for {resname} will be None. ")
-            return None
-
         # Map atom_id (atom names) with rdkit idx
         name_to_idx_mapping = {atom.GetProp('atom_id'): idx for (idx, atom) in enumerate(rwmol.GetAtoms())}
 
@@ -395,28 +384,29 @@ class ChemicalComponent:
                            'value_order', # bond order
                            ]
         bond_table = block.find(bond_category, bond_attributes)
-        bond_cols = {attr: bond_table.find_column(f"{bond_category}{attr}") for attr in bond_attributes}
+        if bond_table: 
+            bond_cols = {attr: bond_table.find_column(f"{bond_category}{attr}") for attr in bond_attributes}
 
-        # Connect atoms by bonds
-        bond_type_mapping = {
-            'SING': Chem.BondType.SINGLE,
-            'DOUB': Chem.BondType.DOUBLE,
-            'TRIP': Chem.BondType.TRIPLE,
-            'AROM': Chem.BondType.AROMATIC
-        }
-        bond_types = bond_cols['value_order']
+            # Connect atoms by bonds
+            bond_type_mapping = {
+                'SING': Chem.BondType.SINGLE,
+                'DOUB': Chem.BondType.DOUBLE,
+                'TRIP': Chem.BondType.TRIPLE,
+                'AROM': Chem.BondType.AROMATIC
+            }
+            bond_types = bond_cols['value_order']
 
-        for bond_i, bond_type in enumerate(bond_types):
-            rwmol.AddBond(name_to_idx_mapping[bond_cols['atom_id_1'][bond_i].strip('"')], 
-                          name_to_idx_mapping[bond_cols['atom_id_2'][bond_i].strip('"')], 
-                          bond_type_mapping.get(bond_type, Chem.BondType.UNSPECIFIED))
+            for bond_i, bond_type in enumerate(bond_types):
+                rwmol.AddBond(name_to_idx_mapping[bond_cols['atom_id_1'][bond_i].strip('"')], 
+                            name_to_idx_mapping[bond_cols['atom_id_2'][bond_i].strip('"')], 
+                            bond_type_mapping.get(bond_type, Chem.BondType.UNSPECIFIED))
 
-        # Try recharging mol (for metals)
-        try:
-            rwmol = recharge(rwmol)
-        except Exception as e:
-            logger.error(f"Failed to recharge rdkitmol. Error: {e} -> template for {resname} will be None. ")
-            return None
+            # Try recharging mol (for metals)
+            try:
+                rwmol = recharge(rwmol)
+            except Exception as e:
+                logger.error(f"Failed to recharge rdkitmol. Error: {e} -> template for {resname} will be None. ")
+                return None
 
         # Finish eidting mol 
         try:    

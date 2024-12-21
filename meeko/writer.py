@@ -12,7 +12,6 @@ eol="\n"
 import numpy as np
 from rdkit import Chem
 from .utils import pdbutils
-from .utils.rdkitutils import mini_periodic_table
 
 from .molsetup import Bond
 
@@ -384,6 +383,28 @@ class PDBQTWriterLegacy:
         occupancy = 1.0
         temp_factor = 0.0
         atom = "{:6s}{:5d} {:^4s}{:1s}{:3s} {:1s}{:4d}{:1s}   {:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}    {:6.3f} {:<2s}"
+        if atom_type is None: 
+            atom_type = "None"
+            pdbqt_line = atom.format(
+            record_type,
+            count,
+            atom_name,
+            alt_id,
+            res_name,
+            chain,
+            res_num,
+            icode,
+            float(coord[0]),
+            float(coord[1]),
+            float(coord[2]),
+            occupancy,
+            temp_factor,
+            charge,
+            atom_type)
+            raise RuntimeError("Cannot write PDBQT file. The following atom does not have an atom type: " + eol +
+                             pdbqt_line + eol + 
+                             "Consider declaring a custom atom type in the parameter file or revising the input structure. ")
+
         pdbqt_line = atom.format(
             record_type,
             count,

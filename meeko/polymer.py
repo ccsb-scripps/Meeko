@@ -18,12 +18,14 @@ from rdkit.Geometry import Point3D
 from .molsetup import RDKitMoleculeSetup
 from .molsetup import MoleculeSetupEncoder
 from .utils.jsonutils import rdkit_mol_from_json
-from .utils.rdkitutils import mini_periodic_table
 from .utils.rdkitutils import react_and_map
 from .utils.rdkitutils import AtomField
 from .utils.rdkitutils import build_one_rdkit_mol_per_altloc
 from .utils.rdkitutils import _aux_altloc_mol_build
-from .utils.rdkitutils import covalent_radius
+from .utils.covalent_radius_table import covalent_radius
+from .utils.autodock4_atom_types_elements import autodock4_atom_types_elements
+from .utils.utils import is_metal, is_noble
+autodock4_elements = {v for k,v in autodock4_atom_types_elements.items()}
 from .utils.pdbutils import PDBAtomInfo
 from .chemtempgen import export_chem_templates_to_json
 from .chemtempgen import build_noncovalent_CC
@@ -93,7 +95,6 @@ residues_rotamers = {
     ],
 }
 
-
 def find_graph_paths(graph, start_node, end_nodes, current_path=(), paths_found=()):
     """
     Recursively finds all paths between start and end nodes.
@@ -135,9 +136,7 @@ def find_inter_mols_bonds(mols_dict):
     """
 
     allowance = 1.2  # vina uses 1.1 but covalent radii are shorter here
-    max_possible_covalent_radius = (
-        2 * allowance * max([r for k, r in covalent_radius.items()])
-    )
+    max_possible_covalent_radius = (2 * allowance * covalent_radius["I"])
     cubes_min = []
     cubes_max = []
     for key, (mol, _) in mols_dict.items():
@@ -148,6 +147,16 @@ def find_inter_mols_bonds(mols_dict):
     pairs_to_consider = []
     keys = list(mols_dict)
     for i in range(len(mols_dict)):
+        atomic_nums = [atom.GetAtomicNum() for atom in mols_dict[keys[i]][0].GetAtoms()]
+        elements = [periodic_table.GetElementSymbol(atomic_num) for atomic_num in atomic_nums]
+        unsupported_element_idx = [i for i, element in enumerate(elements) if element not in autodock4_elements]
+        unbound_element_idx = [i for i, atomic_num in enumerate(atomic_nums) if is_metal(atomic_num) or is_noble(atomic_num)]
+        if unsupported_element_idx: 
+            logger.warning(f"Input residue {keys[i]}:{mols_dict[keys[i]][1]} atoms #{unsupported_element_idx} do not have an AutoDock4 atom type. ")
+        if unbound_element_idx: 
+            logger.warning(f"Input residue {keys[i]}:{mols_dict[keys[i]][1]} atoms #{unbound_element_idx} is metal or noble gas. " + eol +
+                           "No intermol bond perception will be made involving a metal or noble gas. ")
+            continue
         for j in range(i + 1, len(mols_dict)):
             do_consider = True
             for d in range(3):
@@ -164,18 +173,18 @@ def find_inter_mols_bonds(mols_dict):
         p1 = mols_dict[keys[i]][0].GetConformer().GetPositions()
         p2 = mols_dict[keys[j]][0].GetConformer().GetPositions()
         for a1 in mols_dict[keys[i]][0].GetAtoms():
+            if is_metal(a1.GetAtomicNum()) or is_noble(a1.GetAtomicNum()): 
+                continue
             for a2 in mols_dict[keys[j]][0].GetAtoms():
+                if is_metal(a2.GetAtomicNum()) or is_noble(a2.GetAtomicNum()): 
+                    continue
+
                 vec = p1[a1.GetIdx()] - p2[a2.GetIdx()]
                 distsqr = np.dot(vec, vec)
-
-                # check if atom has implemented covalent radius
-                for atom in [a1, a2]:
-                    if atom.GetAtomicNum() not in covalent_radius:
-                        raise RuntimeError(f"Element {periodic_table.GetElementSymbol(atom.GetAtomicNum())} doesn't have an implemented covalent radius, which was required for the perception of intermolecular bonds. ")
                     
                 cov_dist = (
-                    covalent_radius[a1.GetAtomicNum()]
-                    + covalent_radius[a2.GetAtomicNum()]
+                    covalent_radius[periodic_table.GetElementSymbol(a1.GetAtomicNum())]
+                    + covalent_radius[periodic_table.GetElementSymbol(a2.GetAtomicNum())]
                 )
                 if distsqr < (allowance * cov_dist) ** 2:
                     key = (keys[i], keys[j])
@@ -842,6 +851,17 @@ class Polymer:
 
             bonded_unknown_res = {res_id: all_unknown_res[res_id] for res_id in all_unknown_res 
                                   if any(res_id in respair for respair in bonds)}
+            single_atom_res= set()
+            for res_id in bonded_unknown_res: 
+                raw_input_mol = raw_input_mols[res_id][0]
+                atoms_in_mol = [atom for atom in raw_input_mol.GetAtoms()]
+                if len(atoms_in_mol)==1: 
+                    atom = atoms_in_mol[0]
+                    atomic_num =  atom.GetAtomicNum()
+                    if is_metal(atomic_num) or is_noble(atomic_num): 
+                        single_atom_res.add(res_id)
+            for res_id in single_atom_res:
+                bonded_unknown_res.pop(res_id)
 
             unbound_unknown_res = all_unknown_res.copy()
             for key in bonded_unknown_res:
@@ -1784,7 +1804,7 @@ class Polymer:
 
         pdbout = ""
         atom_count = 0
-        pdb_line = "{:6s}{:5d} {:^4s} {:3s} {:1s}{:4d}{:1s}   {:8.3f}{:8.3f}{:8.3f}                       {:2s} "
+        pdb_line = "{:6s}{:5d} {:^4s} {:3s} {:1s}{:4d}{:1s}   {:8.3f}{:8.3f}{:8.3f}                      {:2s} "
         pdb_line += eol
         for res_id in self.get_valid_monomers():
             rdkit_mol = self.monomers[res_id].rdkit_mol
@@ -1809,7 +1829,7 @@ class Polymer:
                 props = atom.GetPropsAsDict()
                 atom_name = self.monomers[res_id].atom_names[i]
                 x, y, z = positions[i]
-                element = mini_periodic_table[atom.GetAtomicNum()]
+                element = periodic_table.GetElementSymbol(atom.GetAtomicNum())
                 pdbout += pdb_line.format(
                     "ATOM",
                     atom_count,
