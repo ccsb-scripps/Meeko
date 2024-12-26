@@ -340,7 +340,29 @@ class RDKitMolCreate:
         """Add hydrogen atoms to ligand RDKit mol, adjust the positions of
             polar hydrogens to match pdbqt
         """
+
+        editable_mol = Chem.RWMol(mol)
+
+        parent_rdkit_indices = [i - 1 for i in h_parent[::2]]
+        for atom in editable_mol.GetAtoms():
+            if atom.GetIdx() in parent_rdkit_indices: 
+                atom.SetIntProp("original_index", atom.GetIdx())
+
+        isotope_dict = {}
+        for idx, atom in enumerate(editable_mol.GetAtoms()): 
+            isotope_dict[idx] = atom.GetIsotope()
+            atom.SetIsotope(0)
+        mol = Chem.RemoveHs(editable_mol)
         mol = Chem.AddHs(mol, addCoords=True)
+        for idx, isotope in isotope_dict.items(): 
+            mol.GetAtomWithIdx(idx).SetIsotope(isotope)
+
+        atom_mapping = {}
+        for atom in mol.GetAtoms():
+            if atom.HasProp("original_index"):
+                original_index = atom.GetIntProp("original_index")
+                atom_mapping[original_index] = atom.GetIdx()
+        
         conformers = list(mol.GetConformers())
         num_hydrogens = int(len(h_parent) / 2)
         for conformer_idx, atom_coordinates in enumerate(coordinates_list):
@@ -352,7 +374,7 @@ class RDKitMolCreate:
                 x, y, z = [
                     float(coord) for coord in atom_coordinates[h_pdbqt_index]
                 ]
-                parent_atom = mol.GetAtomWithIdx(parent_rdkit_index)
+                parent_atom = mol.GetAtomWithIdx(atom_mapping[parent_rdkit_index])
                 candidate_hydrogens = [
                     atom.GetIdx() for atom in parent_atom.GetNeighbors()
                     if atom.GetAtomicNum() == 1
