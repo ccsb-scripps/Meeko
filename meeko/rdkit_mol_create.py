@@ -341,27 +341,67 @@ class RDKitMolCreate:
             polar hydrogens to match pdbqt
         """
 
-        editable_mol = Chem.RWMol(mol)
+        if not h_parent: # no hydrogens to add
+            return mol
 
-        parent_rdkit_indices = [i - 1 for i in h_parent[::2]]
-        for atom in editable_mol.GetAtoms():
-            if atom.GetIdx() in parent_rdkit_indices: 
+        # check if molecule has H isotopes
+        def has_h_isotopes(mol: Chem.Mol) -> bool:
+            for atom in mol.GetAtoms():
+                if atom.GetAtomicNum() == 1 and atom.GetIsotope() > 0:
+                    return True
+            return False
+        
+        # take advantage of AddHs() and RemoveHs() to handle H isotopes
+        if has_h_isotopes(mol):
+
+            # make a copy of mol
+            mol_copy = Chem.Mol(mol)
+
+            # save original indices
+            for atom in mol_copy.GetAtoms():
                 atom.SetIntProp("original_index", atom.GetIdx())
 
-        isotope_dict = {}
-        for idx, atom in enumerate(editable_mol.GetAtoms()): 
-            isotope_dict[idx] = atom.GetIsotope()
-            atom.SetIsotope(0)
-        mol = Chem.RemoveHs(editable_mol)
-        mol = Chem.AddHs(mol, addCoords=True)
-        for idx, isotope in isotope_dict.items(): 
-            mol.GetAtomWithIdx(idx).SetIsotope(isotope)
+            # save isotopes types
+            isotope_dict = {}
+            # reset isotope types to 0
+            for idx, atom in enumerate(mol_copy.GetAtoms()): 
+                isotope_dict[idx] = atom.GetIsotope()
+                atom.SetIsotope(0)
 
-        atom_mapping = {}
-        for atom in mol.GetAtoms():
-            if atom.HasProp("original_index"):
-                original_index = atom.GetIntProp("original_index")
-                atom_mapping[original_index] = atom.GetIdx()
+            # remove Hs, add Hs
+            mol_copy = Chem.RemoveHs(mol_copy)
+            mol_copy = Chem.AddHs(mol_copy, addCoords=True)
+            # set back the isotope types
+            for idx, isotope in isotope_dict.items(): 
+                mol_copy.GetAtomWithIdx(idx).SetIsotope(isotope)
+
+            # set back original order of atoms
+            def reorder_atoms_by_property(mol: Chem.Mol, prop_name="original_index"):
+                atom_indices = []
+                atoms_in_mol = [atom for atom in mol.GetAtoms()]
+                unindexed_atoms = [atom for atom in atoms_in_mol if not atom.HasProp(prop_name)]
+                counter = 1
+                for atom in mol.GetAtoms():
+                    if atom.HasProp(prop_name): 
+                        atom_indices.append((atom.GetIdx(), atom.GetIntProp(prop_name)))
+                    else:
+                        new_idx = len(atoms_in_mol) - len(unindexed_atoms) + counter
+                        atom.SetIntProp(prop_name, new_idx)
+                        atom_indices.append((atom.GetIdx(), new_idx))
+                        counter += 1
+
+                sorted_indices = [idx for idx, _ in sorted(atom_indices, key=lambda x: x[1])]
+
+                reordered_mol = Chem.RenumberAtoms(mol, sorted_indices)
+                return reordered_mol
+
+            mol_copy = reorder_atoms_by_property(mol_copy)
+
+            # set back molecule-level properties
+            for prop_name in mol.GetPropNames():
+                mol_copy.SetProp(prop_name, mol.GetProp(prop_name))
+            # overwrite mol with the copy
+            mol = mol_copy
         
         conformers = list(mol.GetConformers())
         num_hydrogens = int(len(h_parent) / 2)
@@ -374,7 +414,7 @@ class RDKitMolCreate:
                 x, y, z = [
                     float(coord) for coord in atom_coordinates[h_pdbqt_index]
                 ]
-                parent_atom = mol.GetAtomWithIdx(atom_mapping[parent_rdkit_index])
+                parent_atom = mol.GetAtomWithIdx(parent_rdkit_index)
                 candidate_hydrogens = [
                     atom.GetIdx() for atom in parent_atom.GetNeighbors()
                     if atom.GetAtomicNum() == 1
@@ -382,8 +422,8 @@ class RDKitMolCreate:
                 for h_rdkit_index in candidate_hydrogens:
                     if h_rdkit_index not in used_h:
                         break
-                used_h.append(h_rdkit_index)
-                conf.SetAtomPosition(h_rdkit_index, Point3D(x, y, z))
+                    used_h.append(h_rdkit_index)
+                    conf.SetAtomPosition(h_rdkit_index, Point3D(x, y, z))
         return mol
 
     @staticmethod
