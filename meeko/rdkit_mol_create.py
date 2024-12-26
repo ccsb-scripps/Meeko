@@ -339,16 +339,12 @@ class RDKitMolCreate:
     def add_hydrogens(mol, coordinates_list, h_parent):
         """Add hydrogen atoms to ligand RDKit mol, adjust the positions of
             polar hydrogens to match pdbqt
+           Adjust positions of hydrogen isotopes as if they were regular Hs
         """
 
-        if not h_parent: # no hydrogens to add
-            return mol
-        
-        # pre-populate parent_rdkit_indices and h_pdbqt_indices
+        mol = Chem.AddHs(mol, addCoords=True)
         conformers = list(mol.GetConformers())
         num_hydrogens = int(len(h_parent) / 2)
-        parent_rdkit_indices = [i - 1 for i in h_parent[::2]]
-        h_pdbqt_indices = [i - 1 for i in h_parent[1::2]]
 
         # check if molecule has H isotopes
         def has_h_isotopes(mol: Chem.Mol) -> bool:
@@ -356,59 +352,103 @@ class RDKitMolCreate:
                 if atom.GetAtomicNum() == 1 and atom.GetIsotope() > 0:
                     return True
             return False
+        
+        if not h_parent and not has_h_isotopes(mol): # no hydrogens for correction
+            return mol
+                
+        # pre-populate parent_rdkit_indices and h_pdbqt_indices
+        parent_rdkit_indices = [i - 1 for i in h_parent[::2]]
+        h_pdbqt_indices = [i - 1 for i in h_parent[1::2]]
 
         # take advantage of AddHs() and RemoveHs() to regenerate H isotopes coordinates
         # process H isotopes in mol as if they were regular Hs
         if has_h_isotopes(mol):
+            
+            copy_mol = Chem.Mol(mol)
 
-            copy_mol = Chem.AddHs(mol, addCoords=True)
+            # mapping of H isotope parent atom index (in original mol) to list of H isotope_atoms
+            H_isotope_atom_dict = {}
             H_isotope_atoms = [atom for atom in copy_mol.GetAtoms() 
                     if atom.GetAtomicNum() == 1 and atom.GetIsotope() > 0
                     ]
-
-            H_isotope_dict = {}
             for atom in H_isotope_atoms: 
                 parent_idx = [nei.GetIdx() for nei in atom.GetNeighbors()][0]
-                if parent_idx not in H_isotope_dict: 
-                    H_isotope_dict[parent_idx] = [atom.GetIsotope()]
+                if parent_idx not in H_isotope_atom_dict: 
+                    H_isotope_atom_dict[parent_idx] = [atom]
                 else: 
-                    H_isotope_dict[parent_idx].append(atom.GetIsotope())
+                    H_isotope_atom_dict[parent_idx].append(atom)
+                
+                # set isotope type to 0
                 atom.SetIsotope(0)
+            
+            H_isotope_idxmap = {parent_idx: [atom.GetIdx() for atom in atoms] 
+                                for parent_idx, atoms in H_isotope_atom_dict.items()}
+            H_isotope_typemap = {parent_idx: [atom.GetIsotope() for atom in atoms] 
+                                 for parent_idx, atoms in H_isotope_atom_dict.items()}
 
-            isotope_parent = list(H_isotope_dict.keys())
+            isotope_parent = list(H_isotope_idxmap.keys())
             editable_mol = Chem.EditableMol(copy_mol)
             indices_to_remove = sorted([atom.GetIdx() for atom in H_isotope_atoms], reverse=True)
 
             for idx in indices_to_remove:
                 editable_mol.RemoveAtom(idx)
+
+                # shift H isotope parent indices 
                 for iparent, parent_id in enumerate(isotope_parent): 
                     if parent_id>idx: 
                         isotope_parent[iparent] -= 1
-                for iparent, parent_id in enumerate(parent_rdkit_indices): 
-                    if parent_id>idx: 
-                        parent_rdkit_indices[iparent] -= 1
-            parent_mapping = {
-                list(H_isotope_dict.keys())[i]: isotope_parent[i] for i in range(len(isotope_parent))
-            }
 
+            # mapping of isotope H parent atom index (in original mol) to shifted index
+            parent_idx_mapping = dict(zip(H_isotope_idxmap.keys(), isotope_parent))
+
+            # add H isotopes as regular Hs
             copy_mol = editable_mol.GetMol()
             copy_mol.UpdatePropertyCache(strict=False)
             copy_mol = Chem.AddHs(copy_mol, addCoords=True)
+            atoms_in_copy_mol = [atom for atom in copy_mol.GetAtoms()]
 
-            for idx, isotopes in H_isotope_dict.items(): 
-                parent_id = parent_mapping[idx]
+            # mapping of H isotope atom index (in copy mol) to original index
+            isotope_idx_mapping = {}
+            for idx, isotopes in H_isotope_typemap.items(): 
+                parent_id = parent_idx_mapping[idx]
                 hydrogen_indices = [
                     nei.GetIdx() for nei in copy_mol.GetAtomWithIdx(parent_id).GetNeighbors()
-                    if nei.GetAtomicNum() == 1
+                    if nei.GetAtomicNum() == 1 
                 ]
+                hydrogen_indices = hydrogen_indices[:len(isotopes)]
 
-                isotopes += [0] * (len(hydrogen_indices) - len(isotopes))
+                iter_isotope_type = iter(isotopes)
+                iter_origenal_index = iter(H_isotope_idxmap[idx])
 
-                iter_hydrogen_index = iter(hydrogen_indices)
-                for isotope in isotopes:
-                    hydrogen_idx = next(iter_hydrogen_index)
-                    copy_mol.GetAtomWithIdx(hydrogen_idx).SetIsotope(isotope)
+                for hydrogen_idx in hydrogen_indices:
+                    isotope = next(iter_isotope_type)
+                    original_index = next(iter_origenal_index)
+                    # set isotope type back 
+                    atoms_in_copy_mol[hydrogen_idx].SetIsotope(isotope)
+                    # retrieve original index to isotope_idx_mapping
+                    isotope_idx_mapping[hydrogen_idx] = original_index
 
+            # reorder atoms in copy mol to match original order
+            def reorder_atoms(mol: Chem.Mol, i: int, j: int):
+                """
+                Reorders the atoms in an RDKit molecule by placing the i-th atom before the current j-th atom.
+                """
+
+                atom_indices = list(range(mol.GetNumAtoms()))
+
+                atom_to_move = atom_indices.pop(i)
+                atom_indices.insert(j, atom_to_move)
+                
+                new_mol = Chem.RenumberAtoms(mol, atom_indices)
+                return new_mol
+            
+            isotope_idx_mapping = dict(sorted(isotope_idx_mapping.items(), key=lambda item: item[1]))
+            for current_index, original_index in isotope_idx_mapping.items(): 
+                copy_mol = reorder_atoms(copy_mol, current_index, original_index)
+
+            # copy molecule level properties
+            for prop_name in mol.GetPropNames():
+                copy_mol.SetProp(prop_name, mol.GetProp(prop_name))
             mol = copy_mol
 
         for conformer_idx, atom_coordinates in enumerate(coordinates_list):
