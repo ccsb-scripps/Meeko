@@ -355,10 +355,6 @@ class RDKitMolCreate:
         
         if not h_parent and not has_h_isotopes(mol): # no hydrogens for correction
             return mol
-                
-        # pre-populate parent_rdkit_indices and h_pdbqt_indices
-        parent_rdkit_indices = [i - 1 for i in h_parent[::2]]
-        h_pdbqt_indices = [i - 1 for i in h_parent[1::2]]
 
         # take advantage of AddHs() and RemoveHs() to regenerate H isotopes coordinates
         # process H isotopes in mol as if they were regular Hs
@@ -455,8 +451,8 @@ class RDKitMolCreate:
             conf = conformers[conformer_idx]
             used_h = []
             for i in range(num_hydrogens):
-                parent_rdkit_index = parent_rdkit_indices[i]
-                h_pdbqt_index = h_pdbqt_indices[i]
+                parent_rdkit_index = h_parent[2 * i] - 1
+                h_pdbqt_index = h_parent[2 * i + 1] - 1
                 x, y, z = [
                     float(coord) for coord in atom_coordinates[h_pdbqt_index]
                 ]
