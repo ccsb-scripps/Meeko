@@ -362,23 +362,23 @@ class RDKitMolCreate:
         if has_h_isotopes(mol):
 
             copy_mol = Chem.AddHs(mol, addCoords=True)
-            H_isotope_indices = [atom.GetIdx() for atom in copy_mol.GetAtoms() 
-                                if atom.GetAtomicNum() == 1 and atom.GetIsotope() > 0
-                                ]
-            H_isotope_dict = {}
+            H_isotope_atoms = [atom for atom in copy_mol.GetAtoms() 
+                    if atom.GetAtomicNum() == 1 and atom.GetIsotope() > 0
+                    ]
 
-            for idx, atom in enumerate(copy_mol.GetAtoms()): 
-                atom_isotope = atom.GetIsotope()
-                if atom.GetAtomicNum() == 1 and atom_isotope > 0:
-                    parent_idx = [nei.GetIdx() for nei in atom.GetNeighbors()][0]
-                    if parent_idx not in H_isotope_dict: 
-                        H_isotope_dict[parent_idx] = [atom_isotope]
-                    else: 
-                        H_isotope_dict[parent_idx].append(atom_isotope)
-                    atom.SetIsotope(0)
+            H_isotope_dict = {}
+            for atom in H_isotope_atoms: 
+                parent_idx = [nei.GetIdx() for nei in atom.GetNeighbors()][0]
+                if parent_idx not in H_isotope_dict: 
+                    H_isotope_dict[parent_idx] = [atom.GetIsotope()]
+                else: 
+                    H_isotope_dict[parent_idx].append(atom.GetIsotope())
+                atom.SetIsotope(0)
+
             isotope_parent = list(H_isotope_dict.keys())
             editable_mol = Chem.EditableMol(copy_mol)
-            indices_to_remove = sorted(H_isotope_indices, reverse=True)
+            indices_to_remove = sorted([atom.GetIdx() for atom in H_isotope_atoms], reverse=True)
+
             for idx in indices_to_remove:
                 editable_mol.RemoveAtom(idx)
                 for iparent, parent_id in enumerate(isotope_parent): 
@@ -394,11 +394,16 @@ class RDKitMolCreate:
             copy_mol = editable_mol.GetMol()
             copy_mol.UpdatePropertyCache(strict=False)
             copy_mol = Chem.AddHs(copy_mol, addCoords=True)
+
             for idx, isotopes in H_isotope_dict.items(): 
+                parent_id = parent_mapping[idx]
                 hydrogen_indices = [
-                    nei.GetIdx() for nei in copy_mol.GetAtomWithIdx(parent_mapping[idx]).GetNeighbors() 
-                    if nei.GetAtomicNum() == 1 and nei.GetIsotope() == 0
+                    nei.GetIdx() for nei in copy_mol.GetAtomWithIdx(parent_id).GetNeighbors()
+                    if nei.GetAtomicNum() == 1
                 ]
+
+                isotopes += [0] * (len(hydrogen_indices) - len(isotopes))
+
                 iter_hydrogen_index = iter(hydrogen_indices)
                 for isotope in isotopes:
                     hydrogen_idx = next(iter_hydrogen_index)
