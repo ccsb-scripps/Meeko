@@ -361,47 +361,49 @@ class RDKitMolCreate:
         # process H isotopes in mol as if they were regular Hs
         if has_h_isotopes(mol):
 
-            copy_mol = Chem.Mol(mol)
-
-            # track original indices of parent atoms
-            parent_rdkit_indices = [i - 1 for i in h_parent[::2]]
-            for atom in copy_mol.GetAtoms():
-                atom.SetIntProp("original_index", atom.GetIdx())
-
+            copy_mol = Chem.AddHs(mol, addCoords=True)
+            H_isotope_indices = [atom.GetIdx() for atom in copy_mol.GetAtoms() 
+                                if atom.GetAtomicNum() == 1 and atom.GetIsotope() > 0
+                                ]
             H_isotope_dict = {}
+
             for idx, atom in enumerate(copy_mol.GetAtoms()): 
-                if atom.GetAtomicNum() == 1 and atom.GetIsotope() > 0:
-                    H_isotope_dict[idx] = atom.GetIsotope()
+                atom_isotope = atom.GetIsotope()
+                if atom.GetAtomicNum() == 1 and atom_isotope > 0:
+                    parent_idx = [nei.GetIdx() for nei in atom.GetNeighbors()][0]
+                    if parent_idx not in H_isotope_dict: 
+                        H_isotope_dict[parent_idx] = [atom_isotope]
+                    else: 
+                        H_isotope_dict[parent_idx].append(atom_isotope)
                     atom.SetIsotope(0)
+            isotope_parent = list(H_isotope_dict.keys())
             editable_mol = Chem.EditableMol(copy_mol)
-            indices_to_remove = sorted(list(H_isotope_dict), reverse=True)
+            indices_to_remove = sorted(H_isotope_indices, reverse=True)
             for idx in indices_to_remove:
                 editable_mol.RemoveAtom(idx)
+                for iparent, parent_id in enumerate(isotope_parent): 
+                    if parent_id>idx: 
+                        isotope_parent[iparent] -= 1
                 for iparent, parent_id in enumerate(parent_rdkit_indices): 
                     if parent_id>idx: 
                         parent_rdkit_indices[iparent] -= 1
+            parent_mapping = {
+                list(H_isotope_dict.keys())[i]: isotope_parent[i] for i in range(len(isotope_parent))
+            }
+
             copy_mol = editable_mol.GetMol()
             copy_mol.UpdatePropertyCache(strict=False)
             copy_mol = Chem.AddHs(copy_mol, addCoords=True)
-            for idx, isotope in H_isotope_dict.items(): 
-                copy_mol.GetAtomWithIdx(idx).SetIsotope(isotope)
+            for idx, isotopes in H_isotope_dict.items(): 
+                hydrogen_indices = [
+                    nei.GetIdx() for nei in copy_mol.GetAtomWithIdx(parent_mapping[idx]).GetNeighbors() 
+                    if nei.GetAtomicNum() == 1 and nei.GetIsotope() == 0
+                ]
+                iter_hydrogen_index = iter(hydrogen_indices)
+                for isotope in isotopes:
+                    hydrogen_idx = next(iter_hydrogen_index)
+                    copy_mol.GetAtomWithIdx(hydrogen_idx).SetIsotope(isotope)
 
-            max_index = max([atom.GetIntProp("original_index") for atom in copy_mol.GetAtoms() if atom.HasProp("original_index")])
-            for atom in copy_mol.GetAtoms():
-                if not atom.HasProp("original_index"):
-                    max_index += 1
-                    atom.SetIntProp("original_index", max_index)
-            
-            atom_indices_with_props = [
-                (atom.GetIdx(), atom.GetIntProp("original_index")) 
-                for atom in copy_mol.GetAtoms() 
-                if atom.HasProp("original_index")
-            ]
-     
-            sorted_indices = [idx for idx, _ in sorted(atom_indices_with_props, key=lambda x: x[1])]
-            copy_mol = Chem.RenumberAtoms(copy_mol, sorted_indices)
-            for prop_name in mol.GetPropNames():
-                copy_mol.SetProp(prop_name, mol.GetProp(prop_name))
             mol = copy_mol
 
         for conformer_idx, atom_coordinates in enumerate(coordinates_list):
@@ -423,7 +425,7 @@ class RDKitMolCreate:
                         break
                 used_h.append(h_rdkit_index)
                 conf.SetAtomPosition(h_rdkit_index, Point3D(x, y, z))
-                print("setting position for H", h_rdkit_index, "to", x, y, z)
+
         return mol
 
     @staticmethod
