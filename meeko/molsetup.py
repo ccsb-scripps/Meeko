@@ -1900,6 +1900,13 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
         order = json.loads(order_string)  # mol_noH to smiles
         order = list(np.argsort(order))
         order = {noH_to_H[i]: order[i] + 1 for i in range(len(order))}  # 1-index
+        
+        # remove polar hydrogen isotopes from order 
+        # this prevents them to appear in SMILES IDX but rather in H PARENT
+        for atom in mol_noH.GetAtoms():
+            if atom.GetAtomicNum() == 1 and atom.GetIsotope() > 0:
+                order.pop(atom.GetIdx())
+        
         return smiles, order
 
     # region Ring Construction

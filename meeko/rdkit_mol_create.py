@@ -343,7 +343,6 @@ class RDKitMolCreate:
         """
 
         mol = Chem.AddHs(mol, addCoords=True)
-        conformers = list(mol.GetConformers())
         num_hydrogens = int(len(h_parent) / 2)
 
         # check if molecule has H isotopes
@@ -367,27 +366,33 @@ class RDKitMolCreate:
             H_isotope_atoms = [atom for atom in copy_mol.GetAtoms() 
                     if atom.GetAtomicNum() == 1 and atom.GetIsotope() > 0
                     ]
+            
             for atom in H_isotope_atoms: 
                 parent_idx = [nei.GetIdx() for nei in atom.GetNeighbors()][0]
                 if parent_idx not in H_isotope_atom_dict: 
                     H_isotope_atom_dict[parent_idx] = [atom]
                 else: 
                     H_isotope_atom_dict[parent_idx].append(atom)
-                
-                # set isotope type to 0
-                atom.SetIsotope(0)
             
             H_isotope_idxmap = {parent_idx: [atom.GetIdx() for atom in atoms] 
                                 for parent_idx, atoms in H_isotope_atom_dict.items()}
+            H_isotope_idxmap_inv = {v:k for k, v_list in H_isotope_idxmap.items() for v in v_list}
             H_isotope_typemap = {parent_idx: [atom.GetIsotope() for atom in atoms] 
                                  for parent_idx, atoms in H_isotope_atom_dict.items()}
+            
+            # set isotope type to 0
+            for atom in H_isotope_atoms:            
+                # set isotope type to 0
+                atom.SetIsotope(0)
 
             isotope_parent = list(H_isotope_idxmap.keys())
-            editable_mol = Chem.EditableMol(copy_mol)
+            editable_mol = Chem.RWMol(copy_mol)
             indices_to_remove = sorted([atom.GetIdx() for atom in H_isotope_atoms], reverse=True)
 
             for idx in indices_to_remove:
+                parent_atom = editable_mol.GetAtomWithIdx(H_isotope_idxmap_inv[idx])
                 editable_mol.RemoveAtom(idx)
+                parent_atom.SetNumExplicitHs(parent_atom.GetNumExplicitHs()+1)  
 
                 # shift H isotope parent indices 
                 for iparent, parent_id in enumerate(isotope_parent): 
@@ -399,7 +404,6 @@ class RDKitMolCreate:
 
             # add H isotopes as regular Hs
             copy_mol = editable_mol.GetMol()
-            copy_mol.UpdatePropertyCache(strict=False)
             copy_mol = Chem.AddHs(copy_mol, addCoords=True)
             atoms_in_copy_mol = [atom for atom in copy_mol.GetAtoms()]
 
@@ -423,7 +427,7 @@ class RDKitMolCreate:
                     atoms_in_copy_mol[hydrogen_idx].SetIsotope(isotope)
                     # retrieve original index to isotope_idx_mapping
                     isotope_idx_mapping[hydrogen_idx] = original_index
-
+ 
             # reorder atoms in copy mol to match original order
             def reorder_atoms(mol: Chem.Mol, i: int, j: int):
                 """
@@ -447,6 +451,7 @@ class RDKitMolCreate:
                 copy_mol.SetProp(prop_name, mol.GetProp(prop_name))
             mol = copy_mol
 
+        conformers = list(mol.GetConformers())
         for conformer_idx, atom_coordinates in enumerate(coordinates_list):
             conf = conformers[conformer_idx]
             used_h = []
@@ -466,7 +471,6 @@ class RDKitMolCreate:
                         break
                 used_h.append(h_rdkit_index)
                 conf.SetAtomPosition(h_rdkit_index, Point3D(x, y, z))
-
         return mol
 
     @staticmethod
