@@ -318,6 +318,29 @@ def test_polymer_encoding_decoding(
     return
 
 
+def test_load_reference_json():
+    fn = str(pkgdir/"test"/"polymer_data"/"AHHY_reference_fewer_templates.json")
+    with open(fn) as f:
+        json_string = f.read()
+    polymer = Polymer.from_json(json_string)
+    assert len(polymer.get_valid_monomers()) == 4
+    return
+
+
+@pytest.mark.skipif(not _got_openff, reason="requires openff-forcefields")
+def test_dihedral_equality():
+    mk_prep = MoleculePreparation(
+        merge_these_atom_types=(),
+        dihedral_model="openff",
+    )
+    fn = str(pkgdir/"test"/"flexibility_data"/"non_sequential_atom_ordering_01.mol")
+    mol = Chem.MolFromMolFile(fn, removeHs=False)
+    starting_molsetup = mk_prep(mol)[0]
+    json_str = starting_molsetup.to_json()
+    decoded_molsetup = RDKitMoleculeSetup.from_json(json_str)
+    check_molsetup_equality(starting_molsetup, decoded_molsetup)
+    return
+
 # endregion
 
 
@@ -748,20 +771,6 @@ def check_polymer_equality(
 
     # Checks log equality
     assert decoded_obj.log == starting_obj.log
-    return
-
-@pytest.mark.skipif(not _got_openff, reason="requires openff-forcefields")
-def test_dihedral_equality():
-    mk_prep = MoleculePreparation(
-        merge_these_atom_types=(),
-        dihedral_model="openff",
-    )
-    fn = str(pkgdir/"test"/"flexibility_data"/"non_sequential_atom_ordering_01.mol")
-    mol = Chem.MolFromMolFile(fn, removeHs=False)
-    starting_molsetup = mk_prep(mol)[0]
-    json_str = starting_molsetup.to_json()
-    decoded_molsetup = RDKitMoleculeSetup.from_json(json_str)
-    check_molsetup_equality(starting_molsetup, decoded_molsetup)
     return
 
 # endregion
