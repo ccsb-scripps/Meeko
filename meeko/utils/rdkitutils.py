@@ -56,7 +56,7 @@ def set_h_isotope_atom_coords(mol: Chem.Mol, conf: Chem.Conformer) -> dict[int, 
             }
         }
         """
-
+        
         # initialize 
         isotope_data = {
             'H_isotope_idx': {}, 
@@ -78,8 +78,13 @@ def set_h_isotope_atom_coords(mol: Chem.Mol, conf: Chem.Conformer) -> dict[int, 
             if parent_idx not in parent_idxs:
                 parent_idxs.append(parent_idx)
         
+        # re-compute CIP labels in a copy
+        mol_copy = Chem.Mol(mol)
+        Chem.rdCIPLabeler.AssignCIPLabels(mol_copy)
+        
         # populate parent section
         for idx in parent_idxs: 
+            #atom = mol_copy.GetAtomWithIdx(idx)
             atom = mol.GetAtomWithIdx(idx)
             kids = [nei.GetIdx() for nei in atom.GetNeighbors() if is_h_isotope(nei)]
             cip_code = atom.GetProp("_CIPCode") if atom.HasProp("_CIPCode") else None
@@ -147,9 +152,10 @@ def set_h_isotope_atom_coords(mol: Chem.Mol, conf: Chem.Conformer) -> dict[int, 
         # make correction to recover CIPCode (chirality)
         expected_cip_code = isotope_data['parent_idx'][parent_idx]['CIPCode']
         if len(kids_all) >1 and expected_cip_code is not None: 
-            # evalaute current CIPCode
-            Chem.rdmolops.AssignStereochemistry(copy_mol, force=True, cleanIt=True)
-            if parent_atom.GetProp('_CIPCode')==expected_cip_code: 
+            # evalaute current CIPCode from 3D
+            Chem.AssignStereochemistryFrom3D(copy_mol)
+            current_cip_code = parent_atom.GetProp('_CIPCode') if parent_atom.HasProp('_CIPCode') else None
+            if current_cip_code==expected_cip_code: 
                 continue
             # get a list of isotope types on current parent
             kids_types = [nei.GetIsotope() for nei in kids_all]
@@ -161,7 +167,7 @@ def set_h_isotope_atom_coords(mol: Chem.Mol, conf: Chem.Conformer) -> dict[int, 
                 raise RuntimeError(
                     f"Unable to recover original chirality by manipulating H sotope positions: \n"
                     f"Atom # ({parent_idx}) \n"
-                    f"Current CIPCode ({parent_atom.GetProp('_CIPCode')}) \n" 
+                    f"Current CIPCode ({current_cip_code}) \n" 
                     f"Expected CIPCode: ({expected_cip_code})\n"
                     "Its chirality might have changed due to re-arrangements of heavy atoms, "
                     "or become ambiguous to Chem.rdmolops.AssignStereochemistry due to strained geometry. "
@@ -171,24 +177,26 @@ def set_h_isotope_atom_coords(mol: Chem.Mol, conf: Chem.Conformer) -> dict[int, 
             min_idx = kids_types.index(min(kids_types))
             copy_mol.GetAtomWithIdx(kids_idxs_all[max_idx]).SetIsotope(kids_types[min_idx])
             copy_mol.GetAtomWithIdx(kids_idxs_all[min_idx]).SetIsotope(kids_types[max_idx])
-            # re-evaluate CIPCode
-            Chem.rdmolops.AssignStereochemistry(copy_mol, force=True, cleanIt=True)
+            # re-evaluate current CIPCode from 3D
+            Chem.AssignStereochemistryFrom3D(copy_mol)
+            current_cip_code = parent_atom.GetProp('_CIPCode') if parent_atom.HasProp('_CIPCode') else None
+            current_cip_code = parent_atom.GetProp('_CIPCode') if parent_atom.HasProp('_CIPCode') else None
             # a single swap of max and min isotopes normally inverts the chirality, in case not
-            if parent_atom.GetProp('_CIPCode')!=expected_cip_code: 
+            if current_cip_code!=expected_cip_code: 
                 raise RuntimeError(
                     "Failed to recover original chirality after attempts to manipulate H sotope positions: \n"
                     f"Atom # ({parent_idx}) \n"
-                    f"Current CIPCode ({parent_atom.GetProp('_CIPCode')}) \n" 
+                    f"Current CIPCode ({current_cip_code}) \n" 
                     f"Expected CIPCode: ({expected_cip_code})\n"
                     "Its chirality might have changed due to re-arrangements of heavy atoms, "
                     "or become ambiguous to Chem.rdmolops.AssignStereochemistry due to strained geometry. "
                 )
             # apply the swap 
-            max_pos = copy_conf.GetAtomPosition(kids_idxs_all[max_pos])
-            min_pos = copy_conf.GetAtomPosition(kids_idxs_all[min_pos])
-            H_isotope_idx_with_maxpos = isotope_data['parent_idx'][parent_idx]['kids'][max_pos]
+            max_pos = copy_conf.GetAtomPosition(kids_idxs_all[max_idx])
+            min_pos = copy_conf.GetAtomPosition(kids_idxs_all[min_idx])
+            H_isotope_idx_with_maxpos = isotope_data['parent_idx'][parent_idx]['kids'][max_idx]
             assigned_isotope_pos[H_isotope_idx_with_maxpos] = min_pos
-            H_isotope_idx_with_minpos = isotope_data['parent_idx'][parent_idx]['kids'][min_pos]
+            H_isotope_idx_with_minpos = isotope_data['parent_idx'][parent_idx]['kids'][min_idx]
             assigned_isotope_pos[H_isotope_idx_with_minpos] = max_pos
 
     return assigned_isotope_pos
