@@ -86,8 +86,6 @@ def set_h_isotope_atom_coords(mol: Chem.Mol, conf: Chem.Conformer, return_mol: b
             'kids': kids, 'CIPCode': cip_code
         }
 
-    print(isotope_data)
-
     # in an editable copy, remove isotopes and add back as regular Hs
     editable_mol = Chem.RWMol(mol)
     indices_to_remove = sorted(H_isotope_idxs, reverse=True)
@@ -99,6 +97,8 @@ def set_h_isotope_atom_coords(mol: Chem.Mol, conf: Chem.Conformer, return_mol: b
             isotope_data['H_isotope_idx'][idx]['parent']
         )
         editable_mol.RemoveAtom(idx)
+        parent_atom.SetNumExplicitHs(parent_atom.GetNumExplicitHs() + 1)
+
         # update parent idx
         for i, parent_idx in enumerate(parent_idxs_shifted):
             if parent_idx > idx: 
@@ -112,8 +112,8 @@ def set_h_isotope_atom_coords(mol: Chem.Mol, conf: Chem.Conformer, return_mol: b
     for i, atom_idx_shifted in enumerate(atom_idxs_shifted): 
         atom_idx_original = atom_idxs_original[i]
         shifted_conf.SetAtomPosition(atom_idx_shifted, conf.GetAtomPosition(atom_idx_original))
+    copy_mol.RemoveAllConformers()
     copy_mol.AddConformer(shifted_conf)
-    copy_mol.UpdatePropertyCache(strict=False)
     copy_mol = Chem.AddHs(copy_mol, addCoords=True)
     copy_conf = copy_mol.GetConformer()
     # assign H isotope coordinates from the regularized equivalent H
@@ -126,7 +126,6 @@ def set_h_isotope_atom_coords(mol: Chem.Mol, conf: Chem.Conformer, return_mol: b
         num_kids_needed = len(isotope_data['parent_idx'][parent_idx]['kids'])
         kids_all = kids_all[:num_kids_needed]
         kids_idxs_all = [nei.GetIdx() for nei in kids_all]
-        print(num_kids_needed, kids_idxs_all)
         for ik, kid in enumerate(isotope_data['parent_idx'][parent_idx]['kids']):
             # initial assignment, in original order
             copy_mol.GetAtomWithIdx(kids_idxs_all[ik]).SetIsotope(
@@ -135,7 +134,7 @@ def set_h_isotope_atom_coords(mol: Chem.Mol, conf: Chem.Conformer, return_mol: b
             assigned_isotope_pos[kid] = copy_conf.GetAtomPosition(kids_idxs_all[ik])
         
         expected_cip_code = isotope_data['parent_idx'][parent_idx]['CIPCode']
-        if expected_cip_code is not None: 
+        if len(kids_all) >1 and expected_cip_code is not None: 
             # check CIPCode
             Chem.rdmolops.AssignStereochemistry(copy_mol, force=True, cleanIt=True)
             if parent_atom.GetProp('_CIPCode')==expected_cip_code: 
@@ -148,7 +147,7 @@ def set_h_isotope_atom_coords(mol: Chem.Mol, conf: Chem.Conformer, return_mol: b
                 set(kids_types),
             )): 
                 raise RuntimeError(
-                    f"Unable to  recover original chirality by manipulating H sotope positions: \n"
+                    f"Unable to recover original chirality by manipulating H sotope positions: \n"
                     f"Atom # ({parent_idx}) \n"
                     f"Current CIPCode ({parent_atom.GetProp('_CIPCode')}) \n" 
                     f"Expected CIPCode: ({expected_cip_code})\n"
