@@ -26,8 +26,6 @@ def set_h_isotope_atom_coords(mol: Chem.Mol, conf: Chem.Conformer) -> dict[int, 
     use AddHs() and RemoveHs() to generate H isotopes coordinates
     in a mol copy as if they were regular Hs
     returns a dict of H isotope atom idx and assigned position as Point3D
-
-    or altenatively, returns a mol with an added conformer
     """
 
     # check if molecule has H isotopes
