@@ -2138,13 +2138,16 @@ class Monomer(BaseJSONParsable):
         molsetup_mapidx = convert_to_int_keyed_dict(obj["molsetup_mapidx"])
         mapidx_from_raw = convert_to_int_keyed_dict(obj["mapidx_from_raw"])
 
+        atom_name = cls.access_with_deprecated_key(
+            obj, old_key="atom_names", new_key="atom_name"
+        )
         monomer = cls(
             raw_input_mol=raw_rdkit_mol,
             rdkit_mol=rdkit_mol,
             mapidx_to_raw=mapidx_to_raw,
             input_resname=obj["input_resname"],
             template_key=obj["residue_template_key"],
-            atom_names=obj["atom_name"],
+            atom_names=atom_name,
         )
 
         monomer.padded_mol=padded_mol
