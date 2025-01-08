@@ -2134,9 +2134,9 @@ class Monomer(BaseJSONParsable):
         if not isinstance(molsetup, RDKitMoleculeSetup):
             molsetup = MoleculeSetup.json_decoder(obj["molsetup"])
     
-        mapidx_to_raw = convert_to_int_keyed_dict(obj.get("mapidx_to_raw"))
-        molsetup_mapidx = convert_to_int_keyed_dict(obj.get("molsetup_mapidx"))
-        mapidx_from_raw = convert_to_int_keyed_dict(obj.get("mapidx_from_raw"))
+        mapidx_to_raw = convert_to_int_keyed_dict(obj["mapidx_to_raw"])
+        molsetup_mapidx = convert_to_int_keyed_dict(obj["molsetup_mapidx"])
+        mapidx_from_raw = convert_to_int_keyed_dict(obj["mapidx_from_raw"])
 
         monomer = cls(
             raw_input_mol=raw_rdkit_mol,
