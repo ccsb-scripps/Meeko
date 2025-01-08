@@ -4,6 +4,7 @@ from rdkit.Chem import rdMolInterchange
 import json
 import logging
 from typing import Optional, Any
+from abc import ABC, abstractmethod
 
 
 SERIALIZATION_SEPARATOR_CHAR = ","
@@ -94,18 +95,18 @@ def string_to_tuple(input_string: str, element_type: type = str):
     else:
         return tuple(input_string)
 
-class BaseJSONParsable:
+class BaseJSONParsable(ABC):
 
     # Define in Individual Subclasses 
     expected_json_keys: Optional[frozenset[str]] = None
 
-    @classmethod
+    @abstractmethod
     def json_encoder(cls, obj):
-        raise NotImplementedError("Subclasses must implement json_encoder.")
+        pass
     
-    @classmethod
+    @abstractmethod
     def _decode_object(cls, obj):
-        raise NotImplementedError("Subclasses must implement _decode_object.")
+        pass
 
     # Inheritable JSON Interchange Functions
     @classmethod
