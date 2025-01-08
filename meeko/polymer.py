@@ -617,9 +617,9 @@ class ResidueChemTemplates(BaseJSONParsable):
 
         # Extracting the constructor args from the json representation and creating a ResidueChemTemplates instance
         templates = {
-            k: ResidueTemplate.json_decoder(v) for k, v in obj["residue_templates"].items()
+            k: ResidueTemplate.json_decoder(v, check_keys=False) for k, v in obj["residue_templates"].items()
         }
-        padders = {k: ResiduePadder.json_decoder(v) for k, v in obj["padders"].items()}
+        padders = {k: ResiduePadder.json_decoder(v, check_keys=False) for k, v in obj["padders"].items()}
 
         residue_chem_templates = cls(templates, padders, obj["ambiguous"])
 
@@ -970,7 +970,7 @@ class Polymer(BaseJSONParsable):
         polymer = cls({}, {}, residue_chem_templates)
 
         polymer.monomers = {
-            k: Monomer.json_decoder(v) for k, v in obj["monomers"].items()
+            k: Monomer.json_decoder(v, check_keys=False) for k, v in obj["monomers"].items()
         }
         polymer.log = obj["log"]
 
