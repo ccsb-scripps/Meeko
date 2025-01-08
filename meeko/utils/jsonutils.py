@@ -24,17 +24,6 @@ def convert_to_tuple_keyed_dict(data: Optional[dict[str, Any]], element_type: ty
     return {string_to_tuple(k, element_type = element_type): v for k, v in data.items()}
 
 
-def access_with_deprecated_key(obj: dict[str, Any], old_key: str, new_key: str): 
-    outcome = obj.get(new_key)
-    if not outcome: 
-        logging.warning(
-                f"Keyword '{old_key}' is deprecated and has been replaced with '{new_key}'. "
-                f"Support for '{old_key}' is provided for backward compatibility. "
-            )
-        outcome = obj.get(old_key)
-    return outcome
-
-
 def rdkit_mol_from_json(json_str: str):
     """
     Takes in a JSON string and attempts to use RDKit's JSON to Mols utility to extract just one RDKitMol from the
@@ -129,6 +118,17 @@ class BaseJSONParsable:
 
         # Delegate specific decoding logic to a subclass-defined method
         return cls._decode_object(obj)
+    
+    @classmethod
+    def access_with_deprecated_key(cls, obj: dict[str, Any], old_key: str, new_key: str): 
+        outcome = obj.get(new_key)
+        if not outcome: 
+            logging.warning(
+                    f"Key '{old_key}' is deprecated for class {cls.__name__} and has been replaced with '{new_key}'. "
+                    f"Support for '{old_key}' is provided for backward compatibility. "
+                )
+            outcome = obj.get(old_key)
+        return outcome
 
     @classmethod
     def from_json(cls, json_string: str):

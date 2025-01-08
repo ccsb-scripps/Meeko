@@ -22,7 +22,6 @@ from .utils.jsonutils import BaseJSONParsable
 from .utils.jsonutils import serialize_optional
 from .utils.jsonutils import rdkit_mol_from_json
 from .utils.jsonutils import convert_to_int_keyed_dict
-from .utils.jsonutils import access_with_deprecated_key
 from .utils.rdkitutils import mini_periodic_table
 from .utils.rdkitutils import react_and_map
 from .utils.rdkitutils import AtomField
@@ -2518,7 +2517,7 @@ class ResiduePadder(BaseJSONParsable):
     @classmethod
     def _decode_object(cls, obj: dict[str, Any]): 
 
-        adjacent_res_smarts = access_with_deprecated_key(
+        adjacent_res_smarts = cls.access_with_deprecated_key(
             obj, old_key="adjacent_smarts", new_key="adjacent_res_smarts"
         )
 
@@ -2643,7 +2642,7 @@ class ResidueTemplate(BaseJSONParsable):
 
         link_labels = convert_to_int_keyed_dict(obj.get("link_labels"))
 
-        atom_name = access_with_deprecated_key(obj, old_key="atom_names", new_key="atom_name")
+        atom_name = cls.access_with_deprecated_key(obj, old_key="atom_names", new_key="atom_name")
 
         # Construct a ResidueTemplate object
         residue_template = cls(mol_smiles, None, atom_name)
