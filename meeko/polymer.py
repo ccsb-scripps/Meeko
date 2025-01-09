@@ -907,6 +907,7 @@ class Polymer:
             invmap2 = {j: i for i, j in monomer2.mapidx_to_raw.items()}
             _bonds[key] = [(invmap1[b[0]], invmap2[b[1]]) for b in bond_list]
         bonds = _bonds
+        self.bonds = bonds
 
         # padding may seem overkill but we had to run a reaction anyway for h_coord_from_dipep
         padded_mols = self._build_padded_mols(self.monomers, bonds, padders)
@@ -919,6 +920,72 @@ class Polymer:
             self.parameterize(mk_prep)
 
         return
+
+    def stitch(self, residues_to_add: Optional[set[str]] = None, 
+               bonds_to_use: Optional[dict[tuple[str], list[tuple[int]]]] = None):
+        """returns a single rdkit molecule that results from adding bonds
+            between every chorizo residue. It may contain multiple fragments
+            if there are multiple chains or gaps. 
+
+            Optionally, specify a set of residue IDs for stitching.
+            Defaults to stitching all monomers. 
+
+            Optionally, specify a dict for bonds to use, 
+            Defaults to stitching using all available bonds in polymer. 
+            key format: (res_id_1, res_id_2)
+            value format: [(atom_idx_1, atom_idx_2), ]
+            same format as output from function find_inter_mols_bonds, 
+            but the indices need to based on rdkit_mol. 
+        """
+        
+        # stitching all monomers by default
+        residues_to_add = residues_to_add or self.monomers.keys()
+        residues_to_add = set(residues_to_add)
+        bonds_to_use = bonds_to_use or {k: v for k, v in self.bonds.items() if k[0] in residues_to_add and k[1] in residues_to_add}
+
+        # verify if requested monomers are valid (have rdkit_mol)
+        valid_monomers = set(self.get_valid_monomers().keys())
+        invalid_monomers = residues_to_add - valid_monomers
+        if invalid_monomers: 
+            raise ValueError(f"Residue IDs not in valid monomers: {invalid_monomers}")
+        
+        # initialize mol and residue/bond tracking
+        mol = Chem.Mol()
+        residues_added = {}
+        bonds_spent = set()
+        
+        # add residues and get offset in order
+        offset = 0
+        for r_id in residues_to_add:
+            res = self.monomers[r_id]
+            residues_added[r_id] = offset
+            offset += res.rdkit_mol.GetNumAtoms()
+            mol = Chem.CombineMols(mol, res.rdkit_mol)
+
+        # add bonds
+        edit_mol = Chem.EditableMol(mol)
+        for bond_key, bond_list in bonds_to_use.items():
+            if bond_key in bonds_spent:
+                continue
+            r1, r2 = bond_key
+            if r1 in residues_added and r2 in residues_added:
+                bonds_spent.add(bond_key)
+                for bond in bond_list: 
+                    i, j = bond
+                    edit_mol.AddBond(
+                        i + residues_added[r1],
+                        j + residues_added[r2],
+                        order=Chem.rdchem.BondType.SINGLE
+                    )
+        mol = edit_mol.GetMol()
+        
+        # review added bonds and residues
+        if len(bonds_spent) != len(bonds_to_use):
+            raise RuntimeError("nr of bonds added differs from bonds to use")
+        if len(residues_added) != len(residues_to_add):
+            raise RuntimeError("nr of residues added differs from residues to add")
+        
+        return mol
 
     @classmethod
     def from_pdb_string(
