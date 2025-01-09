@@ -117,6 +117,11 @@ def get_args():
         metavar="PDB_FILENAME",
         help="reads PDB, not PDBQT, and does not use ProDy",
     )
+    io_group.add_argument(
+        "--read_pqr",
+        metavar="PQR_FILENAME",
+        help="reads PQR with assigned partial charges, and does not use ProDy",
+    )
     need_prody_msg = ""
     # if prody is not installed, the help message is extended to tell
     # the user how to install prody
@@ -186,9 +191,14 @@ def get_args():
         default=[],
         help='specify the flexible residues by the chain ID and residue number, e.g. -f ":42,B:23" is equivalent to -f ":42" -f "B:23" (leave chain ID empty if omitted in input PDB or mmCIF)',
     )
+    config_group.add_argument(
+        "--charge_model",
+        choices=("gasteiger", "espaloma", "zero"),
+        help="default is 'gasteiger', 'zero' sets all zeros",
+        default="gasteiger",
+    )
 
     box_group = parser.add_argument_group("Size and center of grid box")
-
     box_group.add_argument(
         "--box_size", help="size of grid box (x, y, z) in Angstrom", nargs=3, type=float,
         metavar=("X", "Y", "Z"),
@@ -262,14 +272,16 @@ def get_args():
     )
     args = parser.parse_args()
     
-    if args.read_pdb is None and args.read_with_prody is None:
+    num_input_flags = sum([flag is not None for flag in (args.read_pdb, args.read_pqr, args.read_with_prody)])
+
+    if num_input_flags == 0:
         parser.print_help()
-        msg = "Need input filename: use either -i/--read_with_prody or --read_pdb"
+        msg = "Need input filename: use either -i/--read_with_prody, --read_pdb or --read_pqr"
         print(eol + msg)
         sys.exit(2)
 
-    if args.read_pdb is not None and args.read_with_prody is not None:
-        msg = "Can't use both -i/--read_with_prody and --read_pdb"
+    if num_input_flags > 1:
+        msg = "Can't use more than one at a time from -i/--read_with_prody, --read_pdb and --read_pqr"
         print(eol + msg, file=sys.stderr)
         sys.exit(2)
 
@@ -473,7 +485,7 @@ def main():
             mk_config = json.load(f)
         mk_prep = MoleculePreparation.from_config(mk_config)
     else:
-        mk_prep = MoleculePreparation()
+        mk_prep = MoleculePreparation(charge_model=args.charge_model)
     
     # load templates for mapping
     templates = ResidueChemTemplates.create_from_defaults()
@@ -506,7 +518,7 @@ def main():
             except PolymerCreationError as e:
                 print(e)
                 sys.exit(1)
-    else:
+    elif args.read_pdb is not None:
         with open(args.read_pdb) as f:
             pdb_string = f.read()
         try:
@@ -524,6 +536,26 @@ def main():
         except PolymerCreationError as e:
             print(e)
             sys.exit(1)
+    else: # args.read_pqr is not None
+        with open(args.read_pqr) as f:
+            pdb_string = f.read()
+        try:
+            mk_prep = MoleculePreparation(charge_model="read", charge_atom_prop="PQRCharge")
+            print("Reading stuctures and partial charges from PQR. ") 
+            print("Options --charge_model, --default_altloc and --wanted_altloc will be ignored. ")
+            polymer = Polymer.from_pqr_string(
+                pdb_string,
+                templates,  # residue_templates, padders, ambiguous,
+                mk_prep,
+                set_template,
+                delete_residues,
+                args.allow_bad_res,
+                blunt_ends=blunt_ends,
+            )
+        except PolymerCreationError as e:
+            print(e)
+            sys.exit(1)
+    
     
     
     # Use residue name in the input structure file to find reactive atom name
