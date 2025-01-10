@@ -530,13 +530,13 @@ class MoleculeSetup(BaseJSONParsable):
         molsetup = cls(name, is_sidechain)
 
         molsetup.pseudoatom_count = obj["pseudoatom_count"]
-        molsetup.atoms = [Atom.json_decoder(x) for x in obj["atoms"]]
+        molsetup.atoms = [Atom.from_dict(x) for x in obj["atoms"]]
         molsetup.bond_info = {
-            string_to_tuple(k, int): Bond.json_decoder(v)
+            string_to_tuple(k, int): Bond.from_dict(v)
             for k, v in obj["bond_info"].items()
         }
         molsetup.rings = {
-            string_to_tuple(k, int): Ring.json_decoder(v) for k, v in obj["rings"].items()
+            string_to_tuple(k, int): Ring.from_dict(v) for k, v in obj["rings"].items()
         }
         molsetup.ring_closure_info = RingClosureInfo(
             obj["ring_closure_info"]["bonds_removed"],
@@ -544,7 +544,7 @@ class MoleculeSetup(BaseJSONParsable):
         )
         molsetup.rotamers = [convert_to_tuple_keyed_dict(rotamer, int) for rotamer in obj["rotamers"]]
         molsetup.atom_params = obj["atom_params"]
-        molsetup.restraints = [Restraint.json_decoder(x) for x in obj["restraints"]]
+        molsetup.restraints = [Restraint.from_dict(x) for x in obj["restraints"]]
         molsetup.flexibility_model = obj["flexibility_model"]
         if "rigid_body_connectivity" in molsetup.flexibility_model:
             tuples_rigid_body_connectivity = {
@@ -1551,7 +1551,7 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit, BaseJSONPa
     @classmethod
     def _decode_object(cls, obj: dict[str, Any]): 
         
-        base_molsetup = MoleculeSetup.json_decoder(obj)
+        base_molsetup = MoleculeSetup.from_dict(obj)
         rdkit_molsetup = cls(source = base_molsetup)
 
         # Restores RDKitMoleculeSetup-specific attributes from the json dict

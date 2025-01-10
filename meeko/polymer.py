@@ -617,9 +617,9 @@ class ResidueChemTemplates(BaseJSONParsable):
 
         # Extracting the constructor args from the json representation and creating a ResidueChemTemplates instance
         templates = {
-            k: ResidueTemplate.json_decoder(v, check_keys=False) for k, v in obj["residue_templates"].items()
+            k: ResidueTemplate.from_dict(v) for k, v in obj["residue_templates"].items()
         }
-        padders = {k: ResiduePadder.json_decoder(v, check_keys=False) for k, v in obj["padders"].items()}
+        padders = {k: ResiduePadder.from_dict(v) for k, v in obj["padders"].items()}
 
         residue_chem_templates = cls(templates, padders, obj["ambiguous"])
 
@@ -963,14 +963,14 @@ class Polymer(BaseJSONParsable):
 
         # Deserializes ResidueChemTemplates from the dict to use as an input, then constructs a Polymer object
         # and sets its values using deserialized JSON values.
-        residue_chem_templates = ResidueChemTemplates.json_decoder(
+        residue_chem_templates = ResidueChemTemplates.from_dict(
             obj["residue_chem_templates"]
         )
 
         polymer = cls({}, {}, residue_chem_templates)
 
         polymer.monomers = {
-            k: Monomer.json_decoder(v, check_keys=False) for k, v in obj["monomers"].items()
+            k: Monomer.from_dict(v) for k, v in obj["monomers"].items()
         }
         polymer.log = obj["log"]
 
@@ -2130,9 +2130,9 @@ class Monomer(BaseJSONParsable):
         rdkit_mol = rdkit_mol_from_json(obj["rdkit_mol"])
         padded_mol = rdkit_mol_from_json(obj["padded_mol"])
 
-        molsetup = RDKitMoleculeSetup.json_decoder(obj["molsetup"])
+        molsetup = RDKitMoleculeSetup.from_dict(obj["molsetup"])
         if not isinstance(molsetup, RDKitMoleculeSetup):
-            molsetup = MoleculeSetup.json_decoder(obj["molsetup"])
+            molsetup = MoleculeSetup.from_dict(obj["molsetup"])
     
         mapidx_to_raw = convert_to_int_keyed_dict(obj["mapidx_to_raw"])
         molsetup_mapidx = convert_to_int_keyed_dict(obj["molsetup_mapidx"])
