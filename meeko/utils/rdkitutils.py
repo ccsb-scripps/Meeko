@@ -84,7 +84,6 @@ def set_h_isotope_atom_coords(mol: Chem.Mol, conf: Chem.Conformer) -> dict[int, 
         
         # populate parent section
         for idx in parent_idxs: 
-            #atom = mol_copy.GetAtomWithIdx(idx)
             atom = mol.GetAtomWithIdx(idx)
             kids = [nei.GetIdx() for nei in atom.GetNeighbors() if is_h_isotope(nei)]
             cip_code = atom.GetProp("_CIPCode") if atom.HasProp("_CIPCode") else None
@@ -126,6 +125,38 @@ def set_h_isotope_atom_coords(mol: Chem.Mol, conf: Chem.Conformer) -> dict[int, 
     copy_mol.RemoveAllConformers()
     copy_mol.AddConformer(shifted_conf)
     copy_mol = Chem.AddHs(copy_mol, addCoords=True)
+
+    # reorder atoms, make sure to have regular Hs at the isotopes positions
+    # as placeholders in order to restore the original ordering of all 
+    # heavy atoms AND explicit H isotopes
+    placeholders = {}
+    for parent_idx in isotope_data["parent_idx"]: 
+        # get current (shifted) idx of parent atom that has isotope kids
+        parent_idx_shifted = atom_idx_trace[parent_idx]
+        # get parent atom
+        parent_atom = copy_mol.GetAtomWithIdx(parent_idx_shifted)
+        # get isotope kids' original idxs
+        isotope_kid_idxs = isotope_data["parent_idx"][parent_idx]["kids"]
+        # get just enough current (shifted) idxs of avail kids of the parent atom
+        avail_kids_idxs_shifted = [kid.GetIdx() for kid in parent_atom.GetNeighbors() 
+                                   if kid.GetAtomicNum()==1][:len(isotope_kid_idxs)]
+        # re-order move these regular Hs
+        for i in range(len(isotope_kid_idxs)): 
+            # for the absent isotope (key)
+            # move avail regular H (value) to the position as a placeholder
+            placeholders[isotope_kid_idxs[i]] = avail_kids_idxs_shifted[i]
+    # merge the expected ordering placeholders into the tracked idx of heavy atoms
+    # so we get the mapping to restore the original ordering of all heavy atoms
+    # AND explicit H isotopes 
+    atom_idx_trace = placeholders | atom_idx_trace
+    # prepare a list of wanted order
+    wanted_order = [v for k, v in sorted(atom_idx_trace.items())]
+    # extend the list with no additional moves of un-used hydrogens
+    for i in range(copy_mol.GetNumAtoms()): 
+        if i not in wanted_order: 
+            wanted_order.append(i)
+    # re-order and overwrite the copy_mol
+    copy_mol = Chem.RenumberAtoms(copy_mol, wanted_order)
     copy_conf = copy_mol.GetConformer()
 
     # assign H isotope coordinates from the regularized equivalent H
@@ -133,7 +164,7 @@ def set_h_isotope_atom_coords(mol: Chem.Mol, conf: Chem.Conformer) -> dict[int, 
     for parent_idx in parent_idxs:
 
         # get parent atom in mol copy
-        parent_atom = copy_mol.GetAtomWithIdx(atom_idx_trace[parent_idx])
+        parent_atom = copy_mol.GetAtomWithIdx(parent_idx)
         # get avail Hs of parent atom
         kids_all = [nei for nei in parent_atom.GetNeighbors() if nei.GetAtomicNum() == 1]
         # get just enough regular Hs
