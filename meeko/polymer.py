@@ -25,6 +25,7 @@ from .utils.rdkitutils import build_one_rdkit_mol_per_altloc
 from .utils.rdkitutils import _aux_altloc_mol_build
 from .utils.rdkitutils import covalent_radius
 from .utils.pdbutils import PDBAtomInfo
+from .utils.rdkitutils import getPdbInfoNoNull
 from .chemtempgen import export_chem_templates_to_json
 from .chemtempgen import build_noncovalent_CC
 from .chemtempgen import build_linked_CCs
@@ -2531,13 +2532,21 @@ class ResidueTemplate:
         for atom in input_mol.GetAtoms():
             element = "H" if atom.GetAtomicNum() == 1 else "heavy"
             if atom.GetIdx() not in mapping_inv:
-                if element == "H": 
-                    nei_idx = atom.GetNeighbors()[0].GetIdx()
-                    if nei_idx in mapping_inv: 
-                        result[element]["excess"].append(mapping_inv[nei_idx])
-                    else:
-                        result[element]["excess"].append(-1)
-                else:
+                if element == "H":
+                    if atom.GetNeighbors(): 
+                        nei_idx = atom.GetNeighbors()[0].GetIdx()
+                        if nei_idx in mapping_inv: 
+                            result[element]["excess"].append(mapping_inv[nei_idx])
+                        else:
+                            result[element]["excess"].append(-1)
+                    else: # lone hydrogen found in monomer
+                        monomer_info = getPdbInfoNoNull(atom)
+                        if monomer_info:
+                            logger.warning(f"WARNING: Lone hydrogen is ignored: \n" 
+                                            f"  {monomer_info} \n")
+                        else:
+                            logger.warning(f"WARNING: A lone hydrogen is ignored during monomer-template matching. \n")
+                else: 
                     result[element]["excess"] += 1
         return result, mapping
 
