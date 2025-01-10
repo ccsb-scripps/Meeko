@@ -167,9 +167,6 @@ def set_h_isotope_atom_coords(mol: Chem.Mol, conf: Chem.Conformer) -> dict[int, 
         parent_atom = copy_mol.GetAtomWithIdx(parent_idx)
         # get avail Hs of parent atom
         kids_all = [nei for nei in parent_atom.GetNeighbors() if nei.GetAtomicNum() == 1]
-        # get just enough regular Hs
-        num_kids_needed = len(isotope_data['parent_idx'][parent_idx]['kids'])
-        kids_all = kids_all[:num_kids_needed]
         # get regular Hs idx
         kids_idxs_all = [nei.GetIdx() for nei in kids_all]
         
@@ -191,10 +188,7 @@ def set_h_isotope_atom_coords(mol: Chem.Mol, conf: Chem.Conformer) -> dict[int, 
             # get a list of isotope types on current parent
             kids_types = [nei.GetIsotope() for nei in kids_all]
             # in case the chirality can't be inverted due to unsolvable problems
-            if any(len(lst) <= 1 for lst in (
-                isotope_data['parent_idx'][parent_idx]['kids'], # not enough isotope
-                set(kids_types), # not enough isotope type
-            )): 
+            if len(set(kids_types)) <= 1: # not enough isotopes
                 raise RuntimeError(
                     f"Unable to recover original chirality by manipulating H sotope positions: \n"
                     f"Atom # ({parent_idx}) \n"
@@ -204,13 +198,15 @@ def set_h_isotope_atom_coords(mol: Chem.Mol, conf: Chem.Conformer) -> dict[int, 
                     "or become ambiguous to Chem.rdmolops.AssignStereochemistry due to strained geometry. "
                 )
             # swap assignment of max and min isotope, re-evaluate CIPCode
-            max_idx = kids_types.index(max(kids_types))
-            min_idx = kids_types.index(min(kids_types))
-            copy_mol.GetAtomWithIdx(kids_idxs_all[max_idx]).SetIsotope(kids_types[min_idx])
-            copy_mol.GetAtomWithIdx(kids_idxs_all[min_idx]).SetIsotope(kids_types[max_idx])
+            # find the max and min isotope type values
+            max_isotope_type, min_isotope_type = (max(kids_types), min(kids_types))
+            # get kiw (kid's index with) max and min isotope types
+            kiw_max_isotope = kids_idxs_all[kids_types.index(max(kids_types))]
+            kiw_min_isotope = kids_idxs_all[kids_types.index(min(kids_types))]
+            copy_mol.GetAtomWithIdx(kiw_max_isotope).SetIsotope(min_isotope_type)
+            copy_mol.GetAtomWithIdx(kiw_min_isotope).SetIsotope(max_isotope_type)
             # re-evaluate current CIPCode from 3D
             Chem.AssignStereochemistryFrom3D(copy_mol)
-            current_cip_code = parent_atom.GetProp('_CIPCode') if parent_atom.HasProp('_CIPCode') else None
             current_cip_code = parent_atom.GetProp('_CIPCode') if parent_atom.HasProp('_CIPCode') else None
             # a single swap of max and min isotopes normally inverts the chirality, in case not
             if current_cip_code!=expected_cip_code: 
@@ -223,12 +219,12 @@ def set_h_isotope_atom_coords(mol: Chem.Mol, conf: Chem.Conformer) -> dict[int, 
                     "or become ambiguous to Chem.rdmolops.AssignStereochemistry due to strained geometry. "
                 )
             # apply the swap 
-            max_pos = copy_conf.GetAtomPosition(kids_idxs_all[max_idx])
-            min_pos = copy_conf.GetAtomPosition(kids_idxs_all[min_idx])
-            H_isotope_idx_with_maxpos = isotope_data['parent_idx'][parent_idx]['kids'][max_idx]
-            assigned_isotope_pos[H_isotope_idx_with_maxpos] = min_pos
-            H_isotope_idx_with_minpos = isotope_data['parent_idx'][parent_idx]['kids'][min_idx]
-            assigned_isotope_pos[H_isotope_idx_with_minpos] = max_pos
+            max_pos = copy_conf.GetAtomPosition(kiw_max_isotope)
+            min_pos = copy_conf.GetAtomPosition(kiw_min_isotope)
+            assigned_isotope_pos[kiw_max_isotope] = min_pos
+            # only assign positions if min isotope type is greater than 0 (not regular Hs)
+            if min_isotope_type>0: 
+                assigned_isotope_pos[kiw_min_isotope] = max_pos
 
     return assigned_isotope_pos
 
