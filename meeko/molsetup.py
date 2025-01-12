@@ -51,7 +51,7 @@ DEFAULT_IS_IGNORE = False
 DEFAULT_GRAPH = []
 
 DEFAULT_BOND_ROTATABLE = False
-DEFAULT_BOND_CYCLE_BREAK = False
+DEFAULT_BOND_BREAKABLE = False
 
 DEFAULT_RING_CLOSURE_BONDS_REMOVED = []
 DEFAULT_RING_CLOSURE_PSEUDOS_BY_ATOM = defaultdict
@@ -279,7 +279,7 @@ class Bond(BaseJSONParsable):
     index1: int
     index2: int
     rotatable: bool = DEFAULT_BOND_ROTATABLE
-    cycle_break: bool = DEFAULT_BOND_CYCLE_BREAK
+    breakable: bool = DEFAULT_BOND_BREAKABLE
 
     def __post_init__(self):
         self.canon_id = self.get_bond_id(self.index1, self.index2)
@@ -293,12 +293,12 @@ class Bond(BaseJSONParsable):
                 "index1": obj.index1,
                 "index2": obj.index2,
                 "rotatable": obj.rotatable,
-                "cycle_break": obj.cycle_break,
+                "breakable": obj.breakable,
         }
         return output_dict
     
     # Keys to check for deserialized JSON 
-    expected_json_keys = {"canon_id", "index1", "index2", "rotatable", "cycle_break"}
+    expected_json_keys = {"canon_id", "index1", "index2", "rotatable"}
 
     @classmethod
     def _decode_object(cls, obj: dict[str, Any]): 
@@ -307,8 +307,8 @@ class Bond(BaseJSONParsable):
         index1 = obj["index1"]
         index2 = obj["index2"]
         rotatable = obj["rotatable"]
-        cycle_break = obj["cycle_break"]
-        output_bond = cls(index1, index2, rotatable, cycle_break)
+        breakable = obj.get("breakable", DEFAULT_BOND_BREAKABLE)
+        output_bond = cls(index1, index2, rotatable, breakable)
         return output_bond
     # endregion
 

@@ -336,7 +336,7 @@ class MoleculePreparation:
 
         for atom1, atom2 in bonds_to_break:
             bond_id = Bond.get_bond_id(atom1, atom2)
-            setup.bond_info[bond_id].cycle_break = True
+            setup.bond_info[bond_id].breakable = True
 
         return
 
