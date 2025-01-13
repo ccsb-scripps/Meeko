@@ -341,6 +341,21 @@ def test_dihedral_equality():
     check_molsetup_equality(starting_molsetup, decoded_molsetup)
     return
 
+
+def test_broken_bond(): 
+    fn = str(pkgdir / "test" / "macrocycle_data" / "lorlatinib.mol")
+    mol = Chem.MolFromMolFile(fn, removeHs=False)
+    mk_prep_untyped = MoleculePreparation(untyped_macrocycles=True)
+    starting_molsetup = mk_prep_untyped(mol)[0]
+    decoded_molsetup = RDKitMoleculeSetup.from_json(starting_molsetup.to_json())
+    count_rotatable = 0
+    count_breakable = 0
+    for bond_id, bond_info in decoded_molsetup.bond_info.items():
+        count_rotatable += bond_info.rotatable
+        count_breakable += bond_info.breakable
+    assert count_rotatable == 10
+    assert count_breakable == 1
+
 # endregion
 
 

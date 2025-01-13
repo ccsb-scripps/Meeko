@@ -51,6 +51,7 @@ DEFAULT_IS_IGNORE = False
 DEFAULT_GRAPH = []
 
 DEFAULT_BOND_ROTATABLE = False
+DEFAULT_BOND_BREAKABLE = False
 
 DEFAULT_RING_CLOSURE_BONDS_REMOVED = []
 DEFAULT_RING_CLOSURE_PSEUDOS_BY_ATOM = defaultdict
@@ -278,6 +279,7 @@ class Bond(BaseJSONParsable):
     index1: int
     index2: int
     rotatable: bool = DEFAULT_BOND_ROTATABLE
+    breakable: bool = DEFAULT_BOND_BREAKABLE
 
     def __post_init__(self):
         self.canon_id = self.get_bond_id(self.index1, self.index2)
@@ -291,6 +293,7 @@ class Bond(BaseJSONParsable):
                 "index1": obj.index1,
                 "index2": obj.index2,
                 "rotatable": obj.rotatable,
+                "breakable": obj.breakable,
         }
         return output_dict
     
@@ -304,7 +307,8 @@ class Bond(BaseJSONParsable):
         index1 = obj["index1"]
         index2 = obj["index2"]
         rotatable = obj["rotatable"]
-        output_bond = cls(index1, index2, rotatable)
+        breakable = obj.get("breakable", DEFAULT_BOND_BREAKABLE)
+        output_bond = cls(index1, index2, rotatable, breakable)
         return output_bond
     # endregion
 
@@ -328,7 +332,6 @@ class Bond(BaseJSONParsable):
         idx_min = min(idx1, idx2)
         idx_max = max(idx1, idx2)
         return idx_min, idx_max
-
 
 @dataclass
 class Ring(BaseJSONParsable):

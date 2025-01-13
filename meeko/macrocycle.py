@@ -36,6 +36,7 @@ class FlexMacrocycle:
         double_bond_penalty: float = DEFAULT_DOUBLE_BOND_PENALTY,
         max_breaks: int = DEFAULT_MAX_BREAKS,
         allow_break_atype_A: bool = False,
+        untyped: bool = False,
     ):
         """
         Initialize macrocycle typer.
@@ -50,6 +51,8 @@ class FlexMacrocycle:
         max_breaks: int
         allow_break_type_A: bool
             Allow breaking bonds involving atoms typed A, default is False.
+        untyped: bool
+            Does not use atom typing, any rotatable bond can break
         """
         self._min_ring_size = min_ring_size
         self._max_ring_size = max_ring_size
@@ -57,6 +60,7 @@ class FlexMacrocycle:
         self._double_bond_penalty = double_bond_penalty
         self.max_breaks = max_breaks
         self.allow_break_atype_A = allow_break_atype_A
+        self.untyped = untyped
 
         self.setup = None
         self.breakable_rings = None
@@ -115,6 +119,8 @@ class FlexMacrocycle:
         bond = Bond.get_bond_id(bond[0], bond[1])
         if not self.setup.bond_info[bond].rotatable:
             return -1
+        if self.untyped:
+            return 100
         atom_idx1, atom_idx2 = bond
         for i in (atom_idx1, atom_idx2):
             atype = self.setup.get_atom_type(i)
