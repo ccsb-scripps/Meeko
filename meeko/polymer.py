@@ -2435,7 +2435,23 @@ class Monomer(BaseJSONParsable):
         self.atom_names = atom_names_list
         return
 
-    def parameterize(self, mk_prep, residue_id):
+    def parameterize(self, mk_prep, residue_id, get_atomprop_from_raw: dict = None):
+
+        if get_atomprop_from_raw: 
+            if any(not isinstance(prop_name, str) for prop_name in get_atomprop_from_raw.keys()): 
+                raise ValueError(f"Atom property name must be str. Got {prop_name} ({type(prop_name)}) instead! ")
+            raw_mol = self.raw_rdkit_mol
+            atoms_in_raw_mol = [atom for atom in raw_mol.GetAtoms()]
+            mapidx_to_raw = self.mapidx_to_raw
+            molsetup_mapidx = self.molsetup_mapidx
+            for atom in self.padded_mol.GetAtoms(): 
+                atom_idx_in_raw = mapidx_to_raw.get(molsetup_mapidx.get(atom.GetIdx(), None), None)
+                for prop_name, default_value in get_atomprop_from_raw.items(): 
+                    if atom_idx_in_raw is not None: 
+                        prop_value = atoms_in_raw_mol[atom_idx_in_raw].GetProp(prop_name)
+                    else:
+                        prop_value = str(default_value)
+                    atom.SetProp(prop_name, prop_value)
 
         molsetups = mk_prep(self.padded_mol)
         if len(molsetups) != 1:
